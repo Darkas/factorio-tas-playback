@@ -5,9 +5,10 @@ local commandqueue = {}
 
 Currently implemented commands:
 {"auto-move-to", {<X>,<Y>}}
+{"build", <entity>, {<X>,<Y>}, <facing direction>}
 
 To be implemented:
-"build"
+
 "build-blueprint"
 "move"
 "rotate"
@@ -27,11 +28,10 @@ To be implemented:
 "stop-auto-move-to"
 
 Currently implemented conditions:
-none
+on_entering_range=<bool> (as soon as this action is possible)
 
 To be implemented:
-on_entering=<bool> (as soon as this action is possible)
-on_leaving=<bool> (right before this action becomes impossible)
+on_leaving_range=<bool> (right before this action becomes impossible)
 on_player_in_range=<range> (player is range away from )
 items_total={<item name>, <N>} (there are currently N of item name available (in the entire world))
 needs_fuel={<X>,<Y>} (entity needs fuel)
@@ -48,7 +48,8 @@ commandqueue["command_list"] = {
 	{
 		name = "start",
 		commands = {
-			{"move-to", {5,10}}
+			{"auto-move-to", {5,10}},
+			{"build", "stone-furnace", {7,12}, "N", on_entering_range = true}
 		}
 	}
 }

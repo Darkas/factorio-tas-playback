@@ -79,7 +79,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 end
 
 function to_low_level(command, myplayer)
-	if command[1] == "move-to" then		
+	if command[1] == "auto-move-to" then		
 		if not command.data.moveData then
 			command.data.moveData = {}
 		
@@ -125,6 +125,11 @@ function to_low_level(command, myplayer)
 		
 		return {"move", move_dir}
 	end
+	
+	if command[1] == "build" then
+		command.data.finished = true
+		return {command[1], command[2], command[3], command[4]}
+	end
 end
 
 function command_executable(command, myplayer)
@@ -137,7 +142,7 @@ function command_executable(command, myplayer)
 			distance = myplayer.build_distance
 		end
 		
-		if sqdistance(command[4], myplayer.position) < distance^2 then
+		if sqdistance(command[3], myplayer.position) > distance^2 then
 			return false
 		end
 	end
@@ -148,5 +153,5 @@ function command_executable(command, myplayer)
 end
 
 function sqdistance(pos1, pos2)
-	return (pos1[1] - pos2[1])^2 + (pos1[2] - pos2[2])^2
+	return (pos1[1] - pos2.x)^2 + (pos1[2] - pos2.y)^2
 end
