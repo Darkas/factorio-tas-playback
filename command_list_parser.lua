@@ -1,44 +1,17 @@
---[[
-{"build", "mining-drill", "N", {0,0}, on_entering=true, on_leaving, on_player_in_range=range, items_total="iron", needs_fuel=pos, priority=..., name=...}
-{"build-blueprint", "blueprint", "N", {0,0}, ...}
-{"move", "NE", ...}
-{"move-to", {0,0}, ...}
-"rotate"
-"mine"
-"craft"
-"put"
-"take"
-"tech"
-"recipe"
-"throw"
-"vehicle"
-"auto-refuel"
-"auto-take"
-"stop-auto-refuel"
-"stop-auto-take"
-"stop-move"
+global.current_command_set = {}
 
-command_list = {
-	{
-		name = "start-1"
-		required = {"name1", ...},
-		{"build", "mining-drill", "N", {0,0}, on_entering=true, on_leaving, on_player_in_range=range, items_total="iron", needs_fuel=pos, priority=..., name=...}
-	},
-	{
-		name = "start-2"
-		required = {"name1", ...},
-		{"build", "mining-drill", "N", {0,0}, on_entering=true, on_leaving, on_player_in_range=range, items_total="iron", needs_fuel=pos, priority=..., name=...}
-	}
+always_possible = {}
+blocks_others = {"auto-refuel", "mine"}
+default_priorities = {
+	["auto-refuel"] = 5,
+	["mine"] = 6,
 }
---]]
-
-current_command_set = {}
 
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	local finished = true
 	local finished_commands = {}
 	
-	for _,command in pairs(current_command_set) do
+	for _,command in pairs(global.current_command_set) do
 		if command.data.finished and command.name then
 			finished_commands[#finished_commands + 1] = command.name
 		end
@@ -55,30 +28,60 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			return false
 		end
 		
-		current_command_set = command_list[1].commands
+		global.current_command_set = command_list[1].commands
 		table.remove(command_list, 1)
 		
-		for _,command in pairs(current_command_set) do
+		for _,command in pairs(global.current_command_set) do
 			command.data = {}
+			
+			if not command.priority then
+				command.priority = default_priorities[command[1]]
+			end
 		end
 	end
 	
 	local executable_commands = {}
 	
-	for _,command in pairs(current_command_set) do
-		if command_executable(command, myplayer) then
-			executable_commands[#executable_commands + 1] = to_low_level(command, myplayer)
+	for _,command in pairs(global.current_command_set) do
+		if command_executable(command, myplayer, tick) then
+			executable_commands[#executable_commands + 1] = command
 		end
 	end
 	
 	-- Check in which orders the commands should be executed
 	
-	commandqueue[tick] = executable_commands
+	local blocking_command = nil
+	
+	for _,command in pairs(executable_commands) do
+		if has_value(blocks_others, command[1]) then
+			if not blocking_command or blocking_command.priority > command.priority then
+				blocking_command = command
+			end
+		end
+	end
+	
+	if blocking_command then
+		commandqueue[tick] = {to_low_level(blocking_command, myplayer, tick)}
+		
+		for _,command in pairs(global.current_command_set) do
+			if has_value(always_possible, command[1]) then
+				commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
+			end
+		end
+		
+		return true
+	end
+	
+	commandqueue[tick] = {}
+		
+	for _,command in pairs(executable_commands) do
+		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
+	end
 	
 	return true
 end
 
-function to_low_level(command, myplayer)
+function to_low_level(command, myplayer, tick)
 	if command[1] == "auto-move-to" then		
 		if not command.data.moveData then
 			command.data.moveData = {}
@@ -126,13 +129,25 @@ function to_low_level(command, myplayer)
 		return {"move", move_dir}
 	end
 	
-	if command[1] == "build" then
+	if command[1] == "auto-refuel" then
+		if not command.data.started then
+			command.data.started = tick
+		end
+		
+		return {"put", command[3], "coal", 1, defines.inventory.fuel}
+	end
+	
+	if command[1] == "craft" or command[1] == "build" then
 		command.data.finished = true
-		return {command[1], command[2], command[3], command[4]}
+		return command
+	end
+	
+	if command[1] == "mine" then
+		return command
 	end
 end
 
-function command_executable(command, myplayer)
+function command_executable(command, myplayer, tick)
 	if command.data.finished then
 		return false
 	end
@@ -147,11 +162,41 @@ function command_executable(command, myplayer)
 		end
 	end
 	
-	
+	if command[1] == "auto-refuel" then
+		if myplayer.get_item_count("coal") == 0 then
+			return false
+		end
+			
+		if command.data.started then
+			local frequency = 0
+		
+			if command[2] == "m" then -- mining drill
+				frequency = 1600
+			end
+		
+			if command[2] == "f" then -- stone furnace
+				frequency = 2660
+			end
+		
+			if (command.data.started - tick) % frequency > 0 then
+				return false
+			end
+		end
+	end
 	
 	return true
 end
 
 function sqdistance(pos1, pos2)
 	return (pos1[1] - pos2.x)^2 + (pos1[2] - pos2.y)^2
+end
+
+function has_value(table, element)
+	for _,v in pairs(table) do
+		if v == element then
+			return true
+		end
+	end
+	
+	return false
 end
