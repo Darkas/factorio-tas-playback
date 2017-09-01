@@ -3,9 +3,14 @@ global.previous_commands = {}
 
 always_possible = {"speed"}
 blocks_others = {"auto-refuel", "mine"}
+blocks_movement = {"move", "mine"}
+blocks_selection = {"auto-refuel", "build", "put", "take"}
 default_priorities = {
 	["auto-refuel"] = 5,
 	["mine"] = 6,
+}
+max_ranges = {
+	["build"] = 6,
 }
 
 
@@ -62,27 +67,21 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
-	-- Determine blocking command with highest priority
-	local blocking_command = nil
+	-- Determine first out of range command
+	local leaving_range_command = nil
 	
 	for _, command in pairs(executable_commands) do
-		if has_value(blocks_others, command[1]) then
-			if not blocking_command or blocking_command.priority > command.priority then
-				blocking_command = command
-			end
+		if leaving_range(command, myplayer, tick) then
+			leaving_range_command = command
+			break
 		end
 	end
 	
-	-- Process blocking command if it exists
-	if blocking_command then
-		commandqueue[tick] = {to_low_level(blocking_command, myplayer, tick)}
-		
-		for _, command in pairs(global.current_command_set) do
-			if has_value(always_possible, command[1]) then
-				commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
-			end
-		end
-		
+	-- Process out of range command if it exists
+	if leaving_range_command then
+		commandqueue[tick] = {to_low_level(leaving_range_command, myplayer, tick)}
+		add_compatible_commands(leaving_range_command, executable_commands, commandqueue[tick], myplayer)
+				
 		if tables_equal(global.previous_commands, commandqueue[tick]) then
 			commandqueue[tick] = {}
 		else
@@ -92,17 +91,21 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		return true
 	end
 	
-	-- Otherwise execute all commands we can.
-	commandqueue[tick] = {}
-		
-	for _,command in pairs(executable_commands) do
-		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
-	end
-	
-	if serpent.block(global.previous_commands) == serpent.block(commandqueue[tick]) then
-		commandqueue[tick] = {}
-	else
-		global.previous_commands = commandqueue[tick]
+	-- Otherwise execute first command with highest priority.
+	if #executable_commands > 0 then
+		local command = executable_commands[1]
+		for _, com in pairs(executable_commands) do
+			if command.priority < com.priority then
+				command = com
+			end
+		end
+		commandqueue[tick] = {to_low_level(command, myplayer, tick)}
+		add_compatible_commands(command, executable_commands, commandqueue[tick], myplayer)
+		if serpent.block(global.previous_commands) == serpent.block(commandqueue[tick]) then
+			commandqueue[tick] = {}
+		else
+			global.previous_commands = commandqueue[tick]
+		end
 	end
 	
 	return true
@@ -133,6 +136,11 @@ function to_low_level(command, myplayer, tick)
 		
 		local move_dir = ""
 		
+		-- TODO: Test if this works when we walk on transport belts
+		-- Could replace this by
+		-- if command[2][2] < myplayer.position.y - epsilon then
+		-- 	move_dir = move_dir .. "N"
+		-- end
 		if command[2][2] < myplayer.position.y and not command.data.moveData.S then
 			move_dir = move_dir .. "N"
 		end
@@ -172,6 +180,10 @@ function to_low_level(command, myplayer, tick)
 	
 	if command[1] == "mine" then
 		return command
+	end
+	
+	if command[1] == "rotate" then
+
 	end
 end
 
@@ -219,6 +231,39 @@ function command_executable(command, myplayer, tick)
 	end
 	
 	return true
+end
+
+function leaving_range(command, myplayer, tick) 
+	if not command.data.last_range_sq then 
+		command.data.last_range_sq = command_sqdistance(command, player)
+		-- if not command.data.last_range then return false end
+	else
+		local distsq = command_sqdistance(command, player)
+		local max_range = command.leaving_range or max_ranges[commands[1]] or 6
+		if command.data.last_range_sq * command.data.last_range_sq < distsq and distsq < max_range*max_range and 0.9*max_range*max_range < command.data.last_range_sq then 
+			command.data.last_range_sq = distsq
+			return true
+		end
+		command.data.last_range_sq = distsq
+	end
+	return false
+end
+
+function command_sqdistance(command, player)
+	local position = nil
+	if command[1] == "build" then position = command[3]
+	elseif command[1] == "auto-move-to" then position = command[2]
+	end
+	
+	if position then 
+		return sqdistance(position, player.position)
+	else 
+		return nil 
+	end
+end
+
+function add_compatible_commands(command, executable_commands, commands, myplayer)
+	-- TODO
 end
 
 function sqdistance(pos1, pos2)
