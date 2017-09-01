@@ -4,15 +4,33 @@ global.previous_commands = {}
 always_possible = {"speed"}
 blocks_others = {"auto-refuel", "mine"}
 blocks_movement = {"move", "mine"}
+
 blocks_selection = {"auto-refuel", "build", "put", "take"}
+
+always_possible_actions = {"take-from-ground", "speed", "stop-auto-move-to", "stop-auto-refuel", "stop-auto-take"}
+selection_actions = {"mine", "put-stack", "rotate", "take"}
+ui_actions = {"craft", "put", "recipe", "tech"}
+
+-- TODO: "throw" and "vehicle"
+
+inherited_actions = {
+	["auto-refuel"] = "put-stack",
+	["auto-move-to"] = "move",
+	["auto-take"] = "take",
+	["build-blueprint"] = "build",
+}
+
 default_priorities = {
+	["speed"] = 5,
+	["build"] = 5,
+	["craft"] = 5,
 	["auto-refuel"] = 5,
 	["mine"] = 6,
+	["auto-move-to"] = 7,
 }
 max_ranges = {
 	["build"] = 6,
 }
-
 
 
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
@@ -80,7 +98,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	-- Process out of range command if it exists
 	if leaving_range_command then
 		commandqueue[tick] = {to_low_level(leaving_range_command, myplayer, tick)}
-		add_compatible_commands(leaving_range_command, executable_commands, commandqueue[tick], myplayer)
+		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
 				
 		if tables_equal(global.previous_commands, commandqueue[tick]) then
 			commandqueue[tick] = {}
@@ -91,6 +109,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		return true
 	end
 	
+
 	-- Otherwise execute first command with highest priority.
 	if #executable_commands > 0 then
 		local command = executable_commands[1]
@@ -99,18 +118,18 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				command = com
 			end
 		end
+
 		commandqueue[tick] = {to_low_level(command, myplayer, tick)}
-		add_compatible_commands(command, executable_commands, commandqueue[tick], myplayer)
-		if serpent.block(global.previous_commands) == serpent.block(commandqueue[tick]) then
+		
+		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
+		if tables_equal(global.previous_commands, commandqueue[tick]) then
 			commandqueue[tick] = {}
 		else
 			global.previous_commands = commandqueue[tick]
 		end
 	end
-	
 	return true
 end
-
 
 function to_low_level(command, myplayer, tick)
 	if command[1] == "auto-move-to" then		
@@ -235,11 +254,11 @@ end
 
 function leaving_range(command, myplayer, tick) 
 	if not command.data.last_range_sq then 
-		command.data.last_range_sq = command_sqdistance(command, player)
+		command.data.last_range_sq = command_sqdistance(command, myplayer)
 		-- if not command.data.last_range then return false end
 	else
-		local distsq = command_sqdistance(command, player)
-		local max_range = command.leaving_range or max_ranges[commands[1]] or 6
+		local distsq = command_sqdistance(command, myplayer)
+		local max_range = command.leaving_range or max_ranges[command[1]] or 6
 		if command.data.last_range_sq * command.data.last_range_sq < distsq and distsq < max_range*max_range and 0.9*max_range*max_range < command.data.last_range_sq then 
 			command.data.last_range_sq = distsq
 			return true
@@ -262,8 +281,49 @@ function command_sqdistance(command, player)
 	end
 end
 
-function add_compatible_commands(command, executable_commands, commands, myplayer)
-	-- TODO
+function add_compatible_commands(executable_commands, commands, myplayer)
+	if #commands ~= 1 then -- TODO: Fix!
+		error("Function add_compatible_commands: commands parameter has not exactly one element.")
+	end
+	local command = commands[1]
+
+	if has_value(selection_actions, basic_action(command)) then -- if you want things to happen in the same frame, use the exact same coordinates!
+		coordinates = command[2] -- all selection actions have there coordinates at [2]
+		
+		local priority_take_or_put = nil
+		
+		if not has_value({"put-stack", "take"}, basic_action(command)) then
+			-- find the highest priority take or put-stack action at this position
+			
+			for _, comm in pairs(executable_commands) do
+				if has_value({"put-stack", "take"}, basic_action(comm)) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
+					if not priority_take_or_put and priority_take_or_put.priority > comm.priority then
+						priority_take_or_put = comm
+					end
+				end
+			end
+		else
+			priority_take_or_put = command
+		end
+		
+		local forbidden_action = ""
+		
+		if priority_take_or_put and basic_action(priority_take_or_put) == "put-stack" then
+			forbidden_action = "take"
+		else
+			forbidden_action = "put-stack"
+		end
+		
+		for _, comm in pairs(executable_commands) do
+			if has_value(selection_actions, comm) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
+				if basic_action(comm) ~= forbidden_action then
+					commands[#commands + 1] = comm
+				end
+			end
+		end
+	end
+	
+	-- TODO: move and mine are incompatible, do something about UI interactions
 end
 
 function sqdistance(pos1, pos2)
@@ -282,4 +342,8 @@ end
 
 function tables_equal(t1, t2)
 	return serpent.block(t1) == serpent.block(t2)
+end
+
+function basic_action(command)
+	return inherited_actions[command[1]] or command[1]
 end
