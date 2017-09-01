@@ -1,6 +1,7 @@
 require("util")
 require("utility_functions")
 require("silo-script")
+require("command_list_parser")
 
 -- Global variables initialization
 local max_tick = 0
@@ -38,10 +39,12 @@ function init_run(myplayer_index)
 		return
 	end
 	debugprint("Command queue size is " .. table_size(commandqueue)) --includes settings "field"
+	--[[
 	if max_tick == 0 then
 		errprint("The command queue is empty! No point in starting.")
 		return
 	end
+	--]]
 	if not commandqueue.settings then
 		errmessage("The settings for of the command queue don't exist.")
 		return
@@ -120,6 +123,12 @@ script.on_event(defines.events.on_tick, function(event)
 	if commandqueue and global.running then
 		local tick = game.tick - global.start_tick
 		local myplayer = global.myplayer
+		
+		-- Check what commands are to be executed next
+		if not evaluate_command_list(commandqueue["command_list"], commandqueue, myplayer, tick) then
+			end_of_input(myplayer)
+		end
+		
 		if not myplayer.connected then
 			error("The runner left.")
 		end
