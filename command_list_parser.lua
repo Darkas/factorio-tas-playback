@@ -1,6 +1,7 @@
 global.current_command_set = {}
+global.previous_commands = {}
 
-always_possible = {}
+always_possible = {"speed"}
 blocks_others = {"auto-refuel", "mine"}
 default_priorities = {
 	["auto-refuel"] = 5,
@@ -8,6 +9,10 @@ default_priorities = {
 }
 
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
+	if not command_list then
+		return true
+	end
+	
 	local finished = true
 	local finished_commands = {}
 	
@@ -69,6 +74,12 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			end
 		end
 		
+		if serpent.block(global.previous_commands) == serpent.block(commandqueue[tick]) then
+			commandqueue[tick] = {}
+		else
+			global.previous_commands = commandqueue[tick]
+		end
+		
 		return true
 	end
 	
@@ -76,6 +87,12 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		
 	for _,command in pairs(executable_commands) do
 		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
+	end
+	
+	if serpent.block(global.previous_commands) == serpent.block(commandqueue[tick]) then
+		commandqueue[tick] = {}
+	else
+		global.previous_commands = commandqueue[tick]
 	end
 	
 	return true
@@ -137,7 +154,7 @@ function to_low_level(command, myplayer, tick)
 		return {"put", command[3], "coal", 1, defines.inventory.fuel}
 	end
 	
-	if command[1] == "craft" or command[1] == "build" then
+	if command[1] == "craft" or command[1] == "build" or command[1] == "speed" then
 		command.data.finished = true
 		return command
 	end
@@ -181,6 +198,12 @@ function command_executable(command, myplayer, tick)
 			if (command.data.started - tick) % frequency > 0 then
 				return false
 			end
+		end
+	end
+	
+	if command[1] == "mine" then
+		if myplayer.mining_state.mining == true then
+			return false
 		end
 	end
 	

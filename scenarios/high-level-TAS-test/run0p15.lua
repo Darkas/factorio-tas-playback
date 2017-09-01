@@ -45,12 +45,11 @@ commandqueue["settings"] = {
     end_tick_debug = true
 }
 
-commandqueue[5] = {{"speed", 10}}
-
 commandqueue["command_list"] = {
 	{
 		name = "start-1",
 		commands = {
+			{"speed", 10},
 			{"craft", "iron-axe", 1},
 			{"auto-move-to", {-35,26}},
 			{"build", "stone-furnace", {-32,29}, 0, on_entering_range = true},
