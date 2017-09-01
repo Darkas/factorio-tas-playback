@@ -8,15 +8,20 @@ default_priorities = {
 	["mine"] = 6,
 }
 
+
+
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
 		return true
 	end
 	
+	
+	-- Check if we finished all commands in the current command set
+
 	local finished = true
 	local finished_commands = {}
 	
-	for _,command in pairs(global.current_command_set) do
+	for _, command in pairs(global.current_command_set) do
 		if command.data.finished and command.name then
 			finished_commands[#finished_commands + 1] = command.name
 		end
@@ -26,17 +31,20 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
-	-- set finished to true if finished_commands and command_list[2].required have the same elements
+	-- TODO: set finished to true if finished_commands and command_list[2].required have the same elements
 	
+
+	-- Add the next command group to the current command set.
 	if finished then
 		if not command_list[1] then
 			return false
 		end
 		
+		-- TODO: Add, not overwrite here.
 		global.current_command_set = command_list[1].commands
 		table.remove(command_list, 1)
 		
-		for _,command in pairs(global.current_command_set) do
+		for _, command in pairs(global.current_command_set) do
 			command.data = {}
 			
 			if not command.priority then
@@ -44,20 +52,20 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			end
 		end
 	end
-	
+
+	-- 	Determine which commands we can execute this tick
 	local executable_commands = {}
 	
-	for _,command in pairs(global.current_command_set) do
+	for _, command in pairs(global.current_command_set) do
 		if command_executable(command, myplayer, tick) then
 			executable_commands[#executable_commands + 1] = command
 		end
 	end
 	
-	-- Check in which orders the commands should be executed
-	
+	-- Determine blocking command with highest priority
 	local blocking_command = nil
 	
-	for _,command in pairs(executable_commands) do
+	for _, command in pairs(executable_commands) do
 		if has_value(blocks_others, command[1]) then
 			if not blocking_command or blocking_command.priority > command.priority then
 				blocking_command = command
@@ -65,16 +73,17 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
+	-- Process blocking command if it exists
 	if blocking_command then
 		commandqueue[tick] = {to_low_level(blocking_command, myplayer, tick)}
 		
-		for _,command in pairs(global.current_command_set) do
+		for _, command in pairs(global.current_command_set) do
 			if has_value(always_possible, command[1]) then
 				commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
 			end
 		end
 		
-		if serpent.block(global.previous_commands) == serpent.block(commandqueue[tick]) then
+		if tables_equal(global.previous_commands, commandqueue[tick]) then
 			commandqueue[tick] = {}
 		else
 			global.previous_commands = commandqueue[tick]
@@ -83,6 +92,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		return true
 	end
 	
+	-- Otherwise execute all commands we can.
 	commandqueue[tick] = {}
 		
 	for _,command in pairs(executable_commands) do
@@ -97,6 +107,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	return true
 end
+
 
 function to_low_level(command, myplayer, tick)
 	if command[1] == "auto-move-to" then		
@@ -222,4 +233,8 @@ function has_value(table, element)
 	end
 	
 	return false
+end
+
+function tables_equal(t1, t2)
+	return serpent.block(t1) == serpent.block(t2)
 end
