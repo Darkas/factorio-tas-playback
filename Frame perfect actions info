@@ -1,0 +1,13 @@
+UI interactions (inventory, toolbelt):
+On an opened UI, arbitrary amounts of interactions per tick are possible. A UI has to be closed for a tick to be able to open a new UI (i.e. you cannot press E twice in the same frame or similar).
+
+Selection interactions (mine, take out/put into machines):
+The selection can only be moved once per tick. It is possible to do arbitrary put interactions in the same tick (for example, put 3 stacks from the toolbelt into a chest without using the UI) and it is possible to do a put action and open the UI, but not a put action and a take action.
+
+Build:
+It is only possible to build if the frame started while holding a buildable entity. But then, arbitrary amounts of entities can be built (even different ones, if they are in the toolbar).
+
+
+
+Notes:
+- arbitrary means number of clicks that factorio can process each tick. Reliably, this number seems to be around 20 but it can go up to 40.
