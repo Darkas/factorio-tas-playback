@@ -95,6 +95,27 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if out_of_range_command then
 		add_compatible_commands(out_of_range_command, executable_commands, commandqueue[tick], myplayer)
 				
+	-- Determine blocking command with highest priority
+	local blocking_command = nil
+	
+	for _, command in pairs(executable_commands) do
+		if has_value(blocks_others, command[1]) then
+			if not blocking_command or blocking_command.priority > command.priority then
+				blocking_command = command
+			end
+		end
+	end
+	
+	-- Process blocking command if it exists
+	if blocking_command then
+		commandqueue[tick] = {to_low_level(blocking_command, myplayer, tick)}
+		
+		for _, command in pairs(global.current_command_set) do
+			if has_value(always_possible, command[1]) then
+				commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
+			end
+		end
+		
 		if tables_equal(global.previous_commands, commandqueue[tick]) then
 			commandqueue[tick] = {}
 		else
@@ -112,6 +133,8 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				command = com
 			end
 		end
+	-- Otherwise execute all commands we can.
+	commandqueue[tick] = {}
 		
 		add_compatible_commands(command, executable_commands, commandqueue[tick], myplayer)
 		if serpent.block(global.previous_commands) == serpent.block(commandqueue[tick]) then
@@ -123,7 +146,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	return true
 end
-
+end
 
 function to_low_level(command, myplayer, tick)
 	if command[1] == "auto-move-to" then		
