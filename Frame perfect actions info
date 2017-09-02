@@ -5,7 +5,10 @@ Selection interactions (mine, take out/put into machines):
 The selection can only be moved once per tick. It is possible to do arbitrary put interactions in the same tick (for example, put 3 stacks from the toolbelt into a chest without using the UI) and it is possible to do a put action and open the UI, but not a put action and a take action.
 
 Build:
-It is only possible to build if the frame started while holding a buildable entity. But then, arbitrary amounts of entities can be built (even different ones, if they are in the toolbar).
+It is only possible to build if the frame started while holding a buildable entity. But then, arbitrary amounts of entities can be built (even different ones, if they are in the toolbar). The range that is used to see if the entity can be built is the distance from the players position to the collision_box of the entity (centered at the center of the entity). It is possible to build even if the distance is exactly 6 (and even slightly higher: 6.00234 allows you to build, 6.00235 not).
+
+Mine:
+The distance seems to be the resource_reach_distance, and mining is possible if the distance from the collision_box is smaller than the resource_reach_distance. Note that the position of the ores is not precisely centered (it seems random, there might be a pattern), so the easiest way to retrieve the position is to get it from the entity itself.
 
 Item manipulation:
 After an entity has crafted an item, it is only possible to take it out in the frame where the item is displayed in its inventory. If in item is inserted into the player's inventory it can be used in the same frame for handcrafting.

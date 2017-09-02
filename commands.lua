@@ -63,11 +63,13 @@ TAScommands["build"] = function (tokens, myplayer)
     return
   end
 
-  -- Check if we are in reach of this tile
+  -- Check if we are in reach of this tile TODO: put a correct range test here
+  --[[
   if not inrange(position, myplayer) then
     errprint("Build failed: You are trying to place beyond realistic reach")
     return
   end
+  --]]
 
   -- Check if we can actually place the item at this tile
   local canplace = myplayer.surface.can_place_entity{name = item, position = position, direction = direction, force = "player"}  

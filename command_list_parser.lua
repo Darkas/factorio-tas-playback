@@ -85,8 +85,41 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 		table.remove(command_list, 1)
 		
+		-- Initialize commands here
+		
 		for _, command in pairs(global.current_command_set) do
 			command.data = {}
+			
+			-- Initialize the collision boxes
+			
+			local coords = nil
+			local collision_box = nil
+			
+			if command[1] == "build" then
+				coords = command[3]
+				collision_box = game.entity_prototypes[command[2]].collision_box
+				
+				command.distance = myplayer.build_distance
+			end
+			
+			if command[1] == "mine" then
+				local resources = myplayer.surface.find_entities_filtered({area = {{-0.1 + command[2][1], -0.1 + command[2][2]}, {0.1 + command[2][1], 0.1 + command[2][2]}}, type= "resource"})
+				
+				if (not resources) or #resources ~= 1 then
+					game.print("There is not precisely 1 resource patch at this place!")
+					return false
+				end
+				
+				coords = resources[1].position
+				collision_box = game.entity_prototypes["iron-ore"].collision_box -- they all have the same collision_box
+				
+				command.distance = myplayer.resource_reach_distance
+			end
+			
+			if coords and collision_box then
+				local x,y = get_coordinates(coords)
+				command.rect = {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
+			end
 			
 			if not command.priority then
 				command.priority = default_priorities[command[1]]
@@ -226,11 +259,7 @@ function command_executable(command, myplayer, tick)
 	end
 	
 	if command.on_entering_range then
-		if command[1] == "build" then
-			distance = myplayer.build_distance
-		end
-		
-		if sqdistance(command[3], myplayer.position) > distance^2 then
+		if distance_from_rect(myplayer.position, command.rect) > command.distance then
 			return false
 		end
 	end
@@ -350,26 +379,79 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 end
 
 function sqdistance(pos1, pos2)
-	local x1 = 0
-	local y1 = 0
-	local x2 = 0
-	local y2 = 0
+	local x1, y1 = get_coordinates(pos1)
+	local x2, y2 = get_coordinates(pos2)
 
-	if pos1.x then 
-		x1 = pos1.x
-		y1 = pos1.y
-	else
-		x1 = pos1[1]
-		y1 = pos1[2]
-	end
-	if pos2.x then 
-		x2 = pos2.x
-		y2 = pos2.y
-	else
-		x2 = pos2[1]
-		y2 = pos2[2]
-	end
 	return (x1 - x2)^2 + (y1 - y2)^2
+end
+
+function distance_from_rect(pos, rect, closest)
+	local posx, posy = get_coordinates(pos)
+	
+	local rect1x, rect1y = get_coordinates(rect[1])
+	local rect2x, rect2y = get_coordinates(rect[2])
+	
+	local corners = {{rect1x, rect1y}, {rect1x, rect2y}, {rect2x, rect1y}, {rect2x, rect2y}}
+	
+	-- find the two closest corners to pos and the center
+	
+	local index = 1
+	
+	for i,corner in pairs(corners) do
+		if sqdistance(corner, pos) < sqdistance(corners[index], pos) then
+			index = i
+		end
+	end
+	
+	local corner1 = corners[index]
+	table.remove(corners, index)
+	
+	local index = 1
+	
+	for i,corner in pairs(corners) do
+		if sqdistance(corner, pos) < sqdistance(corners[index], pos) then
+			index = i
+		end
+	end
+	
+	local corner2 = corners[index]
+	
+	local center = {(rect1x + rect2x)/2, (rect1y + rect2y)/2}
+	
+	-- find the intersection of the line [corner1, corner2] and [pos, center]
+	
+	local d = (corner1[1] - corner2[1]) * (posy - center[2]) - (corner1[2] - corner2[2]) * (posx - center[1])
+	
+	local intersection = {
+		(corner1[1] * corner2[2] - corner1[2] * corner2[1]) * (posx - center[1]) - (posx * center[2] - posy * center[1]) * (corner1[1] - corner2[1]),
+		(corner1[1] * corner2[2] - corner1[2] * corner2[1]) * (posy - center[2]) - (posx * center[2] - posy * center[1]) * (corner1[2] - corner2[2]),
+	}
+	
+	-- closest is defined this way, so that if passed to the function as a parameter, the closest point will also be returned
+	
+	if not closest then
+		closest = {}
+	end
+	
+	closest[1] = corner1[1]
+	closest[2] = corner1[2]
+	
+	for _,point in pairs({corner2, intersection}) do
+		if sqdistance(point, pos) < sqdistance(closest, pos) then
+			closest[1] = point[1]
+			closest[2] = point[2]
+		end
+	end
+	
+	return math.sqrt(sqdistance(closest, pos))
+end
+
+function get_coordinates(pos)
+	if pos.x then 
+		return pos.x, pos.y
+	else
+		return pos[1], pos[2]
+	end
 end
 
 function has_value(table, element)

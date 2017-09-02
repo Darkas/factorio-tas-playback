@@ -5,7 +5,7 @@ local commandqueue = {}
 
 Currently implemented commands:
 {"auto-move-to", {<X>,<Y>}}
-{"build", <entity>, {<X>,<Y>}, <facing direction>}
+{"build", <entity>, {<X>,<Y>}, <facing direction>} NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
 {"craft", <item>, <count>}
 {"auto-refuel", "<type>", {<X>,<Y>}} where type is m for burner mining drill, f for stone furnace and b for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low)
 {"rotate", {<X>, <Y>}, "<direction>"}
@@ -49,19 +49,20 @@ commandqueue["command_list"] = {
 	{
 		name = "start-1",
 		commands = {
-			{"speed", 10},
+			--{"speed", 10},
 			{"craft", "iron-axe", 1},
 			{"auto-move-to", {-35,26}},
 			{"build", "stone-furnace", {-32,29}, 0, on_entering_range = true},
 			{"build", "burner-mining-drill", {-34,29}, 2, on_entering_range = true},
+			{"mine", {-36.5,26.5}, on_entering_range = true},
+			{"auto-refuel", "m", {-34,29}},
+			{"auto-refuel", "f", {-32,29}},
 		}
 	},
 	{
 		name = "start-2",
 		commands = {
-			{"mine", {-37,26}},
-			{"auto-refuel", "m", {-34,29}},
-			{"auto-refuel", "f", {-32,29}},
+			
 		}
 	},
 }
