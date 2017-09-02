@@ -7,6 +7,9 @@ The selection can only be moved once per tick. It is possible to do arbitrary pu
 Build:
 It is only possible to build if the frame started while holding a buildable entity. But then, arbitrary amounts of entities can be built (even different ones, if they are in the toolbar).
 
+Item manipulation:
+After an entity has crafted an item, it is only possible to take it out in the frame where the item is displayed in its inventory. If in item is inserted into the player's inventory it can be used in the same frame for handcrafting.
+
 
 
 Notes:
