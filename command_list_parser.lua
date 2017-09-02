@@ -17,6 +17,7 @@ ui_actions = {"craft", "put", "recipe", "tech"}
 inherited_actions = {
 	["auto-refuel"] = "put-stack",
 	["auto-move-to"] = "move",
+	["auto-move-to-command"] = "move",
 	["auto-take"] = "take",
 	["build-blueprint"] = "build",
 }
@@ -28,6 +29,7 @@ default_priorities = {
 	["auto-refuel"] = 5,
 	["mine"] = 6,
 	["auto-move-to"] = 7,
+	["auto-move-to-command"] = 7,
 }
 max_ranges = {
 	["build"] = 6,
@@ -111,7 +113,11 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				end
 				
 				coords = resources[1].position
-				collision_box = game.entity_prototypes["iron-ore"].collision_box -- they all have the same collision_box
+				collision_box = game.entity_prototypes[resources[1].name].collision_box
+				
+				command.data.ore_type = resources[1].name
+				
+				game.print(command.data.ore_type)
 				
 				command.distance = myplayer.resource_reach_distance
 			end
@@ -123,6 +129,21 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			
 			if not command.priority then
 				command.priority = default_priorities[command[1]]
+			end
+		end
+		
+		-- Find the position auto-move-to-command has to move to
+	
+		for _, command in pairs(global.current_command_set) do
+			if command[1] == "auto-move-to-command" then
+				for _, com in pairs(global.current_command_set) do
+					if com.name == command[2] then
+						command.data.target_pos = {}
+						distance_from_rect(myplayer.position, com.rect, command.data.target_pos)
+
+						debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+					end
+				end
 			end
 		end
 	end
@@ -148,16 +169,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	-- Process out of range command if it exists
 	if leaving_range_command then
-		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(leaving_range_command, myplayer, tick)
-		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
-				
-		if tables_equal(global.previous_commands, commandqueue[tick]) then
-			commandqueue[tick] = {}
-		else
-			global.previous_commands = commandqueue[tick]
-		end
-		
-		return true
+		commandqueue[tick] = create_commandqueue(executable_commands, leaving_range_command, myplayer, tick)
 	end
 	
 
@@ -169,37 +181,68 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				command = com
 			end
 		end
-
-		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
 		
-		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
-		if tables_equal(global.previous_commands, commandqueue[tick]) then
-			commandqueue[tick] = {}
-		else
-			global.previous_commands = commandqueue[tick]
+		commandqueue[tick] = create_commandqueue(executable_commands, command, myplayer, tick)
+	end
+	
+	-- Do we have to send a {"mine", nil}?
+	
+	for _, command in pairs(global.current_command_set) do
+		if command[1] == "mine" and command.data.send_nil then
+			command.data.send_nil = false
+			commandqueue[tick][#commandqueue[tick] + 1] = {"mine",nil}
 		end
 	end
+	
 	return true
 end
 
+function create_commandqueue(executable_commands, command, myplayer, tick)
+	local high_level_commands = {command}
+	
+	add_compatible_commands(executable_commands, high_level_commands, myplayer)
+	
+	local queue = {}
+	
+	for _,com in pairs(high_level_commands) do
+		queue[#queue + 1] = to_low_level(com, myplayer, tick)
+	end
+	
+	if tables_equal(global.previous_commands, queue) then
+		queue = {}
+	else
+		global.previous_commands = queue
+	end
+	
+	return queue
+end
+
 function to_low_level(command, myplayer, tick)
-	if command[1] == "auto-move-to" then		
+	if command[1] == "auto-move-to" or command[1] == "auto-move-to-command" then
+		local target_pos = nil
+		
+		if command[1] == "auto-move-to" then
+			target_pos = command[2]
+		else
+			target_pos = command.data.target_pos
+		end
+				
 		if not command.data.moveData then
 			command.data.moveData = {}
 		
-			if command[2][2] < myplayer.position.y then
+			if target_pos[2] < myplayer.position.y then
 				command.data.moveData.N = true
 			end
 		
-			if command[2][2] > myplayer.position.y then
+			if target_pos[2] > myplayer.position.y then
 				command.data.moveData.S = true
 			end
 		
-			if command[2][1] > myplayer.position.x then
+			if target_pos[1] > myplayer.position.x then
 				command.data.moveData.E = true
 			end
 		
-			if command[2][1] < myplayer.position.x then
+			if target_pos[1] < myplayer.position.x then
 				command.data.moveData.W = true
 			end
 		end
@@ -211,19 +254,19 @@ function to_low_level(command, myplayer, tick)
 		-- if command[2][2] < myplayer.position.y - epsilon then
 		-- 	move_dir = move_dir .. "N"
 		-- end
-		if command[2][2] < myplayer.position.y and not command.data.moveData.S then
+		if target_pos[2] < myplayer.position.y and not command.data.moveData.S then
 			move_dir = move_dir .. "N"
 		end
 		
-		if command[2][2] > myplayer.position.y and not command.data.moveData.N then
+		if target_pos[2] > myplayer.position.y and not command.data.moveData.N then
 			move_dir = move_dir .. "S"
 		end
 		
-		if command[2][1] > myplayer.position.x and not command.data.moveData.W then
+		if target_pos[1] > myplayer.position.x and not command.data.moveData.W then
 			move_dir = move_dir .. "E"
 		end
 		
-		if command[2][1] < myplayer.position.x and not command.data.moveData.E then
+		if target_pos[1] < myplayer.position.x and not command.data.moveData.E then
 			move_dir = move_dir .. "W"
 		end
 		
@@ -249,6 +292,10 @@ function to_low_level(command, myplayer, tick)
 	end
 	
 	if command[1] == "mine" then
+		if not command.data.started then
+			command.data.started = tick
+		end
+		
 		return command
 	end
 end
@@ -287,10 +334,26 @@ function command_executable(command, myplayer, tick)
 	end
 	
 	if command[1] == "mine" then
-		if myplayer.mining_state.mining == true then
+		if distance_from_rect(myplayer.position, command.rect) > command.distance then
 			return false
 		end
+		
+		if command.data.started then
+			local time = 0
+			if command.data.ore_type == "stone" then
+				time = 95
+			else
+				time = 125
+			end
+			
+			if tick - command.data.started > time * command.amount then
+				command.data.finished = true
+				command.data.send_nil = true
+				return false
+			end
+		end
 	end
+	
 	if command.on_leaving_range and not leaving_range(command, myplayer, tick) then
 		return false
 	end

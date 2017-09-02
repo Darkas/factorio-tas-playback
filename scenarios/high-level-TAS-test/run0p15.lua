@@ -9,7 +9,8 @@ Currently implemented commands:
 {"craft", <item>, <count>}
 {"auto-refuel", "<type>", {<X>,<Y>}} where type is m for burner mining drill, f for stone furnace and b for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low)
 {"rotate", {<X>, <Y>}, "<direction>"}
-["tech", "<research-name>"} - Note that this pushes the researches into a queue, so it need not be tick-perfect.
+{"tech", "<research-name>"} - Note that this pushes the researches into a queue, so it need not be tick-perfect.
+{"mine", {<X>,<Y>}, amount=...} NOTE: It is assumed that iron, coal and copper need 124 ticks, stone needs 95 ticks
 
 To be implemented:
 
@@ -51,10 +52,10 @@ commandqueue["command_list"] = {
 		commands = {
 			--{"speed", 10},
 			{"craft", "iron-axe", 1},
-			{"auto-move-to", {-35,26}},
+			{"auto-move-to-command", "mine-coal"},
 			{"build", "stone-furnace", {-32,29}, 0, on_entering_range = true},
 			{"build", "burner-mining-drill", {-34,29}, 2, on_entering_range = true},
-			{"mine", {-36.5,26.5}, on_entering_range = true},
+			{"mine", {-36.5,26.5}, amount=4, on_entering_range = true, name="mine-coal"},
 			{"auto-refuel", "m", {-34,29}},
 			{"auto-refuel", "f", {-32,29}},
 		}
@@ -62,7 +63,7 @@ commandqueue["command_list"] = {
 	{
 		name = "start-2",
 		commands = {
-			
+			{"mine", {-56,16}}
 		}
 	},
 }
