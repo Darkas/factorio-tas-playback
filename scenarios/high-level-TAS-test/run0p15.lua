@@ -7,17 +7,17 @@ Currently implemented commands:
 {"auto-move-to", {<X>,<Y>}}
 {"build", <entity>, {<X>,<Y>}, <facing direction>}
 {"craft", <item>, <count>}
-{"auto-refuel", "<type>", {<X>,<Y>}} where type is m for burner mining drill, f for stone furnace and b for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks to low)
+{"auto-refuel", "<type>", {<X>,<Y>}} where type is m for burner mining drill, f for stone furnace and b for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low)
 {"rotate", {<X>, <Y>}, "<direction>"}
+["tech", "<research-name>"} - Note that this pushes the researches into a queue, so it need not be tick-perfect.
 
 To be implemented:
 
-"build-blueprint"
+{"build-blueprint", "<name>"}
 "move"
 "put"
 "take"
 "take-from-ground"
-"tech"
 "recipe"
 "throw"
 "vehicle"

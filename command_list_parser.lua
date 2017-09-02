@@ -1,5 +1,6 @@
 global.current_command_set = {}
 global.previous_commands = {}
+global.tech_queue = {}
 
 always_possible = {"speed"}
 blocks_others = {"auto-refuel", "mine"}
@@ -32,6 +33,11 @@ max_ranges = {
 	["build"] = 6,
 }
 
+script.on_event(defines.events.on_research_finished, function (event)
+	local force = event.research.force
+	commandqueue[game.tick][#commandqueue[game.tick] + 1] =	{"tech", global.tech_queue[1]}
+	table.delete(global.tech_queue, 1)
+end)
 
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
@@ -39,6 +45,8 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	end
 	
 	
+	commandqueue[tick] = {}
+
 	-- Check if we finished all commands in the current command set
 
 	local finished = true
@@ -65,6 +73,16 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		
 		-- TODO: Add, not overwrite here.
 		global.current_command_set = command_list[1].commands
+		for i, command in ipairs(global.current_command_set) do
+			if command[1] == "tech" then
+				if myplayer.force.current_research then
+					global.tech_queue[#global.tech_queue + 1] = command[2]
+				else
+					commandqueue[tick][#commandqueue[tick] + 1] = command
+				end
+				table.delete(global.current_command_set, i)
+			end
+		end
 		table.remove(command_list, 1)
 		
 		for _, command in pairs(global.current_command_set) do
@@ -97,7 +115,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	-- Process out of range command if it exists
 	if leaving_range_command then
-		commandqueue[tick] = {to_low_level(leaving_range_command, myplayer, tick)}
+		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(leaving_range_command, myplayer, tick)
 		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
 				
 		if tables_equal(global.previous_commands, commandqueue[tick]) then
@@ -119,7 +137,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			end
 		end
 
-		commandqueue[tick] = {to_low_level(command, myplayer, tick)}
+		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
 		
 		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
 		if tables_equal(global.previous_commands, commandqueue[tick]) then
@@ -285,7 +303,9 @@ function command_sqdistance(command, player)
 end
 
 function add_compatible_commands(executable_commands, commands, myplayer)
-	if #commands ~= 1 then -- TODO: Fix!
+	-- TODO: Allow more than one command in the commands list here!
+	if #commands ~= 1 then
+		game.print(serpent.block(commands))
 		error("Function add_compatible_commands: commands parameter has not exactly one element.")
 	end
 	local command = commands[1]
