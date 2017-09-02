@@ -1,5 +1,6 @@
 global.current_command_set = {}
 global.previous_commands = {}
+global.tech_queue = {}
 
 always_possible = {"speed"}
 blocks_others = {"auto-refuel", "mine"}
@@ -32,6 +33,11 @@ max_ranges = {
 	["build"] = 6,
 }
 
+script.on_event(defines.events.on_research_finished, function (event)
+	local force = event.research.force
+	commandqueue[game.tick][#commandqueue[game.tick] + 1] =	{"tech", global.tech_queue[1]}
+	table.delete(global.tech_queue, 1)
+end)
 
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
@@ -39,6 +45,8 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	end
 	
 	
+	commandqueue[tick] = {}
+
 	-- Check if we finished all commands in the current command set
 
 	local finished = true
@@ -65,6 +73,16 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		
 		-- TODO: Add, not overwrite here.
 		global.current_command_set = command_list[1].commands
+		for i, command in ipairs(global.current_command_set) do
+			if command[1] == "tech" then
+				if myplayer.force.current_research then
+					global.tech_queue[#global.tech_queue + 1] = command[2]
+				else
+					commandqueue[tick][#commandqueue[tick] + 1] = command
+				end
+				table.delete(global.current_command_set, i)
+			end
+		end
 		table.remove(command_list, 1)
 		
 		for _, command in pairs(global.current_command_set) do
@@ -97,7 +115,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	-- Process out of range command if it exists
 	if leaving_range_command then
-		commandqueue[tick] = {to_low_level(leaving_range_command, myplayer, tick)}
+		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(leaving_range_command, myplayer, tick)
 		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
 				
 		if tables_equal(global.previous_commands, commandqueue[tick]) then
@@ -114,12 +132,12 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if #executable_commands > 0 then
 		local command = executable_commands[1]
 		for _, com in pairs(executable_commands) do
-			if command.priority < com.priority then
+			if command.priority > com.priority then
 				command = com
 			end
 		end
 
-		commandqueue[tick] = {to_low_level(command, myplayer, tick)}
+		commandqueue[tick][#commandqueue[tick] + 1] = to_low_level(command, myplayer, tick)
 		
 		add_compatible_commands(executable_commands, commandqueue[tick], myplayer)
 		if tables_equal(global.previous_commands, commandqueue[tick]) then
@@ -192,17 +210,13 @@ function to_low_level(command, myplayer, tick)
 		return {"put", command[3], "coal", 1, defines.inventory.fuel}
 	end
 	
-	if command[1] == "craft" or command[1] == "build" or command[1] == "speed" then
+	if command[1] == "craft" or command[1] == "build" or command[1] == "speed" or command[1] == "rotate" then
 		command.data.finished = true
 		return command
 	end
 	
 	if command[1] == "mine" then
 		return command
-	end
-	
-	if command[1] == "rotate" then
-
 	end
 end
 
@@ -248,30 +262,37 @@ function command_executable(command, myplayer, tick)
 			return false
 		end
 	end
+	if command.on_leaving_range and not leaving_range(command, myplayer, tick) then
+		return false
+	end
 	
 	return true
 end
 
-function leaving_range(command, myplayer, tick) 
+function leaving_range(command, myplayer, tick)
+	if command.data.range_check_tick == game.tick then return command.data.leaving_range end
+
+	command.data.range_check_tick = game.tick
+	local distsq = command_sqdistance(command, myplayer)
 	if not command.data.last_range_sq then 
-		command.data.last_range_sq = command_sqdistance(command, myplayer)
-		-- if not command.data.last_range then return false end
+		command.data.last_range_sq = distsq
 	else
-		local distsq = command_sqdistance(command, myplayer)
 		local max_range = command.leaving_range or max_ranges[command[1]] or 6
-		if command.data.last_range_sq * command.data.last_range_sq < distsq and distsq < max_range*max_range and 0.9*max_range*max_range < command.data.last_range_sq then 
+		if command.data.last_range_sq < distsq and distsq < max_range*max_range and 0.9*max_range*max_range < command.data.last_range_sq then 
 			command.data.last_range_sq = distsq
+			command.data.leaving_range = true
 			return true
 		end
 		command.data.last_range_sq = distsq
 	end
+	command.data.leaving_range = false
 	return false
 end
 
 function command_sqdistance(command, player)
 	local position = nil
-	if command[1] == "build" then position = command[3]
-	elseif command[1] == "auto-move-to" then position = command[2]
+	if has_value({"rotate", "recipe", "take", "put", "mine"}, command[1]) then position = command[2]
+	elseif command[1] == "auto-move-to" or command[1] == "build" then position = command[3]
 	end
 	
 	if position then 
@@ -282,7 +303,9 @@ function command_sqdistance(command, player)
 end
 
 function add_compatible_commands(executable_commands, commands, myplayer)
-	if #commands ~= 1 then -- TODO: Fix!
+	-- TODO: Allow more than one command in the commands list here!
+	if #commands ~= 1 then
+		game.print(serpent.block(commands))
 		error("Function add_compatible_commands: commands parameter has not exactly one element.")
 	end
 	local command = commands[1]
@@ -327,7 +350,26 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 end
 
 function sqdistance(pos1, pos2)
-	return (pos1[1] - pos2.x)^2 + (pos1[2] - pos2.y)^2
+	local x1 = 0
+	local y1 = 0
+	local x2 = 0
+	local y2 = 0
+
+	if pos1.x then 
+		x1 = pos1.x
+		y1 = pos1.y
+	else
+		x1 = pos1[1]
+		y1 = pos1[2]
+	end
+	if pos2.x then 
+		x2 = pos2.x
+		y2 = pos2.y
+	else
+		x2 = pos2[1]
+		y2 = pos2[2]
+	end
+	return (x1 - x2)^2 + (y1 - y2)^2
 end
 
 function has_value(table, element)

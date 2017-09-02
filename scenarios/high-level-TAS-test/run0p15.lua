@@ -7,17 +7,17 @@ Currently implemented commands:
 {"auto-move-to", {<X>,<Y>}}
 {"build", <entity>, {<X>,<Y>}, <facing direction>}
 {"craft", <item>, <count>}
-{"auto-refuel", "<type>", {<X>,<Y>}} where type is m for burner mining drill, f for stone furnace and b for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks to low)
+{"auto-refuel", "<type>", {<X>,<Y>}} where type is m for burner mining drill, f for stone furnace and b for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low)
+{"rotate", {<X>, <Y>}, "<direction>"}
+["tech", "<research-name>"} - Note that this pushes the researches into a queue, so it need not be tick-perfect.
 
 To be implemented:
 
-"build-blueprint"
+{"build-blueprint", "<name>"}
 "move"
-"rotate"
 "put"
 "take"
 "take-from-ground"
-"tech"
 "recipe"
 "throw"
 "vehicle"
@@ -28,9 +28,9 @@ To be implemented:
 
 Currently implemented conditions:
 on_entering_range=<bool> (as soon as this action is possible)
+on_leaving_range=<bool> (right before this action becomes impossible)
 
 To be implemented:
-on_leaving_range=<bool> (right before this action becomes impossible)
 on_player_in_range=<range> (player is range away from )
 on_tick=<tick> (do this on a certain tick)
 on_relative_tick={<tick>, <name>} (do this a given amount of ticks after the command with the given name finished or after the current command set began (if name is not set))
