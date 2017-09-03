@@ -7,7 +7,7 @@ blocks_movement = {"move", "mine"}
 
 blocks_selection = {"auto-refuel", "build", "put", "take"}
 
-always_possible_actions = {"take-from-ground", "speed", "stop-auto-move-to", "stop-auto-refuel", "stop-auto-take"}
+always_possible_actions = {"take-from-ground", "speed", "stop-auto-move-to", "stop-auto-refuel", "stop-auto-take", "pickup"}
 selection_actions = {"mine", "put", "rotate", "take-stack"}
 ui_actions = {"craft", "recipe", "take", "tech"}
 

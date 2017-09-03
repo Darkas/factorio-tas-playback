@@ -87,6 +87,7 @@ Where :
 	* `{"recipe", {<X>,<Y>}, <recipe>}` sets the recipe of the entity at the given coordinates. 
 	* `{"rotate", {<X>,<Y>}, "<direction>"}` rotates the entity at the given coordinates to face the direction specified, among directions `N`,`S`,`E`,`W`. 
 	* `{"stopcraft", <Index>, <Quantity>}` cancels the crafting of the given quantity of the items at the given index in the queue. If the `<Quantity>` is not specified, 1 will be used. 
+	* `{"pickup"} picks up items from the floor around the player.
 	
 	
 ## High Level Language
@@ -130,6 +131,7 @@ Currently implemented commands:
 * `{"take", {<X>,<Y>}, "<item>", <amount>, <inventory>}`:
 * `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`:
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
+* `{"pickup", oneshot}`: Pick up items from floor. If `oneshot` is set, this will be active only once, otherwise it stays active until it is deactivated.
 
 To be implemented:
 
