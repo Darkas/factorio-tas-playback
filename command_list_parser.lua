@@ -7,7 +7,7 @@ blocks_movement = {"move", "mine"}
 
 blocks_selection = {"auto-refuel", "build", "put", "take"}
 
-always_possible_actions = {"take-from-ground", "speed", "stop-auto-move-to", "stop-auto-refuel", "stop-auto-take", "pickup"}
+always_possible_actions = {"pickup", "speed", "stop-auto-move-to", "stop-auto-refuel", "stop-auto-take"}
 selection_actions = {"mine", "put", "rotate", "take-stack"}
 ui_actions = {"craft", "recipe", "take", "tech"}
 
@@ -23,6 +23,7 @@ inherited_actions = {
 }
 
 default_priorities = {
+	["pickup"] = 10,
 	["speed"] = 5,
 	["build"] = 5,
 	["craft"] = 5,
