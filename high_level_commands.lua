@@ -1,3 +1,6 @@
+
+
+
 function auto_move_to_low_level (command, myplayer, tick)
 	local target_pos = nil
 	
