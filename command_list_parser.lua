@@ -298,7 +298,11 @@ function command_executable(command, myplayer, tick)
 			pos = command.items_available.pos
 		end
 		
-		entity = get_entity_from_pos(pos, myplayer)
+		if pos then
+			entity = get_entity_from_pos(pos, myplayer)
+		else
+			entity = myplayer
+		end
 		
 		if entity.get_item_count(command.items_available[1]) < command.items_available[2] then
 			return false

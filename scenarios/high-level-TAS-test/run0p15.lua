@@ -49,7 +49,18 @@ commandqueue["command_list"] = {
 			{"mine", {-36.5,28.5}, amount=10, on_entering_range = true, name="mine-coal"},
 			{"take", {-32,29}, "iron-plate", 3, defines.inventory.furnace_result, items_available={"iron-plate", 3}, name="iron-taken"},
 			{"craft", "burner-mining-drill", 1, command_finished="iron-taken"},
-			{"speed", 1},
+			{"build", "burner-mining-drill", {-34,31}, 2, items_available={"burner-mining-drill", 1}, name="miner-built"},
+		}
+	},
+	{
+		name = "start-5",
+		required = {"miner-built"},
+		commands = {
+			{"auto-move-to-command", "furnace"},
+			{"build", "stone-furnace", {-32,31}, 0, name="furnace"},
+			{"auto-refuel", "m", {-34,31}, priority=4},
+			{"auto-refuel", "f", {-32,31}},
+			{"speed", 10},
 		}
 	},
 }
