@@ -310,4 +310,14 @@ high_level_commands = {
 		["initialize"] = empty,
 		["init_dependencies"] = empty
 	},
+	pickup = {
+		to_low_level = function (command, myplayer, tick)
+			if command.oneshot then command.finished = true end
+			return command
+		end,
+		executable = return_true,
+		initialize = empty,
+		init_dependencies = empty
+	},
+
 }
