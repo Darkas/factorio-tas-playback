@@ -100,10 +100,11 @@ TAScommands["put"] = function (tokens, myplayer)
     return
   end
 
+  --[[
   if not inrange(position, myplayer) then
     errprint("Put failed: You are trying to reach too far.")
     return
-  end
+  end--]]
 
   local amountininventory = myplayer.get_item_count(item)
   local otherinv = myplayer.selected.get_inventory(slot)
@@ -155,11 +156,12 @@ TAScommands["take"] = function (tokens, myplayer)
     return
   end
 
+  --[[
   -- Check if we are in reach of this tile
   if not inrange(position, myplayer) then
     errprint("Take failed: You are trying to reach too far.")
     return
-  end
+  end--]]
 
   local otherinv = myplayer.selected.get_inventory(slot)
 
@@ -226,6 +228,9 @@ TAScommands["rotate"] = function (tokens, myplayer)
 
   myplayer.selected.direction = directions[direction]
   debugprint("Rotating " .. myplayer.selected.name  .. " so that it faces " .. direction .. ".")
+end
+
+TAScommands["phantom"] = function (tokens, myplayer)
 end
 
 return TAScommands

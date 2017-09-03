@@ -63,6 +63,27 @@ function move_collision_box(collision_box, coords)
 	return {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
 end
 
+function is_entity_at_pos(pos, myplayer)
+	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}})
+
+	if (not entities) or #entities ~= 1 then
+		return false
+	else
+		return true
+	end
+end
+
+function get_entity_from_pos(pos, myplayer)
+	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}})
+
+	if (not entities) or #entities ~= 1 then
+		game.print("There is not precisely one entity at this place!")
+		return nil
+	end
+	
+	return entities[1]
+end
+
 function return_true()
 	return true
 end
@@ -108,6 +129,10 @@ high_level_commands = {
 					debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 				end
 			end
+			
+			if not command.data.target_command then
+				debugprint("There is no command named: " .. command[2])
+			end
 		end,
 		["init_dependencies"] = function (command)
 			return command[2]
@@ -123,6 +148,14 @@ high_level_commands = {
 			return {"put", command[3], "coal", 1, defines.inventory.fuel}
 		end,
 		["executable"] = function(command, myplayer, tick)
+			if not is_entity_at_pos(command[3], myplayer) then
+				return false
+			else
+				local entity = get_entity_from_pos(command[3], myplayer)
+			
+				command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			end
+			
 			if myplayer.get_item_count("coal") == 0 then
 				return false
 			end
@@ -145,7 +178,9 @@ high_level_commands = {
 			
 			return true
 		end,
-		["initialize"] = empty,
+		["initialize"] = function (command, myplayer)
+			command.distance = myplayer.reach_distance
+		end,
 		["init_dependencies"] = empty
 	},
 	
@@ -163,6 +198,19 @@ high_level_commands = {
 		["to_low_level"] = return_self_finished,
 		["executable"] = return_true,
 		["initialize"] = empty,
+		["init_dependencies"] = empty
+	},
+	
+	["entity-interaction"] = {
+		["to_low_level"] = function () return {"phantom"} end,
+		["executable"] = in_range,
+		["initialize"] = function (command, myplayer)
+			command.distance = command[3] or myplayer.build_distance
+			
+			local entity = get_entity_from_pos(command[2], myplayer)
+		
+			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+		end,
 		["init_dependencies"] = empty
 	},
 	
@@ -185,18 +233,36 @@ high_level_commands = {
 			return true
 		end,
 		["initialize"] = function (command, myplayer)
-			local resources = myplayer.surface.find_entities_filtered({area = {{-0.1 + command[2][1], -0.1 + command[2][2]}, {0.1 + command[2][1], 0.1 + command[2][2]}}})
+			local entity = get_entity_from_pos(command[2], myplayer)
 		
-			if (not resources) or #resources ~= 1 then
-				game.print("There is not precisely 1 resource patch at this place!")
-				return false
-			end
-		
-			command.data.ore_type = resources[1].name
+			command.data.ore_type = entity.name
 		
 			command.distance = myplayer.resource_reach_distance
-			command.rect = move_collision_box(game.entity_prototypes[resources[1].name].collision_box, resources[1].position)
+			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
 		end,
+		["init_dependencies"] = empty
+	},
+	
+	["put"] = {
+		["to_low_level"] = return_self_finished,
+		["executable"] = function(command, myplayer, tick)
+			if not is_entity_at_pos(command[3], myplayer) then
+				return false
+			else
+				if not command.rect then
+					local entity = get_entity_from_pos(command[3], myplayer)
+			
+					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+				end
+			end
+			
+			if myplayer.get_item_count(command[3]) < command[4] then
+				return false
+			else
+				return true
+			end
+		end,
+		["initialize"] = empty,
 		["init_dependencies"] = empty
 	},
 	

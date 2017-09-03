@@ -8,8 +8,8 @@ blocks_movement = {"move", "mine"}
 blocks_selection = {"auto-refuel", "build", "put", "take"}
 
 always_possible_actions = {"take-from-ground", "speed", "stop-auto-move-to", "stop-auto-refuel", "stop-auto-take"}
-selection_actions = {"mine", "put-stack", "rotate", "take"}
-ui_actions = {"craft", "put", "recipe", "tech"}
+selection_actions = {"mine", "put", "rotate", "take-stack"}
+ui_actions = {"craft", "recipe", "take", "tech"}
 
 -- TODO: "throw" and "vehicle"
 -- TODO: Check if we need the type parameter in auto-refuel, add amount parameter?
@@ -30,6 +30,7 @@ default_priorities = {
 	["mine"] = 6,
 	["auto-move-to"] = 7,
 	["auto-move-to-command"] = 7,
+	["entity-interaction"] = 100
 }
 max_ranges = {
 	["build"] = 6,
