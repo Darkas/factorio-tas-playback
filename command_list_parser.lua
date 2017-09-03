@@ -41,6 +41,8 @@ function init()
 	global.tech_queue = {}
 	global.command_finished_times = {}
 	
+	global.current_mining = 0
+	
 	global.current_command_group_tick = nil
 end
 
@@ -50,11 +52,14 @@ script.on_event(defines.events.on_research_finished, function (event)
 	table.delete(global.tech_queue, 1)
 end)
 
+script.on_event(defines.events.on_player_mined_item, function(event)
+	global.current_mining = global.current_mining + (event.item_stack.count or 1)
+end)
+
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
 		return true
 	end
-	
 	
 	commandqueue[tick] = {}
 

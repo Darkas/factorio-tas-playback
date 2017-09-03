@@ -1,6 +1,3 @@
-
-
-
 function auto_move_to_low_level (command, myplayer, tick)
 	local target_pos = nil
 	
@@ -171,10 +168,6 @@ high_level_commands = {
 	
 	["mine"] = {
 		["to_low_level"] = function (command, myplayer, tick)
-			if not command.data.started then
-				command.data.started = tick
-			end
-			
 			return command
 		end,
 		["executable"] = function(command, myplayer, tick)
@@ -182,19 +175,11 @@ high_level_commands = {
 				return false
 			end
 		
-			if command.data.started and command.amount then
-				local time = 0
-				if command.data.ore_type == "stone" then
-					time = 95
-				else
-					time = 125
-				end
-			
-				if tick - command.data.started > time * command.amount then
-					command.finished = true
-					command.data.send_nil = true
-					return false
-				end
+			if command.amount and global.current_mining >= command.amount then
+				command.finished = true
+				command.data.send_nil = true
+				global.current_mining = 0
+				return false
 			end
 			
 			return true

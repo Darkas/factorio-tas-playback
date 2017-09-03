@@ -27,9 +27,8 @@ commandqueue["command_list"] = {
 		name = "start-2",
 		required = {"mine-coal"},
 		commands = {
-			{"craft", "iron-axe", 1},
 			{"auto-move-to-command", "mine-rock"},
-			{"mine", {-56,16}, name="mine-rock"},
+			{"mine", {-56,16}, amount=1, name="mine-rock"},
 		}
 	},
 	{
