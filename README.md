@@ -132,6 +132,7 @@ Currently implemented commands:
 * `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`:
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
 * `{"pickup", oneshot}`: Pick up items from floor. If `oneshot` is set, this will be active only once, otherwise it stays active until it is deactivated.
+* `{"recipe", {<X>,<Y>}, <recipe>}`
 
 To be implemented:
 

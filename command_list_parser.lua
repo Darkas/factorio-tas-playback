@@ -97,19 +97,25 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		if (not command_list[1]) then
 			return false
 		end
+
+		local command_group = command_list[1]
+
+		if command_group.save_before then 
+			game.server_save(tas_name .. "__" .. command_group.name)
+		end
 		
-		local iterations = command_list[1].iterations or 5
+		local iterations = command_group.iterations or 5
 		local initialized_names = {}
 		
 		for i=0,iterations do
-			for i, command in ipairs(command_list[1].commands) do
-				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_list[1].name)) then
-					add_command_to_current_set(command, myplayer, tick, commandqueue, command_list[1])
+			for i, command in ipairs(command_group.commands) do
+				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
+					add_command_to_current_set(command, myplayer, tick, commandqueue, command_group)
 					
 					if command.name then
 						initialized_names[#initialized_names + 1] = command.name
 					end
-					table.remove(command_list[1].commands, i)
+					table.remove(command_group.commands, i)
 				end
 			end
 		end

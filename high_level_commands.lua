@@ -231,7 +231,60 @@ high_level_commands = {
 	},
 	
 	["put"] = {
-		["to_low_level"] = return_self_finished,
+		["to_low_level"] = function(command, myplayer, tick)
+			local item = command[3]
+			local amount = command[4]
+			local inventory = command.inventory
+			
+			local entity = get_entity_from_pos(command[2], myplayer)
+			
+			if not inventory then
+				local item_type = game.item_prototypes[item].type
+				if entity.type == "furnace" then
+					if item == "raw-wood" or item == "coal" then
+						inventory = defines.inventory.fuel
+					else 
+						inventory = defines.inventory.furnace_source
+					end
+				elseif entity.type == "assembling-machine" then
+					if item_type == "module" then
+						inventory = defines.inventory.assembling_machine_modules
+					else
+						inventory = defines.inventory.assembling_machine_input
+					end
+				elseif entity.type == "lab" then
+					if item_type == "module" then
+						inventory = defines.inventory.lab_modules
+					else
+						inventory = defines.inventory.lab_input
+					end
+				elseif entity.type == "car" then
+					inventory = defines.inventory.car_trunk
+				elseif entity.type == "rocket-silo" then
+					if item_type == "module" then
+						inventory = defines.inventory.assembling_machine_modules
+					elseif item == "satellite" then 
+						inventory = defines.inventory.rocket_silo_rocket
+					else 
+						inventory = defines.inventory.assembling_machine_input
+					end
+				elseif entity.type == "container" then
+					inventory = defines.inventory.chest
+				end
+			end
+			
+			if not item then -- take the first thing in the inventory
+				item = entity.get_inventory(inventory)[1].name
+			end
+			
+			if not amount then -- take everything
+				amount = math.min(entity.get_item_count(item), game.item_prototypes[item].stack_size)
+			end
+			
+			command.finished = true
+			
+			return {command[1], command[2], item, amount, inventory}
+		end,
 		["executable"] = function(command, myplayer, tick)
 			if not is_entity_at_pos(command[2], myplayer) then
 				return false
@@ -277,21 +330,22 @@ high_level_commands = {
 			local entity = get_entity_from_pos(command[2], myplayer)
 			
 			if not inventory then
-				if entity.type == "furnace" then
-					inventory = defines.inventory.furnace_result
-				end
-				
-				if entity.type == "assembling-machine" then
-					inventory = defines.inventory.assembling_machine_output
-				end
+				local invs = {
+					furnace = defines.inventory.furnace_result,
+					["assembling-machine"] = defines.inventory.assembling_machine_output,
+					container = defines.inventory.chest,
+					car = defines.inventory.car_trunk,
+					["cargo-wagon"] = defines.inventory.cargo_wagon,
+				}
+				inventory = invs[entity.type]
 			end
 			
-			if not item then -- take iron and copper from a furnace
-				item = entity.recipe.name
+			if not item then -- take the first thing in the inventory
+				item = entity.get_inventory(inventory)[1].name
 			end
 			
 			if not amount then -- take everything
-				amount = entity.get_item_count(item)
+				amount = math.min(entity.get_item_count(item), game.item_prototypes[item].stack_size)
 			end
 			
 			command.finished = true
