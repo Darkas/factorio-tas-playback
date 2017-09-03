@@ -63,12 +63,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
 		return true
 	end
-	
-	if commandqueue.settings.continue_commands then
-		debugprint("The command list parser REALLY needs the continue_commands setting to be false.")
-		return true
-	end
-	
+		
 	commandqueue[tick] = {}
 
 	-- Check if we finished all commands in the current command set

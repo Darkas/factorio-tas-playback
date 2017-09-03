@@ -328,5 +328,10 @@ high_level_commands = {
 		initialize = empty,
 		init_dependencies = empty
 	},
-
+	recipe = {
+		to_low_level = return_self_finished,
+		executable = return_true,
+		initialize = empty,
+		init_dependencies = empty
+	},
 }
