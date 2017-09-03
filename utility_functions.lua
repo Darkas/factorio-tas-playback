@@ -207,8 +207,8 @@ end
 -- Surface related
 -------------------
 
-function is_entity_at_pos(pos, myplayer)
-	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}})
+function is_entity_at_pos(pos, myplayer, type)
+	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}, type = type})
 
 	if (not entities) or #entities ~= 1 then
 		return false
@@ -217,8 +217,8 @@ function is_entity_at_pos(pos, myplayer)
 	end
 end
 
-function get_entity_from_pos(pos, myplayer)
-	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}})
+function get_entity_from_pos(pos, myplayer, type)
+	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}, type = type})
 
 	if (not entities) or #entities ~= 1 then
 		game.print("There is not precisely one entity at this place!")

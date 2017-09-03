@@ -126,7 +126,7 @@ script.on_event(defines.events.on_tick, function(event)
 		
 		if not commandqueue.settings.continue_commands then
 			global.minestate = nil
-			global.walking_state = {walking = false}
+			global.walkstate = {walking = false}
 		end
 		
 		-- Check what commands are to be executed next

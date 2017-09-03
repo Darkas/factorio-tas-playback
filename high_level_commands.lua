@@ -92,6 +92,7 @@ high_level_commands = {
 		["to_low_level"] = auto_move_to_low_level,
 		["executable"] = function(command, myplayer, tick)
 			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) then
+				debugprint("Auto move stopped!")
 				command.finished = true
 				return false
 			end
@@ -124,35 +125,43 @@ high_level_commands = {
 				command.data.started = tick
 			end
 		
-			return {"put", command[3], "coal", 1, defines.inventory.fuel}
+			return {"put", command[2], "coal", 1, defines.inventory.fuel}
 		end,
 		["executable"] = function(command, myplayer, tick)
-			if not is_entity_at_pos(command[3], myplayer) then
-				return false
-			else
-				local entity = get_entity_from_pos(command[3], myplayer)
+			local type = nil
+			local entity = nil
 			
-				command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			for _,t in pairs({"mining-drill", "furnace", "boiler"}) do
+				if is_entity_at_pos(command[2], myplayer, t) then
+					type = t
+					entity = get_entity_from_pos(command[2], myplayer, t)
+				end
 			end
 			
-			if myplayer.get_item_count("coal") == 0 then
+			if entity then
+				command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			else
 				return false
 			end
 			
 			if command.data.started then
 				local frequency = 0
 		
-				if command[2] == "m" then -- mining drill
+				if type == "mining-drill" then
 					frequency = 1600
 				end
 		
-				if command[2] == "f" then -- stone furnace
+				if type == "furnace" then -- stone furnace
 					frequency = 2660
 				end
 		
 				if (command.data.started - tick) % frequency > 0 then
 					return false
 				end
+			end
+			
+			if myplayer.get_item_count("coal") == 0 then
+				return false
 			end
 			
 			return true

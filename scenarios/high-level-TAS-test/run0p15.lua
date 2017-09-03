@@ -20,8 +20,8 @@ commandqueue["command_list"] = {
 			{"build", "stone-furnace", {-32,29}, 0, on_entering_range = true},
 			{"build", "burner-mining-drill", {-34,29}, 2, on_entering_range = true},
 			{"mine", {-36.5,26.5}, amount=4, on_entering_range = true, name="mine-coal"},
-			{"auto-refuel", "m", {-34,29}, priority=4},
-			{"auto-refuel", "f", {-32,29}},
+			{"auto-refuel", {-34,29}, priority=4},
+			{"auto-refuel", {-32,29}},
 		}
 	},
 	{
@@ -60,8 +60,8 @@ commandqueue["command_list"] = {
 		commands = {
 			{"auto-move-to-command", "furnace", priority=3},
 			{"build", "stone-furnace", {-32,31}, 0, name="furnace"},
-			{"auto-refuel", "m", {-34,31}, priority=4},
-			{"auto-refuel", "f", {-32,31}},
+			{"auto-refuel", {-34,31}, priority=4},
+			{"auto-refuel", {-32,31}},
 			--{"speed", 1},
 		}
 	},
