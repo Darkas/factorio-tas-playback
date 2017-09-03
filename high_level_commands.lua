@@ -63,27 +63,6 @@ function move_collision_box(collision_box, coords)
 	return {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
 end
 
-function is_entity_at_pos(pos, myplayer)
-	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}})
-
-	if (not entities) or #entities ~= 1 then
-		return false
-	else
-		return true
-	end
-end
-
-function get_entity_from_pos(pos, myplayer)
-	local entities = myplayer.surface.find_entities_filtered({area = {{-0.1 + pos[1], -0.1 + pos[2]}, {0.1 + pos[1], 0.1 + pos[2]}}})
-
-	if (not entities) or #entities ~= 1 then
-		game.print("There is not precisely one entity at this place!")
-		return nil
-	end
-	
-	return entities[1]
-end
-
 function return_true()
 	return true
 end

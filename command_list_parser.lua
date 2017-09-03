@@ -220,6 +220,10 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue, comma
 		command.name = namespace_prefix(command.name, command_group.name)
 	end
 	
+	if command.command_finished then
+		command.command_finished = namespace_prefix(command.command_finished, command_group.name)
+	end
+	
 	-- Set default priority
 	if not command.priority then
 		command.priority = default_priorities[command[1]]
@@ -283,6 +287,36 @@ function command_executable(command, myplayer, tick)
 	
 	if command.on_leaving_range and not leaving_range(command, myplayer, tick) then
 		return false
+	end
+	
+	if command.items_available then
+		local pos = nil
+		
+		if command[1] == "take" and not command.items_available.pos then -- we can use the default position here
+			pos = command[2]
+		else
+			pos = command.items_available.pos
+		end
+		
+		entity = get_entity_from_pos(pos, myplayer)
+		
+		if entity.get_item_count(command.items_available[1]) < command.items_available[2] then
+			return false
+		end
+	end
+	
+	if command.command_finished then
+		local com_finished = false
+		
+		for _, com in pairs(global.current_command_set) do
+			if com.finished and com.name and com.name == command.command_finished then
+				com_finished = true
+			end
+		end
+		
+		if not com_finished then
+			return false
+		end
 	end
 	
 	return true

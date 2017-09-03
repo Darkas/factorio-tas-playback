@@ -47,7 +47,8 @@ commandqueue["command_list"] = {
 		commands = {
 			{"craft", "iron-gear-wheel", 3},
 			{"mine", {-36.5,28.5}, amount=10, on_entering_range = true, name="mine-coal"},
-			--{"mine", {-36.5,26.5}, on_entering_range = true},
+			{"take", {-32,29}, "iron-plate", 3, defines.inventory.furnace_result, items_available={"iron-plate", 3}, name="iron-taken"},
+			{"craft", "burner-mining-drill", 1, command_finished="iron-taken"},
 			{"speed", 1},
 		}
 	},
