@@ -246,21 +246,22 @@ high_level_commands = {
 	["put"] = {
 		["to_low_level"] = return_self_finished,
 		["executable"] = function(command, myplayer, tick)
-			if not is_entity_at_pos(command[3], myplayer) then
+			if not is_entity_at_pos(command[2], myplayer) then
 				return false
 			else
 				if not command.rect then
-					local entity = get_entity_from_pos(command[3], myplayer)
+					local entity = get_entity_from_pos(command[2], myplayer)
 			
 					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+					command.distance = myplayer.reach_distance
 				end
 			end
 			
-			if myplayer.get_item_count(command[3]) < command[4] then
+			if distance_from_rect(myplayer.position, command.rect) > command.distance then
 				return false
-			else
-				return true
 			end
+			
+			return true
 		end,
 		["initialize"] = empty,
 		["init_dependencies"] = empty
@@ -290,7 +291,12 @@ high_level_commands = {
 					local entity = get_entity_from_pos(command[2], myplayer)
 			
 					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+					command.distance = myplayer.reach_distance
 				end
+			end
+			
+			if distance_from_rect(myplayer.position, command.rect) > command.distance then
+				return false
 			end
 			
 			return true

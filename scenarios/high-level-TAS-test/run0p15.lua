@@ -38,14 +38,15 @@ commandqueue["command_list"] = {
 			{"auto-move-to-command", "furnace-interaction"},
 			{"entity-interaction", {-32,29}, name="furnace-interaction"},
 			{"craft", "stone-furnace", 4},
-			{"mine", {-36.5,28.5}, amount=10, on_entering_range = true, name="mine-coal"},
+			{"take", {-32,29}, "iron-plate", 2, defines.inventory.furnace_result, name="iron-taken"},
 		}
 	},
 	{
 		name = "start-4",
-		required = {"mine-coal"},
+		required = {"iron-taken"},
 		commands = {
-			{"take", {-32,29}, "iron-plate", 1, defines.inventory.furnace_result},
+			{"craft", "iron-gear-wheel", 3},
+			{"mine", {-36.5,28.5}, amount=10, on_entering_range = true, name="mine-coal"},
 			--{"mine", {-36.5,26.5}, on_entering_range = true},
 			{"speed", 1},
 		}
