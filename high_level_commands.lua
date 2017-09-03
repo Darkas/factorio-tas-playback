@@ -204,7 +204,6 @@ high_level_commands = {
 		
 			if command.amount and global.current_mining >= command.amount then
 				command.finished = true
-				command.data.send_nil = true
 				global.current_mining = 0
 				return false
 			end

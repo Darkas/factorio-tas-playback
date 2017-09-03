@@ -40,7 +40,6 @@ max_ranges = {
 
 function init()
 	global.current_command_set = {}
-	global.previous_commands = {}
 	global.tech_queue = {}
 	global.command_finished_times = {}
 	
@@ -62,6 +61,11 @@ end)
 
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
+		return true
+	end
+	
+	if commandqueue.settings.continue_commands then
+		debugprint("The command list parser REALLY needs the continue_commands setting to be false.")
 		return true
 	end
 	
@@ -164,31 +168,6 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		commandqueue[tick] = create_commandqueue(executable_commands, command, myplayer, tick)
 	end
 	
-	-- Do we have to send a {"mine", nil}?
-	
-	for _, command in pairs(global.current_command_set) do
-		if command[1] == "mine" and command.data.send_nil then
-			command.data.send_nil = false
-			commandqueue[tick][#commandqueue[tick] + 1] = {"mine",nil}
-		end
-	end
-	
-	-- Do we have to send a {"move", "STOP"}?
-	
-	local stop = true
-	
-	for _, command in pairs(global.current_command_set) do
-		if (command[1] == "auto-move-to" or command[1] == "auto-move-to-command" or command[1] == "move") and (not command.finished) then
-			stop = false
-			stopped = false
-		end
-	end
-	
-	if stop and (not stopped) then
-		commandqueue[tick][#commandqueue[tick] + 1] = {"move","STOP"}
-		stopped = true
-	end
-	
 	return true
 end
 
@@ -247,12 +226,6 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	
 	for _,com in pairs(command_collection) do
 		queue[#queue + 1] = high_level_commands[com[1]].to_low_level(com, myplayer, tick)
-	end
-	
-	if tables_equal(global.previous_commands, queue) then
-		queue = {}
-	else
-		global.previous_commands = queue
 	end
 
 	-- save finishing time for on_relative_tick

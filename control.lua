@@ -124,6 +124,11 @@ script.on_event(defines.events.on_tick, function(event)
 		local tick = game.tick - global.start_tick
 		local myplayer = global.myplayer
 		
+		if not commandqueue.settings.continue_commands then
+			global.minestate = nil
+			global.walking_state = {walking = false}
+		end
+		
 		-- Check what commands are to be executed next
 		if not command_list_parser.evaluate_command_list(commandqueue["command_list"], commandqueue, myplayer, tick) then
 			end_of_input(myplayer)

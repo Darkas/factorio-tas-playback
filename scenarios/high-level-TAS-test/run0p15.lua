@@ -6,7 +6,8 @@ local commandqueue = {}
 commandqueue["settings"] = {
     debugmode = true,
     allowspeed = true,
-    end_tick_debug = true
+    end_tick_debug = true,
+	continue_commands = false
 }
 
 commandqueue["command_list"] = {
