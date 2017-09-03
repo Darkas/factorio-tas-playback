@@ -1,0 +1,30 @@
+UI interactions (inventory, toolbelt):
+On an opened UI, arbitrary amounts of interactions per tick are possible. A UI has to be closed for a tick to be able to open a new UI (i.e. you cannot press E twice in the same frame or similar).
+
+Selection interactions (mine, take out/put into machines):
+The selection can only be moved once per tick. It is possible to do arbitrary put interactions in the same tick (for example, put 3 stacks from the toolbelt into a chest without using the UI) and it is possible to do a put action and open the UI, but not a put action and a take action.
+
+Build:
+It is only possible to build if the frame started while holding a buildable entity. But then, arbitrary amounts of entities can be built (even different ones, if they are in the toolbar). The range that is used to see if the entity can be built is the distance from the players position to the collision_box of the entity (centered at the center of the entity). It is possible to build even if the distance is exactly 6 (and even slightly higher: 6.00234 allows you to build, 6.00235 not). An arbitrary amount of rotations on the cursor stack can be performed. A selected entity can also be rotated an arbitrary number of times during the same tick.
+
+Mine:
+The distance seems to be the resource_reach_distance, and mining is possible if the distance from the collision_box is smaller than the resource_reach_distance. Note that the position of the ores is not precisely centered (it seems random, there might be a pattern), so the easiest way to retrieve the position is to get it from the entity itself. The player can build while he is mining, as long as at the end of the tick the selection is still the mined entity.
+
+Item manipulation:
+After an entity has crafted an item, it is only possible to take it out in the frame where the item is displayed in its inventory. If in item is inserted into the player's inventory it can be used in the same frame for handcrafting.
+
+
+
+Notes:
+- arbitrary means number of clicks that factorio can process each tick. Reliably, this number seems to be around at least 20 but it can go up to 40 and in rare instances above 80.
+
+
+
+Rules
+
+Changing technologies takes zero ticks.
+If we build in a single tick, we can build an arbitrary number of buildings inside a circle of radius six around the player character.
+Mining and Building are compatible.
+We require a single tick to take a stack from an entity.
+We can put an arbitrary number of stacks and half-stacks in an entities inventory.
+Can put an arbitrary number of a single item up to a full stack into an entity inventory in two ticks.

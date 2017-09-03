@@ -13,6 +13,7 @@ selection_actions = {"mine", "put-stack", "rotate", "take"}
 ui_actions = {"craft", "put", "recipe", "tech"}
 
 -- TODO: "throw" and "vehicle"
+-- TODO: Check if we need the type parameter in auto-refuel, add amount parameter?
 
 inherited_actions = {
 	["auto-refuel"] = "put-stack",
@@ -73,64 +74,13 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			return false
 		end
 		
-		-- TODO: Add, not overwrite here.
-		global.current_command_set = command_list[1].commands
-		for i, command in ipairs(global.current_command_set) do
-			if command[1] == "tech" then
-				if myplayer.force.current_research then
-					global.tech_queue[#global.tech_queue + 1] = command[2]
-				else
-					commandqueue[tick][#commandqueue[tick] + 1] = command
-				end
-				table.delete(global.current_command_set, i)
-			end
+		for i, command in ipairs(command_list[1].commands) do
+			add_command_to_current_set(command, myplayer, tick, commandqueue)
 		end
 		table.remove(command_list, 1)
 		
 		-- Initialize commands here
 		
-		for _, command in pairs(global.current_command_set) do
-			command.data = {}
-			
-			-- Initialize the collision boxes
-			
-			local coords = nil
-			local collision_box = nil
-			
-			if command[1] == "build" then
-				coords = command[3]
-				collision_box = game.entity_prototypes[command[2]].collision_box
-				
-				command.distance = myplayer.build_distance
-			end
-			
-			if command[1] == "mine" then
-				local resources = myplayer.surface.find_entities_filtered({area = {{-0.1 + command[2][1], -0.1 + command[2][2]}, {0.1 + command[2][1], 0.1 + command[2][2]}}, type= "resource"})
-				
-				if (not resources) or #resources ~= 1 then
-					game.print("There is not precisely 1 resource patch at this place!")
-					return false
-				end
-				
-				coords = resources[1].position
-				collision_box = game.entity_prototypes[resources[1].name].collision_box
-				
-				command.data.ore_type = resources[1].name
-				
-				game.print(command.data.ore_type)
-				
-				command.distance = myplayer.resource_reach_distance
-			end
-			
-			if coords and collision_box then
-				local x,y = get_coordinates(coords)
-				command.rect = {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
-			end
-			
-			if not command.priority then
-				command.priority = default_priorities[command[1]]
-			end
-		end
 		
 		-- Find the position auto-move-to-command has to move to
 	
@@ -216,6 +166,72 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	
 	return queue
 end
+
+
+-- Add command to current command set and initialize the command. 
+function add_command_to_current_set(command, myplayer, tick, commandqueue)
+	local do_add = true -- At the end of this function we add the command to the set if this is still true
+
+	-- Tick conditions
+	if command.
+	-- Enqueue technology
+	if command[1] == "tech" then
+		if myplayer.force.current_research then
+			global.tech_queue[#global.tech_queue + 1] = command[2]
+		else
+			commandqueue[tick][#commandqueue[tick] + 1] = command
+		end
+		table.delete(global.current_command_set, i)
+		do_add = false
+	end
+
+	command.data = {}
+	
+	-- Initialize the collision boxes
+	local coords = nil
+	local collision_box = nil
+	
+	if command[1] == "build" then
+		coords = command[3]
+		collision_box = game.entity_prototypes[command[2]].collision_box
+		
+		command.distance = myplayer.build_distance
+	end
+	
+	if command[1] == "mine" then
+		local resources = myplayer.surface.find_entities_filtered({area = {{-0.1 + command[2][1], -0.1 + command[2][2]}, {0.1 + command[2][1], 0.1 + command[2][2]}}, type= "resource"})
+		
+		if (not resources) or #resources ~= 1 then
+			game.print("There is not precisely 1 resource patch at this place!")
+			return false
+		end
+		
+		coords = resources[1].position
+		collision_box = game.entity_prototypes[resources[1].name].collision_box
+		
+		command.data.ore_type = resources[1].name
+		
+		game.print(command.data.ore_type)
+		
+		command.distance = myplayer.resource_reach_distance
+	end
+	
+	if coords and collision_box then
+		local x,y = get_coordinates(coords)
+		command.rect = {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
+	end
+	
+	-- Set default priority
+	if not command.priority then
+		command.priority = default_priorities[command[1]]
+	end
+
+	-- Add command to set
+	if do_add then
+		global.current_command_set[#global.current_command_set + 1] = command
+	end
+end
+
 
 function to_low_level(command, myplayer, tick)
 	if command[1] == "auto-move-to" or command[1] == "auto-move-to-command" then
@@ -304,6 +320,8 @@ function command_executable(command, myplayer, tick)
 	if command.data.finished then
 		return false
 	end
+
+	if command.after_tick and command.after_tick < tick then return false end
 	
 	if command.on_entering_range then
 		if distance_from_rect(myplayer.position, command.rect) > command.distance then
@@ -394,6 +412,7 @@ function command_sqdistance(command, player)
 	end
 end
 
+-- Given the set commands, add commands from the set executable_commands
 function add_compatible_commands(executable_commands, commands, myplayer)
 	-- TODO: Allow more than one command in the commands list here!
 	if #commands ~= 1 then

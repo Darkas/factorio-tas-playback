@@ -78,7 +78,7 @@ Where :
 	* `{"move","<DIRECTION>"}` commands the player to start moving in a direction or stop. Directions can be `N`,`S`,`E`,`W`,`NE`,`SE`,`SW`,`NW` or `STOP`.
 	* `{"craft","<ITEM>", <AMOUNT>}` commands the player to pocket-craft given amount of specified item. 
 	* `{"mine", {<X>,<Y>}}` commands the player to start mining at specified coordinated. To stop mining, replace `{<X>,<Y>}` with `nil`.
-	* `{"build","<ITEM>", {<X>,<Y>}, <FACING DIRECTION>}` commands the player to build the specified item at the specified coordinates, with the item facing a certain direction. The `<FACING DIRECTION>` should be an element of the factorio class [`defines.direction`](http://lua-api.factorio.com/latest/defines.html#defines.direction ). 
+	* `{"build","<ITEM>", {<X>,<Y>}, <FACING DIRECTION>}` commands the player to build the specified item at the specified coordinates, with the item facing a certain direction. The `<FACING DIRECTION>` should be an element of the factorio class [`defines.direction`](http://lua-api.factorio.com/latest/defines.html#defines.direction ). NOTE: The specified position is must be entered as the center of the entity. Otherwise, you do things that are not possible in the base game.
 	* `{"put",{X,Y},"<ITEM>", <AMOUNT>, <destination inventory type>}` commands the player to put the specified amount of the specified item into the inventory of the entity at the given coordinates. The `<destination inventory type>` must be an element of the factorio class [`defines.inventory`](http://lua-api.factorio.com/latest/defines.html#defines.inventory ) that says which inventory slot is to be used. 
 	* `{"speed", <speed>}` sets the game speed if `allowspeed` is at `true`. Otherwise, a warning will be generated. 
 	* `{"take",{<X>,<Y>},"<ITEM>",<AMOUNT>,<source inventory type>}` commands the player to take the specified amount of the specified item from the inventory of the entity at the given coordinates. The `<source inventory type>` must be an element of the factorio class [`defines.inventory`](http://lua-api.factorio.com/latest/defines.html#defines.inventory ) that says which inventory slot is to be used. 
@@ -89,4 +89,71 @@ Where :
 	* `{"stopcraft", <Index>, <Quantity>}` cancels the crafting of the given quantity of the items at the given index in the queue. If the `<Quantity>` is not specified, 1 will be used. 
 	
 	
-	
+## High Level Language
+This fork is creating an abstracted language from the elementary actions given in the main mod. The goals are twofold, for one out input contains as little reference to ticks as possible and instead we determines the tick in which an action needs to run depending on the game state while the game is running. We also add some more abstracted commands. For example the action that takes items from a furnace depends not on a tick but on the inventory of the furnace. We enqueue technologies instead of giving the tick in which the technology finishes, we walk to a position, we automatically refuel burner-miners, we allow building a whole blueprint.
+
+The following is an example of our language in use.
+```
+commandqueue["command_list"] = {
+	{
+		name = "start-1",
+		commands = {
+			--{"speed", 10},
+			{"craft", "iron-axe", 1},
+			{"auto-move-to-command", "mine-coal"},
+			{"build", "stone-furnace", {-32,29}, 0, on_entering_range = true},
+			{"build", "burner-mining-drill", {-34,29}, 2, on_entering_range = true},
+			{"mine", {-36.5,26.5}, amount=4, on_entering_range = true, name="mine-coal"},
+			{"auto-refuel", "m", {-34,29}},
+			{"auto-refuel", "f", {-32,29}},
+		}
+	},
+	{
+		name = "start-2",
+		commands = {
+			{"mine", {-56,16}}
+		}
+	},
+}
+
+```
+
+Currently implemented commands:
+* `{"auto-move-to", {<X>,<Y>}}`: move to a position, walking diagonal first, without smart path-finding around entities.
+* `{"build", <entity>, {<X>,<Y>}, <facing direction>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
+* `{"craft", <item>, <count>}`: 
+* `{"auto-refuel", "<type>", {<X>,<Y>}}`: automatically refuel the entity at the location. Where type is "m" for burner mining drill, "f" for stone furnace and "b" for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low). 
+* `{"rotate", {<X>, <Y>}, "<direction>"}`
+* `{"tech", "<research-name>"}`: This pushes the researches into a queue, so it can be issued in advance.
+* `{"mine", {<X>,<Y>}, amount=...}`: It is assumed that iron, coal and copper need 124 ticks, stone needs 95 ticks
+
+To be implemented:
+
+{"build-blueprint", "<name>", {<X>, <Y>}}
+"move"
+"put"
+"take"
+"take-from-ground"
+"recipe"
+"throw"
+"vehicle"
+"auto-take"
+"stop-auto-refuel"
+"stop-auto-take"
+"stop-auto-move-to"
+
+Currently implemented conditions:
+* `on_entering_range=<bool>`: as soon as this action is possible
+* `on_leaving_range=<bool>`: right before this action becomes impossible
+* `on_tick={<tick>}`: do this on or after a certain tick
+
+
+To be implemented:
+on_player_in_range=<range> (player is range away from )
+on_exact_tick=<tick> (do this on exactly the tick - do we need this?)
+on_relative_tick = {<tick>, <name>}: do this on or after a given amount of ticks have passed since the command with given name finished or since the current command set began (if the name is not set or the param is a single int).
+on_exact_relative_tick={<tick>, <name>} (do this a given amount of ticks after the command with the given name finished or after the current command set began (if name is not set))
+items_total={<item name>, <N>} (there are currently N of item name available (in the entire world))
+needs_fuel={<X>,<Y>} (entity needs fuel)
+
+--]]
