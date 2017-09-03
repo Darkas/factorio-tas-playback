@@ -7,7 +7,7 @@ commandqueue["settings"] = {
     debugmode = true,
     allowspeed = true,
     end_tick_debug = true,
-	continue_commands = false
+    enable_high_level_commands = true
 }
 
 commandqueue["command_list"] = {

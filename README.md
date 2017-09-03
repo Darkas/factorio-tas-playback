@@ -137,7 +137,6 @@ To be implemented:
 
 {"build-blueprint", "<name>", {<X>, <Y>}}
 "move"
-"take-from-ground"
 "recipe"
 "throw"
 "vehicle"
