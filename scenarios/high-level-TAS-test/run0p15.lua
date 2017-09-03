@@ -13,7 +13,7 @@ commandqueue["command_list"] = {
 	{
 		name = "start-1",
 		commands = {
-			--{"speed", 10},
+			{"speed", 10},
 			{"craft", "iron-axe", 1},
 			{"auto-move-to-command", "mine-coal"},
 			{"build", "stone-furnace", {-32,29}, 0, on_entering_range = true},
@@ -25,8 +25,10 @@ commandqueue["command_list"] = {
 	},
 	{
 		name = "start-2",
+		required = {"mine-coal"},
 		commands = {
-			{"mine", {-56,16}}
+			{"auto-move-to-command", "mine-rock"},
+			{"mine", {-56,16}, name="mine-rock"},
 		}
 	},
 }

@@ -72,7 +72,15 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
-	-- TODO: set finished to true if finished_commands and command_list[2].required have the same elements
+	if command_list[1] and command_list[1].required then
+		finished = true
+		
+		for _,name in pairs(command_list[1].required) do
+			if not has_value(finished_commands, name) then
+				finished = false
+			end
+		end
+	end
 	
 	-- Add the next command group to the current command set.
 	if finished then
@@ -185,7 +193,7 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue)
 	end
 	
 	if command[1] == "mine" then
-		local resources = myplayer.surface.find_entities_filtered({area = {{-0.1 + command[2][1], -0.1 + command[2][2]}, {0.1 + command[2][1], 0.1 + command[2][2]}}, type= "resource"})
+		local resources = myplayer.surface.find_entities_filtered({area = {{-0.1 + command[2][1], -0.1 + command[2][2]}, {0.1 + command[2][1], 0.1 + command[2][2]}}})
 		
 		if (not resources) or #resources ~= 1 then
 			game.print("There is not precisely 1 resource patch at this place!")
@@ -378,7 +386,7 @@ function command_executable(command, myplayer, tick)
 			return false
 		end
 		
-		if command.data.started then
+		if command.data.started and command.amount then
 			local time = 0
 			if command.data.ore_type == "stone" then
 				time = 95
