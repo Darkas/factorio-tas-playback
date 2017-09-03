@@ -236,16 +236,19 @@ end
 
 TAScommands["pickup"] = function (tokens, myplayer)
   local pos = myplayer.position
-  local r = myplayer.pickup_distance
+  local r = myplayer.item_pickup_distance
   local area = {{pos.x - r, pos.y - r}, {pos.x + r, pos.y + r}}
-  local items = game.surfaces.nauvis.find_entities_filtered{area=area, name="item-on-floor"} 
+  local items = myplayer.surface.find_entities_filtered{area=area, type="item-entity"} 
+  
+  if #items > 0 then
+	debugprint("Picking up items (at position {" .. myplayer.position.x .. ", " .. myplayer.position.y .. "}).")
+  end
 
   for _, item in pairs(items) do
     local stack = item.stack
     local totake = stack.count
     local taken = myplayer.insert{name=stack.name, count=totake}
     
-    debugprint("Picking up items (at position {" .. myplayer.position.x .. ", " .. myplayer.position.y .. "}).")
     if taken < totake then errprint("Pickup failed, inventory full!") end
 
     item.destroy()
