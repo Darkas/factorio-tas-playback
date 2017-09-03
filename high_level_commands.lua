@@ -184,7 +184,12 @@ high_level_commands = {
 	
 	["craft"] = {
 		["to_low_level"] = return_self_finished,
-		["executable"] = return_true,
+		["executable"] = function(command, myplayer, tick)
+		--	-- Check for missing materials
+			local item = command[2]
+			local count = command[3]
+			return myplayer.get_craftable_count(item) >= count
+		end,
 		["initialize"] = empty,
 		["init_dependencies"] = empty
 	},
