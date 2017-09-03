@@ -186,13 +186,9 @@ high_level_commands = {
 		["to_low_level"] = return_self_finished,
 		["executable"] = function(command, myplayer, tick)
 		--	-- Check for missing materials
-		--	local item = command[2]
-		--	local count = command[3]
-
-		--	for _, ingredient in pairs(game.recipe_prototypes[item].ingredients) do
-		--		if ingredient.amount * count > myplayer.get_item_count(item) then return false end
-		--	end
-			return true
+			local item = command[2]
+			local count = command[3]
+			return myplayer.get_craftable_count(item) >= count
 		end,
 		["initialize"] = empty,
 		["init_dependencies"] = empty
