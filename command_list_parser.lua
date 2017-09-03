@@ -95,8 +95,8 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		
 		for i=0,iterations do
 			for i, command in ipairs(command_list[1].commands) do
-				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(initialized_names, high_level_commands[command[1]].init_dependencies(command)) then
-					add_command_to_current_set(command, myplayer, tick, commandqueue)
+				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_list[1].name)) then
+					add_command_to_current_set(command, myplayer, tick, commandqueue, command_list[1])
 					
 					if command.name then
 						initialized_names[#initialized_names + 1] = command.name
@@ -105,7 +105,15 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				end
 			end
 		end
-
+		
+		-- Add namespace prefixes to the next group
+		
+		if command_list[2] and command_list[2].required then
+			for i, name in pairs(command_list[2].required) do
+				command_list[2].required[i] = namespace_prefix(name, command_list[1].name)
+			end
+		end
+		
 		table.remove(command_list, 1)
 		global.current_command_group_tick = tick
 	end
@@ -162,7 +170,7 @@ end
 
 
 -- Add command to current command set and initialize the command. 
-function add_command_to_current_set(command, myplayer, tick, commandqueue)
+function add_command_to_current_set(command, myplayer, tick, commandqueue, command_group)
 	local do_add = true -- At the end of this function we add the command to the set if this is still true
 
 	-- Reset on_relative_tick time.
@@ -181,14 +189,18 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue)
 
 	command.data = {}
 	
+	command.data.parent_command_group = command_group
+	
+	if command.name then
+		command.name = namespace_prefix(command.name, command_group.name)
+	end
+	
 	-- Set default priority
 	if not command.priority then
 		command.priority = default_priorities[command[1]]
 	end
 	
 	high_level_commands[command[1]].initialize(command, myplayer)
-	
-	game.print(command[1])
 
 	-- Add command to set
 	if do_add then

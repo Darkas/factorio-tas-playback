@@ -109,3 +109,15 @@ end
 function tables_equal(t1, t2)
 	return serpent.block(t1) == serpent.block(t2)
 end
+
+function namespace_prefix(name, command_group)
+	if not name then
+		return nil
+	end
+	
+	if not string.find(name, "%.") then
+		return command_group .. "." .. name
+	else
+		return name
+	end
+end

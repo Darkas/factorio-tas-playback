@@ -90,12 +90,20 @@ high_level_commands = {
 	
 	["auto-move-to-command"] = {
 		["to_low_level"] = auto_move_to_low_level,
-		["executable"] = return_true,
+		["executable"] = function(command, myplayer, tick)
+			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) then
+				command.finished = true
+				return false
+			end
+			
+			return true
+		end,
 		["initialize"] = function (command, myplayer)
 			for _, com in pairs(global.current_command_set) do
-				if com.name == command[2] then
+				if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
 					command.data.target_pos = {}
 					distance_from_rect(myplayer.position, com.rect, command.data.target_pos)
+					command.data.target_command = com
 
 					debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 				end

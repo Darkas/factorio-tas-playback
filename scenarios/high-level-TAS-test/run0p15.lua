@@ -13,13 +13,13 @@ commandqueue["command_list"] = {
 	{
 		name = "start-1",
 		commands = {
-			{"speed", 10},
+			{"speed", 5},
 			{"craft", "iron-axe", 1},
 			{"auto-move-to-command", "mine-coal"},
 			{"build", "stone-furnace", {-32,29}, 0, on_entering_range = true},
 			{"build", "burner-mining-drill", {-34,29}, 2, on_entering_range = true},
 			{"mine", {-36.5,26.5}, amount=4, on_entering_range = true, name="mine-coal"},
-			{"auto-refuel", "m", {-34,29}},
+			{"auto-refuel", "m", {-34,29}, priority=4},
 			{"auto-refuel", "f", {-32,29}},
 		}
 	},
@@ -27,8 +27,18 @@ commandqueue["command_list"] = {
 		name = "start-2",
 		required = {"mine-coal"},
 		commands = {
+			{"craft", "iron-axe", 1},
 			{"auto-move-to-command", "mine-rock"},
 			{"mine", {-56,16}, name="mine-rock"},
+		}
+	},
+	{
+		name = "start-3",
+		required = {"mine-rock"},
+		commands = {
+			{"auto-move-to-command", "mine-coal"},
+			{"craft", "stone-furnace", 4},
+			{"mine", {-36.5,26.5}, on_entering_range = true, name="mine-coal"},
 		}
 	},
 }
