@@ -26,6 +26,8 @@ default_priorities = {
 	["speed"] = 5,
 	["build"] = 5,
 	["craft"] = 5,
+	["take"] = 5,
+	["put"] = 5,
 	["auto-refuel"] = 5,
 	["mine"] = 6,
 	["auto-move-to"] = 7,
@@ -43,6 +45,7 @@ function init()
 	global.command_finished_times = {}
 	
 	global.current_mining = 0
+	global.stopped = true
 	
 	global.current_command_group_tick = nil
 end
@@ -168,6 +171,22 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			command.data.send_nil = false
 			commandqueue[tick][#commandqueue[tick] + 1] = {"mine",nil}
 		end
+	end
+	
+	-- Do we have to send a {"move", "STOP"}?
+	
+	local stop = true
+	
+	for _, command in pairs(global.current_command_set) do
+		if (command[1] == "auto-move-to" or command[1] == "auto-move-to-command" or command[1] == "move") and (not command.finished) then
+			stop = false
+			stopped = false
+		end
+	end
+	
+	if stop and (not stopped) then
+		commandqueue[tick][#commandqueue[tick] + 1] = {"move","STOP"}
+		stopped = true
 	end
 	
 	return true

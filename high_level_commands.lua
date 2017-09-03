@@ -279,4 +279,23 @@ high_level_commands = {
 		["initialize"] = empty,
 		["init_dependencies"] = empty
 	},
+	
+	["take"] = {
+		["to_low_level"] = return_self_finished,
+		["executable"] = function(command, myplayer, tick)
+			if not is_entity_at_pos(command[2], myplayer) then
+				return false
+			else
+				if not command.rect then
+					local entity = get_entity_from_pos(command[2], myplayer)
+			
+					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+				end
+			end
+			
+			return true
+		end,
+		["initialize"] = empty,
+		["init_dependencies"] = empty
+	},
 }

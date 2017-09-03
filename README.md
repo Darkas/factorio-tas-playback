@@ -120,19 +120,21 @@ commandqueue["command_list"] = {
 
 Currently implemented commands:
 * `{"auto-move-to", {<X>,<Y>}}`: move to a position, walking diagonal first, without smart path-finding around entities.
+* `{"auto-move-to-command", "<command name>"}`: move to the closest point from the player that allows the command with the given name to be executed.
 * `{"build", <entity>, {<X>,<Y>}, <facing direction>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
 * `{"craft", <item>, <count>}`: 
 * `{"auto-refuel", "<type>", {<X>,<Y>}}`: automatically refuel the entity at the location. Where type is "m" for burner mining drill, "f" for stone furnace and "b" for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low). 
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
 * `{"tech", "<research-name>"}`: This pushes the researches into a queue, so it can be issued in advance.
 * `{"mine", {<X>,<Y>}, amount=...}`: It is assumed that iron, coal and copper need 124 ticks, stone needs 95 ticks
+* `{"take", {<X>,<Y>}, "<item>", <amount>, <inventory>}`:
+* `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`:
+* `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
 
 To be implemented:
 
 {"build-blueprint", "<name>", {<X>, <Y>}}
 "move"
-"put"
-"take"
 "take-from-ground"
 "recipe"
 "throw"
