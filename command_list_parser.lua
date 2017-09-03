@@ -1,6 +1,4 @@
-global.current_command_set = {}
-global.previous_commands = {}
-global.tech_queue = {}
+module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
 
 always_possible = {"speed"}
 blocks_others = {"auto-refuel", "mine"}
@@ -36,6 +34,15 @@ max_ranges = {
 	["build"] = 6,
 }
 
+function init()
+	global.current_command_set = {}
+	global.previous_commands = {}
+	global.tech_queue = {}
+	global.command_finished_times = {}
+	
+	global.current_command_group_tick = nil
+end
+
 script.on_event(defines.events.on_research_finished, function (event)
 	local force = event.research.force
 	commandqueue[game.tick][#commandqueue[game.tick] + 1] =	{"tech", global.tech_queue[1]}
@@ -67,20 +74,17 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	-- TODO: set finished to true if finished_commands and command_list[2].required have the same elements
 	
-
 	-- Add the next command group to the current command set.
 	if finished then
-		if not command_list[1] then
+		if (not command_list[1]) then
 			return false
 		end
-		
+
 		for i, command in ipairs(command_list[1].commands) do
 			add_command_to_current_set(command, myplayer, tick, commandqueue)
 		end
 		table.remove(command_list, 1)
-		
-		-- Initialize commands here
-		
+		global.current_command_group_tick = tick
 		
 		-- Find the position auto-move-to-command has to move to
 	
@@ -147,33 +151,15 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	return true
 end
 
-function create_commandqueue(executable_commands, command, myplayer, tick)
-	local high_level_commands = {command}
-	
-	add_compatible_commands(executable_commands, high_level_commands, myplayer)
-	
-	local queue = {}
-	
-	for _,com in pairs(high_level_commands) do
-		queue[#queue + 1] = to_low_level(com, myplayer, tick)
-	end
-	
-	if tables_equal(global.previous_commands, queue) then
-		queue = {}
-	else
-		global.previous_commands = queue
-	end
-	
-	return queue
-end
 
 
 -- Add command to current command set and initialize the command. 
 function add_command_to_current_set(command, myplayer, tick, commandqueue)
 	local do_add = true -- At the end of this function we add the command to the set if this is still true
 
-	-- Tick conditions
-	if command.
+	-- Reset on_relative_tick time.
+	if command.name then global.command_finished_times[command.name] = nil end
+
 	-- Enqueue technology
 	if command[1] == "tech" then
 		if myplayer.force.current_research then
@@ -231,6 +217,35 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue)
 		global.current_command_set[#global.current_command_set + 1] = command
 	end
 end
+
+
+function create_commandqueue(executable_commands, command, myplayer, tick)
+	local high_level_commands = {command}
+	
+	add_compatible_commands(executable_commands, high_level_commands, myplayer)
+	
+	local queue = {}
+	
+	for _,com in pairs(high_level_commands) do
+		queue[#queue + 1] = to_low_level(com, myplayer, tick)
+	end
+	
+	if tables_equal(global.previous_commands, queue) then
+		queue = {}
+	else
+		global.previous_commands = queue
+	end
+
+	-- save finishing time for on_relative_tick
+	for _, command in pairs(queue) do
+		if command.name then
+			global.command_finished_times[command.name] = tick
+		end
+	end
+	
+	return queue
+end
+
 
 
 function to_low_level(command, myplayer, tick)
@@ -321,7 +336,14 @@ function command_executable(command, myplayer, tick)
 		return false
 	end
 
-	if command.after_tick and command.after_tick < tick then return false end
+	-- on_tick, on_relative_tick
+	if command.on_tick and command.on_tick < tick then return false end
+	if command.on_relative_tick then
+		if type(command.on_relative_tick) == type(1) and tick < global.current_command_group_tick + command.on_relative_tick then return false
+		elseif type(command.on_relative_tick) == type({}) and not global.command_finished_times[command.on_relative_tick[2]] or tick < global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then return false
+		else error("Unrecognized format for on_relative_tick!")
+		end
+	end
 	
 	if command.on_entering_range then
 		if distance_from_rect(myplayer.position, command.rect) > command.distance then
@@ -553,3 +575,5 @@ end
 function basic_action(command)
 	return inherited_actions[command[1]] or command[1]
 end
+
+

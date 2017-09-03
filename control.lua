@@ -125,7 +125,7 @@ script.on_event(defines.events.on_tick, function(event)
 		local myplayer = global.myplayer
 		
 		-- Check what commands are to be executed next
-		if not evaluate_command_list(commandqueue["command_list"], commandqueue, myplayer, tick) then
+		if not command_list_parser.evaluate_command_list(commandqueue["command_list"], commandqueue, myplayer, tick) then
 			end_of_input(myplayer)
 		end
 		
@@ -174,6 +174,7 @@ script.on_init(function()
 	-- Global variables initialization
 	global.walkstate = {walking = false}
 	silo_script.init()
+	command_list_parser.init()
 end)
 
 remote.add_interface("TAS_playback", {launch = function() 
