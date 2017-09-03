@@ -1,3 +1,4 @@
+require("high_level_commands")
 module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
 
 always_possible = {"speed"}
@@ -63,11 +64,11 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	local finished_commands = {}
 	
 	for _, command in pairs(global.current_command_set) do
-		if command.data.finished and command.name then
+		if command.finished and command.name then
 			finished_commands[#finished_commands + 1] = command.name
 		end
 		
-		if not command.data.finished then
+		if not command.finished then
 			finished = false
 		end
 	end
@@ -83,31 +84,30 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	end
 	
 	-- Add the next command group to the current command set.
+	
 	if finished then
 		if (not command_list[1]) then
 			return false
 		end
-
-		for i, command in ipairs(command_list[1].commands) do
-			add_command_to_current_set(command, myplayer, tick, commandqueue)
-		end
-		table.remove(command_list, 1)
-		global.current_command_group_tick = tick
 		
-		-- Find the position auto-move-to-command has to move to
-	
-		for _, command in pairs(global.current_command_set) do
-			if command[1] == "auto-move-to-command" then
-				for _, com in pairs(global.current_command_set) do
-					if com.name == command[2] then
-						command.data.target_pos = {}
-						distance_from_rect(myplayer.position, com.rect, command.data.target_pos)
-
-						debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+		local iterations = command_list[1].iterations or 5
+		local initialized_names = {}
+		
+		for i=0,iterations do
+			for i, command in ipairs(command_list[1].commands) do
+				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(initialized_names, high_level_commands[command[1]].init_dependencies(command)) then
+					add_command_to_current_set(command, myplayer, tick, commandqueue)
+					
+					if command.name then
+						initialized_names[#initialized_names + 1] = command.name
 					end
+					table.remove(command_list[1].commands, i)
 				end
 			end
 		end
+
+		table.remove(command_list, 1)
+		global.current_command_group_tick = tick
 	end
 
 	-- 	Determine which commands we can execute this tick
@@ -181,44 +181,14 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue)
 
 	command.data = {}
 	
-	-- Initialize the collision boxes
-	local coords = nil
-	local collision_box = nil
-	
-	if command[1] == "build" then
-		coords = command[3]
-		collision_box = game.entity_prototypes[command[2]].collision_box
-		
-		command.distance = myplayer.build_distance
-	end
-	
-	if command[1] == "mine" then
-		local resources = myplayer.surface.find_entities_filtered({area = {{-0.1 + command[2][1], -0.1 + command[2][2]}, {0.1 + command[2][1], 0.1 + command[2][2]}}})
-		
-		if (not resources) or #resources ~= 1 then
-			game.print("There is not precisely 1 resource patch at this place!")
-			return false
-		end
-		
-		coords = resources[1].position
-		collision_box = game.entity_prototypes[resources[1].name].collision_box
-		
-		command.data.ore_type = resources[1].name
-		
-		game.print(command.data.ore_type)
-		
-		command.distance = myplayer.resource_reach_distance
-	end
-	
-	if coords and collision_box then
-		local x,y = get_coordinates(coords)
-		command.rect = {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
-	end
-	
 	-- Set default priority
 	if not command.priority then
 		command.priority = default_priorities[command[1]]
 	end
+	
+	high_level_commands[command[1]].initialize(command, myplayer)
+	
+	game.print(command[1])
 
 	-- Add command to set
 	if do_add then
@@ -228,14 +198,14 @@ end
 
 
 function create_commandqueue(executable_commands, command, myplayer, tick)
-	local high_level_commands = {command}
+	local command_collection = {command}
 	
-	add_compatible_commands(executable_commands, high_level_commands, myplayer)
+	add_compatible_commands(executable_commands, command_collection, myplayer)
 	
 	local queue = {}
 	
-	for _,com in pairs(high_level_commands) do
-		queue[#queue + 1] = to_low_level(com, myplayer, tick)
+	for _,com in pairs(command_collection) do
+		queue[#queue + 1] = high_level_commands[com[1]].to_low_level(com, myplayer, tick)
 	end
 	
 	if tables_equal(global.previous_commands, queue) then
@@ -254,93 +224,8 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	return queue
 end
 
-
-
-function to_low_level(command, myplayer, tick)
-	if command[1] == "auto-move-to" or command[1] == "auto-move-to-command" then
-		local target_pos = nil
-		
-		if command[1] == "auto-move-to" then
-			target_pos = command[2]
-		else
-			target_pos = command.data.target_pos
-		end
-				
-		if not command.data.moveData then
-			command.data.moveData = {}
-		
-			if target_pos[2] < myplayer.position.y then
-				command.data.moveData.N = true
-			end
-		
-			if target_pos[2] > myplayer.position.y then
-				command.data.moveData.S = true
-			end
-		
-			if target_pos[1] > myplayer.position.x then
-				command.data.moveData.E = true
-			end
-		
-			if target_pos[1] < myplayer.position.x then
-				command.data.moveData.W = true
-			end
-		end
-		
-		local move_dir = ""
-		
-		-- TODO: Test if this works when we walk on transport belts
-		-- Could replace this by
-		-- if command[2][2] < myplayer.position.y - epsilon then
-		-- 	move_dir = move_dir .. "N"
-		-- end
-		if target_pos[2] < myplayer.position.y and not command.data.moveData.S then
-			move_dir = move_dir .. "N"
-		end
-		
-		if target_pos[2] > myplayer.position.y and not command.data.moveData.N then
-			move_dir = move_dir .. "S"
-		end
-		
-		if target_pos[1] > myplayer.position.x and not command.data.moveData.W then
-			move_dir = move_dir .. "E"
-		end
-		
-		if target_pos[1] < myplayer.position.x and not command.data.moveData.E then
-			move_dir = move_dir .. "W"
-		end
-		
-		if move_dir == "" then
-			move_dir = "STOP"
-			command.data.finished = true
-		end
-		
-		return {"move", move_dir}
-	end
-	
-	if command[1] == "auto-refuel" then
-		if not command.data.started then
-			command.data.started = tick
-		end
-		
-		return {"put", command[3], "coal", 1, defines.inventory.fuel}
-	end
-	
-	if command[1] == "craft" or command[1] == "build" or command[1] == "speed" or command[1] == "rotate" then
-		command.data.finished = true
-		return command
-	end
-	
-	if command[1] == "mine" then
-		if not command.data.started then
-			command.data.started = tick
-		end
-		
-		return command
-	end
-end
-
 function command_executable(command, myplayer, tick)
-	if command.data.finished then
+	if command.finished or not high_level_commands[command[1]].executable(command, myplayer, tick) then
 		return false
 	end
 
@@ -356,49 +241,6 @@ function command_executable(command, myplayer, tick)
 	if command.on_entering_range then
 		if distance_from_rect(myplayer.position, command.rect) > command.distance then
 			return false
-		end
-	end
-	
-	if command[1] == "auto-refuel" then
-		if myplayer.get_item_count("coal") == 0 then
-			return false
-		end
-			
-		if command.data.started then
-			local frequency = 0
-		
-			if command[2] == "m" then -- mining drill
-				frequency = 1600
-			end
-		
-			if command[2] == "f" then -- stone furnace
-				frequency = 2660
-			end
-		
-			if (command.data.started - tick) % frequency > 0 then
-				return false
-			end
-		end
-	end
-	
-	if command[1] == "mine" then
-		if distance_from_rect(myplayer.position, command.rect) > command.distance then
-			return false
-		end
-		
-		if command.data.started and command.amount then
-			local time = 0
-			if command.data.ore_type == "stone" then
-				time = 95
-			else
-				time = 125
-			end
-			
-			if tick - command.data.started > time * command.amount then
-				command.data.finished = true
-				command.data.send_nil = true
-				return false
-			end
 		end
 	end
 	
@@ -488,96 +330,6 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 	end
 	
 	-- TODO: move and mine are incompatible, do something about UI interactions
-end
-
-function sqdistance(pos1, pos2)
-	local x1, y1 = get_coordinates(pos1)
-	local x2, y2 = get_coordinates(pos2)
-
-	return (x1 - x2)^2 + (y1 - y2)^2
-end
-
-function distance_from_rect(pos, rect, closest)
-	local posx, posy = get_coordinates(pos)
-	
-	local rect1x, rect1y = get_coordinates(rect[1])
-	local rect2x, rect2y = get_coordinates(rect[2])
-	
-	local corners = {{rect1x, rect1y}, {rect1x, rect2y}, {rect2x, rect1y}, {rect2x, rect2y}}
-	
-	-- find the two closest corners to pos and the center
-	
-	local index = 1
-	
-	for i,corner in pairs(corners) do
-		if sqdistance(corner, pos) < sqdistance(corners[index], pos) then
-			index = i
-		end
-	end
-	
-	local corner1 = corners[index]
-	table.remove(corners, index)
-	
-	local index = 1
-	
-	for i,corner in pairs(corners) do
-		if sqdistance(corner, pos) < sqdistance(corners[index], pos) then
-			index = i
-		end
-	end
-	
-	local corner2 = corners[index]
-	
-	local center = {(rect1x + rect2x)/2, (rect1y + rect2y)/2}
-	
-	-- find the intersection of the line [corner1, corner2] and [pos, center]
-	
-	local d = (corner1[1] - corner2[1]) * (posy - center[2]) - (corner1[2] - corner2[2]) * (posx - center[1])
-	
-	local intersection = {
-		(corner1[1] * corner2[2] - corner1[2] * corner2[1]) * (posx - center[1]) - (posx * center[2] - posy * center[1]) * (corner1[1] - corner2[1]),
-		(corner1[1] * corner2[2] - corner1[2] * corner2[1]) * (posy - center[2]) - (posx * center[2] - posy * center[1]) * (corner1[2] - corner2[2]),
-	}
-	
-	-- closest is defined this way, so that if passed to the function as a parameter, the closest point will also be returned
-	
-	if not closest then
-		closest = {}
-	end
-	
-	closest[1] = corner1[1]
-	closest[2] = corner1[2]
-	
-	for _,point in pairs({corner2, intersection}) do
-		if sqdistance(point, pos) < sqdistance(closest, pos) then
-			closest[1] = point[1]
-			closest[2] = point[2]
-		end
-	end
-	
-	return math.sqrt(sqdistance(closest, pos))
-end
-
-function get_coordinates(pos)
-	if pos.x then 
-		return pos.x, pos.y
-	else
-		return pos[1], pos[2]
-	end
-end
-
-function has_value(table, element)
-	for _,v in pairs(table) do
-		if v == element then
-			return true
-		end
-	end
-	
-	return false
-end
-
-function tables_equal(t1, t2)
-	return serpent.block(t1) == serpent.block(t2)
 end
 
 function basic_action(command)
