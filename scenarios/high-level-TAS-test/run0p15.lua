@@ -38,7 +38,7 @@ commandqueue["command_list"] = {
 			{"auto-move-to-command", "furnace-interaction"},
 			{"entity-interaction", {-32,29}, name="furnace-interaction"},
 			{"craft", "stone-furnace", 4},
-			{"take", {-32,29}, "iron-plate", 2, defines.inventory.furnace_result, name="iron-taken"},
+			{"take", {-32,29}, name="iron-taken"},
 		}
 	},
 	{
@@ -47,20 +47,21 @@ commandqueue["command_list"] = {
 		commands = {
 			{"craft", "iron-gear-wheel", 3},
 			{"mine", {-36.5,28.5}, amount=10, on_entering_range = true, name="mine-coal"},
-			{"take", {-32,29}, "iron-plate", 3, defines.inventory.furnace_result, items_available={"iron-plate", 3}, name="iron-taken"},
+			{"take", {-32,29}, "iron-plate", items_available={"iron-plate", 2}, name="iron-taken"},
 			{"craft", "burner-mining-drill", 1, command_finished="iron-taken"},
 			{"build", "burner-mining-drill", {-34,31}, 2, items_available={"burner-mining-drill", 1}, name="miner-built"},
+			{"speed", 1},
 		}
 	},
 	{
 		name = "start-5",
 		required = {"miner-built"},
 		commands = {
-			{"auto-move-to-command", "furnace"},
+			{"auto-move-to-command", "furnace", priority=3},
 			{"build", "stone-furnace", {-32,31}, 0, name="furnace"},
 			{"auto-refuel", "m", {-34,31}, priority=4},
 			{"auto-refuel", "f", {-32,31}},
-			{"speed", 10},
+			--{"speed", 1},
 		}
 	},
 }

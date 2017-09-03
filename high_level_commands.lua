@@ -261,7 +261,35 @@ high_level_commands = {
 	},
 	
 	["take"] = {
-		["to_low_level"] = return_self_finished,
+		["to_low_level"] = function(command, myplayer, tick)
+			local item = command[3]
+			local amount = command[4]
+			local inventory = command.inventory
+			
+			local entity = get_entity_from_pos(command[2], myplayer)
+			
+			if not inventory then
+				if entity.type == "furnace" then
+					inventory = defines.inventory.furnace_result
+				end
+				
+				if entity.type == "assembling-machine" then
+					inventory = defines.inventory.assembling_machine_output
+				end
+			end
+			
+			if not item then -- take iron and copper from a furnace
+				item = entity.recipe.name
+			end
+			
+			if not amount then -- take everything
+				amount = entity.get_item_count(item)
+			end
+			
+			command.finished = true
+			
+			return {command[1], command[2], item, amount, inventory}
+		end,
 		["executable"] = function(command, myplayer, tick)
 			if not is_entity_at_pos(command[2], myplayer) then
 				return false
