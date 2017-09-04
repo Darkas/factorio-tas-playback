@@ -393,4 +393,18 @@ high_level_commands = {
 		initialize = empty,
 		init_dependencies = empty
 	},
+	["stop-command"] = {
+		to_low_level = function () return {"phantom"} end,
+		executable = return_true,
+		initialize = function (command, myplayer)
+			local cancel = namespace_prefix(command[2], command.command_group)
+			
+			for _,com in pairs(global.current_command_set) do
+				if com.name == cancel then
+					com.finished = true
+				end
+			end
+		end,
+		init_dependencies = empty
+	}
 }

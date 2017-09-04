@@ -23,8 +23,6 @@ inherited_actions = {
 }
 
 default_priorities = {
-	["pickup"] = 10,
-	["speed"] = 5,
 	["build"] = 5,
 	["craft"] = 5,
 	["take"] = 5,
@@ -33,7 +31,10 @@ default_priorities = {
 	["mine"] = 6,
 	["auto-move-to"] = 7,
 	["auto-move-to-command"] = 7,
-	["entity-interaction"] = 100
+	["entity-interaction"] = 100,
+	["pickup"] = 100,
+	["speed"] = 100,
+	["stop-command"] = 100,
 }
 max_ranges = {
 	["build"] = 6,
@@ -375,7 +376,7 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 		end
 		
 		for _, comm in pairs(executable_commands) do
-			if has_value(selection_actions, comm) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
+			if has_value(selection_actions, basic_action(comm)) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
 				if basic_action(comm) ~= forbidden_action then
 					commands[#commands + 1] = comm
 				end
@@ -384,6 +385,12 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 	end
 	
 	-- TODO: move and mine are incompatible, do something about UI interactions
+	
+	for _, comm in pairs(executable_commands) do
+		if has_value(always_possible_actions, basic_action(comm)) then
+			commands[#commands + 1] = comm
+		end
+	end
 end
 
 function basic_action(command)
