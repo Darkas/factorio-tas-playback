@@ -45,11 +45,8 @@ function init()
 	global.tech_queue = {}
 	global.command_finished_times = {}
 	global.loaded_command_groups = {}
-<<<<<<< HEAD
 	global.initialized_names = {}
-=======
 	global.finished_command_names = {}
->>>>>>> 85efa965aa58f8b411a37109065812102366efc7
 	
 	global.current_mining = 0
 	global.stopped = true
