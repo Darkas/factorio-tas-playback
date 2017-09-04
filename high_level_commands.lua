@@ -88,6 +88,7 @@ high_level_commands = {
 	["auto-move-to"] = {
 		to_low_level = auto_move_to_low_level,
 		executable = return_true,
+		default_priority = 7,
 		initialize = empty,
 		init_dependencies = empty
 	},
@@ -103,6 +104,7 @@ high_level_commands = {
 			
 			return true
 		end,
+		default_priority = 7,
 		initialize = function (command, myplayer)
 			for _, com in pairs(global.current_command_set) do
 				if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
@@ -170,6 +172,7 @@ high_level_commands = {
 			
 			return true
 		end,
+		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.reach_distance
 		end,
@@ -181,6 +184,7 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			return in_range(command, myplayer, tick) and (myplayer.get_item_count(command[2]) > 0)
 		end,
+		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
 			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
@@ -196,6 +200,7 @@ high_level_commands = {
 			local count = command[3]
 			return myplayer.get_craftable_count(item) >= count
 		end,
+		default_priority = 5,
 		initialize = empty,
 		init_dependencies = empty
 	},
@@ -225,6 +230,7 @@ high_level_commands = {
 			
 			return command.data.stage > 0
 		end,
+		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
 			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
@@ -235,6 +241,7 @@ high_level_commands = {
 	["entity-interaction"] = {
 		to_low_level = function () return {"phantom"} end,
 		executable = in_range,
+		default_priority = 100,
 		initialize = function (command, myplayer)
 			command.distance = command[3] or myplayer.build_distance
 			
@@ -250,6 +257,7 @@ high_level_commands = {
 	["freeze-daytime"] = {
 		to_low_level = function () return {"phantom"} end,
 		executable = return_true,
+		default_priority = 100,
 		initialize = function (command, myplayer)
 			myplayer.surface.freeze_daytime = true
 		end,
@@ -273,6 +281,7 @@ high_level_commands = {
 			
 			return true
 		end,
+		default_priority = 6,
 		initialize = function (command, myplayer)
 			local entity = get_entity_from_pos(command[2], myplayer)
 		
@@ -357,11 +366,13 @@ high_level_commands = {
 			
 			return true
 		end,
+		default_priority = 5,
 	},
 	
 	rotate = {
 		to_low_level = return_self_finished,
 		executable = return_true,
+		default_priority = 5,
 		initialize = empty,
 		init_dependencies = empty
 	},
@@ -369,12 +380,14 @@ high_level_commands = {
 	speed = {
 		to_low_level = return_self_finished,
 		executable = return_true,
+		default_priority = 100,
 		initialize = empty,
 		init_dependencies = empty
 	},
 	stop = {
 		to_low_level = return_self_finished,
 		executable = return_false,
+		default_priority = 100,
 		initialize = empty,
 		init_dependencies = empty
 	},
@@ -428,6 +441,7 @@ high_level_commands = {
 			
 			return true
 		end,
+		default_priority = 5,
 	},
 
 	pickup = {
@@ -436,6 +450,7 @@ high_level_commands = {
 			return command
 		end,
 		executable = return_true,
+		default_priority = 100,
 		initialize = empty,
 		init_dependencies = empty
 	},
@@ -443,6 +458,7 @@ high_level_commands = {
 	recipe = {
 		to_low_level = return_self_finished,
 		executable = return_true,
+		default_priority = 5,
 		initialize = empty,
 		init_dependencies = empty
 	},
@@ -450,6 +466,7 @@ high_level_commands = {
 	["stop-command"] = {
 		to_low_level = function () return {"phantom"} end,
 		executable = return_true,
+		default_priority = 100,
 		initialize = function (command, myplayer)
 			local cancel = namespace_prefix(command[2], command.command_group)
 			
@@ -465,6 +482,7 @@ high_level_commands = {
 	tech = {
 		initialize = empty,
 		init_dependencies = empty,
+		default_priority = 5,
 		to_low_level = return_self_finished,
 		executable = function (command, myplayer, tick)
 			return (not myplayer.force.current_research) or command.change_research

@@ -22,21 +22,6 @@ inherited_actions = {
 	["build-blueprint"] = "build",
 }
 
-default_priorities = {
-	["build"] = 5,
-	["craft"] = 5,
-	["craft-build"] = 5,
-	["take"] = 5,
-	["put"] = 5,
-	["auto-refuel"] = 5,
-	["mine"] = 6,
-	["auto-move-to"] = 7,
-	["auto-move-to-command"] = 7,
-	["entity-interaction"] = 100,
-	["pickup"] = 100,
-	["speed"] = 100,
-	["stop-command"] = 100,
-}
 max_ranges = {
 	["build"] = 6,
 }
@@ -212,7 +197,7 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue, comma
 	
 	-- Set default priority
 	if not command.priority then
-		command.priority = default_priorities[command[1]]
+		command.priority = high_level_commands[command[1]].default_priority
 	end
 	
 	not_add = high_level_commands[command[1]].initialize(command, myplayer)
