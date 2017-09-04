@@ -25,6 +25,7 @@ inherited_actions = {
 default_priorities = {
 	["build"] = 5,
 	["craft"] = 5,
+	["craft-build"] = 5,
 	["take"] = 5,
 	["put"] = 5,
 	["auto-refuel"] = 5,
@@ -130,6 +131,10 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		
 		for i=0,iterations do
 			for i, command in ipairs(command_group.commands) do
+				if not high_level_commands[command[1]] then
+					error("The command with the name '" .. command[1] .. "' does not exist!")
+				end
+				
 				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(global.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
 					add_command_to_current_set(command, myplayer, tick, commandqueue, command_group)
 					
