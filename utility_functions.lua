@@ -162,7 +162,7 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 
 	if (not entities) or #entities ~= 1 then
 		game.print("There is not precisely one entity at this place!")
-		return nil
+		return entities[1]
 	end
 	
 	return entities[1]

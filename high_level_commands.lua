@@ -1,4 +1,16 @@
 function auto_move_to_low_level (command, myplayer, tick)
+	local auto_move_commands = 0
+	
+	for _, command in pairs(global.current_command_set) do
+		if (not command.finished) and (command[1] == "auto-move-to" or command[1] == "auto-move-to-command") then
+			auto_move_commands = auto_move_commands + 1
+		end
+	end
+	
+	if auto_move_commands > 1 then
+		errprint("You are using more than one auto-move command at once! Do this only if you know what you are doing!")
+	end
+	
 	local target_pos = nil
 	
 	if command[1] == "auto-move-to" then
@@ -283,7 +295,7 @@ high_level_commands = {
 		end,
 		default_priority = 6,
 		initialize = function (command, myplayer)
-			local entity = get_entity_from_pos(command[2], myplayer, "resource", 0.4)
+			local entity = get_entity_from_pos(command[2], myplayer)
 		
 			command.data.ore_type = entity.name
 		
@@ -407,6 +419,7 @@ high_level_commands = {
 					container = defines.inventory.chest,
 					car = defines.inventory.car_trunk,
 					["cargo-wagon"] = defines.inventory.cargo_wagon,
+					["mining-drill"] = defines.inventory.fuel
 				}
 				inventory = invs[entity.type]
 			end
