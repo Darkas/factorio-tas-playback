@@ -45,7 +45,11 @@ function init()
 	global.tech_queue = {}
 	global.command_finished_times = {}
 	global.loaded_command_groups = {}
+<<<<<<< HEAD
 	global.initialized_names = {}
+=======
+	global.finished_command_names = {}
+>>>>>>> 85efa965aa58f8b411a37109065812102366efc7
 	
 	global.current_mining = 0
 	global.stopped = true
@@ -73,11 +77,22 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	-- Check if we finished all commands in the current command set
 
 	local finished = true
-	local finished_commands = {}
 	
-	for _, command in pairs(global.current_command_set) do
+	for k, command in pairs(global.current_command_set) do
+		-- Handle stop command
+		if command[1] == "stop" and command_executable(command, myplayer, tick) then
+			for i, com in pairs(global.current_command_set) do
+				if com.name == command.name then
+					com.finished = true
+					command.finished = true
+					--table.remove(current_command_set, i)
+					--table.remove(current_command_set, k)
+					break
+				end
+			end
+		end
 		if command.finished and command.name then
-			finished_commands[#finished_commands + 1] = command.name
+			global.finished_command_names[command.name] = true
 		end
 		
 		if not command.finished then
@@ -89,7 +104,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		finished = true
 		
 		for _,name in pairs(command_list[1].required) do
-			if not has_value(finished_commands, name) then
+			if not global.finished_command_names[name] then
 				finished = false
 			end
 		end
@@ -187,17 +202,6 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue, comma
 	-- Reset on_relative_tick time.
 	if command.name then global.command_finished_times[command.name] = nil end
 
-	-- Enqueue technology
-	if command[1] == "tech" then
-		if myplayer.force.current_research then
-			global.tech_queue[#global.tech_queue + 1] = command[2]
-		else
-			commandqueue[tick][#commandqueue[tick] + 1] = command
-		end
-		table.delete(global.current_command_set, i)
-		do_add = false
-	end
-
 	command.data = {}
 	
 	command.data.parent_command_group = command_group
@@ -215,10 +219,10 @@ function add_command_to_current_set(command, myplayer, tick, commandqueue, comma
 		command.priority = default_priorities[command[1]]
 	end
 	
-	high_level_commands[command[1]].initialize(command, myplayer)
+	not_add = high_level_commands[command[1]].initialize(command, myplayer)
 
 	-- Add command to set
-	if do_add then
+	if not not_add then
 		global.current_command_set[#global.current_command_set + 1] = command
 	end
 end
