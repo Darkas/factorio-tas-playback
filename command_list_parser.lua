@@ -44,7 +44,7 @@ function init()
 	global.current_command_set = {}
 	global.tech_queue = {}
 	global.command_finished_times = {}
-	global.finished_command_groups = {}
+	global.loaded_command_groups = {}
 	
 	global.current_mining = 0
 	global.stopped = true
