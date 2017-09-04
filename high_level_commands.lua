@@ -86,15 +86,15 @@ end
 high_level_commands = {
 	
 	["auto-move-to"] = {
-		["to_low_level"] = auto_move_to_low_level,
-		["executable"] = return_true,
-		["initialize"] = empty,
-		["init_dependencies"] = empty
+		to_low_level = auto_move_to_low_level,
+		executable = return_true,
+		initialize = empty,
+		init_dependencies = empty
 	},
 	
 	["auto-move-to-command"] = {
-		["to_low_level"] = auto_move_to_low_level,
-		["executable"] = function(command, myplayer, tick)
+		to_low_level = auto_move_to_low_level,
+		executable = function(command, myplayer, tick)
 			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) then
 				debugprint("Auto move stopped!")
 				command.finished = true
@@ -103,7 +103,7 @@ high_level_commands = {
 			
 			return true
 		end,
-		["initialize"] = function (command, myplayer)
+		initialize = function (command, myplayer)
 			for _, com in pairs(global.current_command_set) do
 				if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
 					command.data.target_pos = {}
@@ -118,20 +118,20 @@ high_level_commands = {
 				debugprint("There is no command named: " .. command[2])
 			end
 		end,
-		["init_dependencies"] = function (command)
+		init_dependencies = function (command)
 			return command[2]
 		end
 	},
 	
 	["auto-refuel"] = {
-		["to_low_level"] = function(command, myplayer, tick)
+		to_low_level = function(command, myplayer, tick)
 			if not command.data.started then
 				command.data.started = tick
 			end
 		
 			return {"put", command[2], "coal", 1, defines.inventory.fuel}
 		end,
-		["executable"] = function(command, myplayer, tick)
+		executable = function(command, myplayer, tick)
 			local type = nil
 			local entity = nil
 			
@@ -170,38 +170,72 @@ high_level_commands = {
 			
 			return true
 		end,
-		["initialize"] = function (command, myplayer)
+		initialize = function (command, myplayer)
 			command.distance = myplayer.reach_distance
 		end,
-		["init_dependencies"] = empty
+		init_dependencies = empty
 	},
 	
-	["build"] = {
-		["to_low_level"] = return_self_finished,
-		["executable"] = in_range,
-		["initialize"] = function (command, myplayer)
+	build = {
+		to_low_level = return_self_finished,
+		executable = function(command, myplayer, tick)
+			return in_range(command, myplayer, tick) and (myplayer.get_item_count(command[2]) > 0)
+		end,
+		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
 			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
 		end,
-		["init_dependencies"] = empty
+		init_dependencies = empty
 	},
 	
-	["craft"] = {
-		["to_low_level"] = return_self_finished,
-		["executable"] = function(command, myplayer, tick)
+	craft = {
+		to_low_level = return_self_finished,
+		executable = function(command, myplayer, tick)
 		--	-- Check for missing materials
 			local item = command[2]
 			local count = command[3]
 			return myplayer.get_craftable_count(item) >= count
 		end,
-		["initialize"] = empty,
-		["init_dependencies"] = empty
+		initialize = empty,
+		init_dependencies = empty
+	},
+	
+	["craft-build"] = {
+		to_low_level = function(command, myplayer, tick)
+			if command.data.stage == 1 and not command.data.crafted then
+				command.data.crafted = true
+				return {"craft", command[2], 1}
+			end
+			
+			if command.data.stage == 2 then
+				command.finished = true
+				return {"build", command[2], command[3], command[4]}
+			end
+		end,
+		executable = function(command, myplayer, tick)
+			command.data.stage = 0
+			
+			if high_level_commands.build.executable(command, myplayer, tick) then
+				command.data.stage = 2
+			else
+				if high_level_commands.craft.executable({"craft", command[2], 1}, myplayer, tick) and not command.data.crafted then
+					command.data.stage = 1
+				end
+			end
+			
+			return command.data.stage > 0
+		end,
+		initialize = function (command, myplayer)
+			command.distance = myplayer.build_distance
+			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
+		end,
+		init_dependencies = empty
 	},
 	
 	["entity-interaction"] = {
-		["to_low_level"] = function () return {"phantom"} end,
-		["executable"] = in_range,
-		["initialize"] = function (command, myplayer)
+		to_low_level = function () return {"phantom"} end,
+		executable = in_range,
+		initialize = function (command, myplayer)
 			command.distance = command[3] or myplayer.build_distance
 			
 			local entity = get_entity_from_pos(command[2], myplayer)
@@ -210,14 +244,23 @@ high_level_commands = {
 			
 			command.finished = true
 		end,
-		["init_dependencies"] = empty
+		init_dependencies = empty
 	},
 	
-	["mine"] = {
-		["to_low_level"] = function (command, myplayer, tick)
+	["freeze-daytime"] = {
+		to_low_level = function () return {"phantom"} end,
+		executable = return_true,
+		initialize = function (command, myplayer)
+			myplayer.surface.freeze_daytime = true
+		end,
+		init_dependencies = empty
+	},
+	
+	mine = {
+		to_low_level = function (command, myplayer, tick)
 			return command
 		end,
-		["executable"] = function(command, myplayer, tick)
+		executable = function(command, myplayer, tick)
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
 				return false
 			end
@@ -230,7 +273,7 @@ high_level_commands = {
 			
 			return true
 		end,
-		["initialize"] = function (command, myplayer)
+		initialize = function (command, myplayer)
 			local entity = get_entity_from_pos(command[2], myplayer)
 		
 			command.data.ore_type = entity.name
@@ -238,11 +281,11 @@ high_level_commands = {
 			command.distance = myplayer.resource_reach_distance
 			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
 		end,
-		["init_dependencies"] = empty
+		init_dependencies = empty
 	},
 	
-	["put"] = {
-		["to_low_level"] = function(command, myplayer, tick)
+	put = {
+		to_low_level = function(command, myplayer, tick)
 			local item = command[3]
 			local amount = command[4]
 			local inventory = command.inventory
@@ -296,7 +339,7 @@ high_level_commands = {
 			
 			return {command[1], command[2], item, amount, inventory}
 		end,
-		["executable"] = function(command, myplayer, tick)
+		executable = function(command, myplayer, tick)
 			if not is_entity_at_pos(command[2], myplayer) then
 				return false
 			else
@@ -314,32 +357,32 @@ high_level_commands = {
 			
 			return true
 		end,
-		["initialize"] = empty,
-		["init_dependencies"] = empty
+		initialize = empty,
+		init_dependencies = empty
 	},
 	
-	["rotate"] = {
-		["to_low_level"] = return_self_finished,
-		["executable"] = return_true,
-		["initialize"] = empty,
-		["init_dependencies"] = empty
+	rotate = {
+		to_low_level = return_self_finished,
+		executable = return_true,
+		initialize = empty,
+		init_dependencies = empty
 	},
 	
-	["speed"] = {
-		["to_low_level"] = return_self_finished,
-		["executable"] = return_true,
-		["initialize"] = empty,
-		["init_dependencies"] = empty
+	speed = {
+		to_low_level = return_self_finished,
+		executable = return_true,
+		initialize = empty,
+		init_dependencies = empty
 	},
-	["stop"] = {
-		["to_low_level"] = return_self_finished,
-		["executable"] = return_false,
-		["initialize"] = empty,
-		["init_dependencies"] = empty
+	stop = {
+		to_low_level = return_self_finished,
+		executable = return_false,
+		initialize = empty,
+		init_dependencies = empty
 	},
 	
-	["take"] = {
-		["to_low_level"] = function(command, myplayer, tick)
+	take = {
+		to_low_level = function(command, myplayer, tick)
 			local item = command[3]
 			local amount = command[4]
 			local inventory = command.inventory
@@ -369,7 +412,7 @@ high_level_commands = {
 			
 			return {command[1], command[2], item, amount, inventory}
 		end,
-		["executable"] = function(command, myplayer, tick)
+		executable = function(command, myplayer, tick)
 			if not is_entity_at_pos(command[2], myplayer) then
 				return false
 			else
@@ -387,8 +430,8 @@ high_level_commands = {
 			
 			return true
 		end,
-		["initialize"] = empty,
-		["init_dependencies"] = empty
+		initialize = empty,
+		init_dependencies = empty
 	},
 
 	pickup = {
