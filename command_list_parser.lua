@@ -45,6 +45,7 @@ function init()
 	global.tech_queue = {}
 	global.command_finished_times = {}
 	global.loaded_command_groups = {}
+	global.initialized_names = {}
 	
 	global.current_mining = 0
 	global.stopped = true
@@ -111,15 +112,14 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		--end
 		
 		local iterations = command_group.iterations or 5
-		local initialized_names = {}
 		
 		for i=0,iterations do
 			for i, command in ipairs(command_group.commands) do
-				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
+				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(global.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
 					add_command_to_current_set(command, myplayer, tick, commandqueue, command_group)
 					
 					if command.name then
-						initialized_names[#initialized_names + 1] = command.name
+						global.initialized_names[#global.initialized_names + 1] = command.name
 					end
 					table.remove(command_group.commands, i)
 				end

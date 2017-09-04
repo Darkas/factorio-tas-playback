@@ -203,6 +203,8 @@ high_level_commands = {
 			local entity = get_entity_from_pos(command[2], myplayer)
 		
 			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			
+			command.finished = true
 		end,
 		["init_dependencies"] = empty
 	},
