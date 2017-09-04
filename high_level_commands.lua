@@ -52,7 +52,7 @@ function auto_move_to_low_level (command, myplayer, tick)
 	
 	if move_dir == "" then
 		move_dir = "STOP"
-		command.data.finished = true
+		command.finished = true
 	end
 	
 	return {"move", move_dir}
@@ -283,7 +283,7 @@ high_level_commands = {
 		end,
 		default_priority = 6,
 		initialize = function (command, myplayer)
-			local entity = get_entity_from_pos(command[2], myplayer)
+			local entity = get_entity_from_pos(command[2], myplayer, "resource", 0.4)
 		
 			command.data.ore_type = entity.name
 		
