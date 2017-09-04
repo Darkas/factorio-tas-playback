@@ -357,8 +357,6 @@ high_level_commands = {
 			
 			return true
 		end,
-		initialize = empty,
-		init_dependencies = empty
 	},
 	
 	rotate = {
@@ -430,8 +428,6 @@ high_level_commands = {
 			
 			return true
 		end,
-		initialize = empty,
-		init_dependencies = empty
 	},
 
 	pickup = {
@@ -475,3 +471,15 @@ high_level_commands = {
 		end,
 	}
 }
+
+
+defaults = {
+	to_low_level = return_self_finished,
+	executable = return_false,
+	initialize = empty,
+	init_dependencies = empty
+}
+
+for _, command in pairs(high_level_commands) do
+	setmetatable(command, {__index = defaults})
+end
