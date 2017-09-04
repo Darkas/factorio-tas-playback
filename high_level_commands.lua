@@ -67,6 +67,10 @@ function return_true()
 	return true
 end
 
+function return_false()
+	return false
+end
+
 function empty()	
 end
 
@@ -325,6 +329,12 @@ high_level_commands = {
 		["initialize"] = empty,
 		["init_dependencies"] = empty
 	},
+	["stop"] = {
+		["to_low_level"] = return_self_finished,
+		["executable"] = return_false,
+		["initialize"] = empty,
+		["init_dependencies"] = empty
+	},
 	
 	["take"] = {
 		["to_low_level"] = function(command, myplayer, tick)
@@ -378,6 +388,7 @@ high_level_commands = {
 		["initialize"] = empty,
 		["init_dependencies"] = empty
 	},
+
 	pickup = {
 		to_low_level = function (command, myplayer, tick)
 			if command.oneshot then command.finished = true end
@@ -387,12 +398,14 @@ high_level_commands = {
 		initialize = empty,
 		init_dependencies = empty
 	},
+
 	recipe = {
 		to_low_level = return_self_finished,
 		executable = return_true,
 		initialize = empty,
 		init_dependencies = empty
 	},
+
 	["stop-command"] = {
 		to_low_level = function () return {"phantom"} end,
 		executable = return_true,
@@ -406,5 +419,14 @@ high_level_commands = {
 			end
 		end,
 		init_dependencies = empty
+	},
+
+	tech = {
+		initialize = empty,
+		init_dependencies = empty,
+		to_low_level = return_self_finished,
+		executable = function (command, myplayer, tick)
+			return (not myplayer.force.current_research) or command.change_research
+		end,
 	}
 }

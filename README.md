@@ -126,10 +126,10 @@ Currently implemented commands:
 * `{"craft", <item>, <count>}`: 
 * `{"auto-refuel", "<type>", {<X>,<Y>}}`: automatically refuel the entity at the location. Where type is "m" for burner mining drill, "f" for stone furnace and "b" for boiler, mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low). 
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
-* `{"tech", "<research-name>"}`: This pushes the researches into a queue, so it can be issued in advance.
+* `{"tech", "<research-name>", change_research = <bool>}`: Set research. If change_research is true then this will overwrite the current research, otherwise it is only activated when the current research has been completed.
 * `{"mine", {<X>,<Y>}, amount=...}`: It is assumed that iron, coal and copper need 124 ticks, stone needs 95 ticks
-* `{"take", {<X>,<Y>}, "<item>", <amount>, <inventory>}`:
-* `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`:
+* `{"take", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer item, amount and inventory from the position
+* `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
 * `{"pickup", oneshot}`: Pick up items from floor. If `oneshot` is set, this will be active only once, otherwise it stays active until it is deactivated.
 * `{"recipe", {<X>,<Y>}, <recipe>}`
@@ -138,24 +138,24 @@ To be implemented:
 
 {"build-blueprint", "<name>", {<X>, <Y>}}
 "move"
-"recipe"
 "throw"
 "vehicle"
 "auto-take"
 "stop-auto-refuel"
 "stop-auto-take"
 "stop-auto-move-to"
+{"stop", name="<name>"} stop the command with the specified name. name can be of the form "name" or "group_name.name", if no group name is specified it refers only to the current group.
 
 Currently implemented conditions:
 * `on_entering_range=<bool>`: as soon as this action is possible
 * `on_leaving_range=<bool>`: right before this action becomes impossible
 * `on_tick={<tick>}`: do this on or after a certain tick
+* `on_relative_tick = {<tick>, <name>}`: do this on or after a given amount of ticks have passed since the command with given name finished or since the current command set began (if the name is not set or the param is a single int).
 
 
 To be implemented:
 on_player_in_range=<range> (player is range away from )
 on_exact_tick=<tick> (do this on exactly the tick - do we need this?)
-on_relative_tick = {<tick>, <name>}: do this on or after a given amount of ticks have passed since the command with given name finished or since the current command set began (if the name is not set or the param is a single int).
 on_exact_relative_tick={<tick>, <name>} (do this a given amount of ticks after the command with the given name finished or after the current command set began (if name is not set))
 items_total={<item name>, <N>} (there are currently N of item name available (in the entire world))
 needs_fuel={<X>,<Y>} (entity needs fuel)
