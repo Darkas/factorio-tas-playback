@@ -43,6 +43,7 @@ function init()
 	global.current_command_set = {}
 	global.tech_queue = {}
 	global.command_finished_times = {}
+	global.finished_command_groups = {}
 	
 	global.current_mining = 0
 	global.stopped = true
@@ -101,9 +102,12 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 
 		local command_group = command_list[1]
 
-		if command_group.save_before then 
-			game.server_save(tas_name .. "__" .. command_group.name)
-		end
+		if global.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
+		global.loaded_command_groups[command_group.name] = true
+
+		--if command_group.save_before then 
+		--	game.server_save(tas_name .. "__" .. command_group.name)
+		--end
 		
 		local iterations = command_group.iterations or 5
 		local initialized_names = {}
