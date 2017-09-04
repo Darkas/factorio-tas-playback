@@ -51,6 +51,7 @@ function init()
 	global.current_mining = 0
 	global.stopped = true
 	
+	global.current_command_group_index = 0
 	global.current_command_group_tick = nil
 end
 
@@ -97,11 +98,11 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
-	if command_list[1] and command_list[1].required then
+	if command_list[global.current_command_group_index + 1] and command_list[global.current_command_group_index + 1].required then
 		finished = true
 		
-		for _,name in pairs(command_list[1].required) do
-			if not global.finished_command_names[name] then
+		for _,name in pairs(command_list[global.current_command_group_index + 1].required) do
+			if not global.finished_command_names[namespace_prefix(name, command_list[global.current_command_group_index].name)] then
 				finished = false
 			end
 		end
@@ -110,11 +111,13 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	-- Add the next command group to the current command set.
 	
 	if finished then
-		if (not command_list[1]) then
+		global.current_command_group_index = global.current_command_group_index + 1
+		
+		if (not command_list[global.current_command_group_index]) then
 			return false
 		end
 
-		local command_group = command_list[1]
+		local command_group = command_list[global.current_command_group_index]
 
 		if global.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
 		global.loaded_command_groups[command_group.name] = true
@@ -138,15 +141,6 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			end
 		end
 		
-		-- Add namespace prefixes to the next group
-		
-		if command_list[2] and command_list[2].required then
-			for i, name in pairs(command_list[2].required) do
-				command_list[2].required[i] = namespace_prefix(name, command_list[1].name)
-			end
-		end
-		
-		table.remove(command_list, 1)
 		global.current_command_group_tick = tick
 	end
 
