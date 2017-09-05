@@ -69,14 +69,14 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				if com.name == command.name then
 					com.finished = true
 					command.finished = true
-					--table.remove(current_command_set, i)
-					--table.remove(current_command_set, k)
+					--table.remove(global.current_command_set, i)
 					break
 				end
 			end
 		end
 		if command.finished and command.name then
 			global.finished_command_names[command.name] = true
+			--table.remove(global.current_command_set, k)
 		end
 		
 		if not command.finished then
@@ -231,27 +231,28 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 end
 
 function command_executable(command, myplayer, tick)
-	if command.finished or not high_level_commands[command[1]].executable(command, myplayer, tick) then
+	if command.finished then
+		return false
+	end
+	
+	local fail_reason = high_level_commands[command[1]].executable(command, myplayer, tick)
+	
+	if fail_reason ~= "" then
+		log_to_ui(command[1] .. ": " .. fail_reason, "command-not-executable")
 		return false
 	end
 
 	-- on_tick, on_relative_tick
 	if command.on_tick and command.on_tick < tick then return false end
 	if command.on_relative_tick then
-		if type(command.on_relative_tick) == type(1) and tick < global.current_command_group_tick + command.on_relative_tick then return false
-		elseif type(command.on_relative_tick) == type({}) and not global.command_finished_times[command.on_relative_tick[2]] or tick < global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then return false
+		if type(command.on_relative_tick) == type(1) and tick < global.current_command_group_tick + command.on_relative_tick then fail_reason = "The tick has not been reached"
+		elseif type(command.on_relative_tick) == type({}) and not global.command_finished_times[command.on_relative_tick[2]] or tick < global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then fail_reason = "The tick has not been reached"
 		else error("Unrecognized format for on_relative_tick!")
 		end
 	end
 	
-	if command.on_entering_range then
-		if distance_from_rect(myplayer.position, command.rect) > command.distance then
-			return false
-		end
-	end
-	
 	if command.on_leaving_range and not leaving_range(command, myplayer, tick) then
-		return false
+		return "Not leaving the range"
 	end
 	
 	if command.items_available then
@@ -270,7 +271,7 @@ function command_executable(command, myplayer, tick)
 		end
 		
 		if entity.get_item_count(command.items_available[1]) < command.items_available[2] then
-			return false
+			fail_reason = "Not enough items available!"
 		end
 	end
 	
@@ -284,8 +285,13 @@ function command_executable(command, myplayer, tick)
 		end
 		
 		if not com_finished then
-			return false
+			fail_reason = "The prerequisite command has not finished"
 		end
+	end
+	
+	if fail_reason ~= "" then
+		log_to_ui(command[1] .. ": " .. fail_reason, "command-not-executable")
+		return false
 	end
 	
 	return true

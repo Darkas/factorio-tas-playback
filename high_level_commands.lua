@@ -75,20 +75,16 @@ function move_collision_box(collision_box, coords)
 	return {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
 end
 
-function return_true()
-	return true
-end
-
-function return_false()
-	return false
-end
-
 function empty()	
 end
 
 function return_self_finished(command, myplayer, tick)
 	command.finished = true
 	return command
+end
+
+function return_phantom ()
+	return {"phantom"}
 end
 
 function in_range(command, myplayer)
@@ -99,22 +95,18 @@ high_level_commands = {
 	
 	["auto-move-to"] = {
 		to_low_level = auto_move_to_low_level,
-		executable = return_true,
 		default_priority = 7,
-		initialize = empty,
-		init_dependencies = empty
 	},
 	
 	["auto-move-to-command"] = {
 		to_low_level = auto_move_to_low_level,
 		executable = function(command, myplayer, tick)
-			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) then
-				debugprint("Auto move stopped!")
+			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) == "" then
 				command.finished = true
-				return false
+				return "finished"
 			end
 			
-			return true
+			return ""
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
@@ -152,7 +144,7 @@ high_level_commands = {
 				if command.data.entity then
 					if not has_value({"boiler", "furnace", "mining-drill"}, command.data.entity.type) then
 						command.data.entity = nil
-						return false
+						return "No refuelable entity found"
 					else
 						command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
 						
@@ -165,40 +157,42 @@ high_level_commands = {
 						end
 					end
 				else
-					return false
+					return "No refuelable entity found"
 				end
 			end
 			
 			if command.data.started then
 				if (command.data.started - tick) % command.data.frequency > 0 then
-					return false
+					return "Needs no refueling now"
 				end
 			end
 			
 			if myplayer.get_item_count("coal") == 0 then
-				return false
+				return "Player has no coal"
 			end
 			
-			return true
+			return ""
 		end,
 		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.reach_distance
 		end,
-		init_dependencies = empty
 	},
 	
 	build = {
 		to_low_level = return_self_finished,
 		executable = function(command, myplayer, tick)
-			return in_range(command, myplayer, tick) and (myplayer.get_item_count(command[2]) > 0)
+			if in_range(command, myplayer, tick) and (myplayer.get_item_count(command[2]) > 0) then
+				return ""
+			else
+				return "Player not in range"
+			end
 		end,
 		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
 			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
 		end,
-		init_dependencies = empty
 	},
 	
 	craft = {
@@ -207,11 +201,13 @@ high_level_commands = {
 		--	-- Check for missing materials
 			local item = command[2]
 			local count = command[3]
-			return myplayer.get_craftable_count(item) >= count
+			if myplayer.get_craftable_count(item) >= count then
+				return ""
+			else
+				return "Player does not have enough items to craft " .. item
+			end
 		end,
 		default_priority = 5,
-		initialize = empty,
-		init_dependencies = empty
 	},
 	
 	["craft-build"] = {
@@ -229,27 +225,36 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			command.data.stage = 0
 			
-			if high_level_commands.build.executable(command, myplayer, tick) then
+			if high_level_commands.build.executable(command, myplayer, tick) == "" then
 				command.data.stage = 2
 			else
-				if high_level_commands.craft.executable({"craft", command[2], 1}, myplayer, tick) and not command.data.crafted then
+				if high_level_commands.craft.executable({"craft", command[2], 1}, myplayer, tick) == "" and not command.data.crafted then
 					command.data.stage = 1
 				end
 			end
 			
-			return command.data.stage > 0
+			if command.data.stage > 0 then
+				return ""
+			else
+				return "Can do neither craft nor build"
+			end
 		end,
 		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
 			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
 		end,
-		init_dependencies = empty
 	},
 	
 	["entity-interaction"] = {
-		to_low_level = function () return {"phantom"} end,
-		executable = in_range,
+		to_low_level = return_phantom,
+		executable = function (command, myplayer)
+			if in_range(command, myplayer) then
+				return ""
+			else
+				return "Out of range"
+			end
+		end,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			command.distance = command[3] or myplayer.build_distance
@@ -260,17 +265,14 @@ high_level_commands = {
 			
 			command.finished = true
 		end,
-		init_dependencies = empty
 	},
 	
 	["freeze-daytime"] = {
-		to_low_level = function () return {"phantom"} end,
-		executable = return_true,
+		to_low_level = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			myplayer.surface.freeze_daytime = true
 		end,
-		init_dependencies = empty
 	},
 	
 	mine = {
@@ -279,16 +281,16 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
-				return false
+				return "Out of range"
 			end
 		
 			if command.amount and global.current_mining >= command.amount then
 				command.finished = true
 				global.current_mining = 0
-				return false
+				return "finished"
 			end
 			
-			return true
+			return ""
 		end,
 		default_priority = 6,
 		initialize = function (command, myplayer)
@@ -299,7 +301,6 @@ high_level_commands = {
 			command.distance = myplayer.resource_reach_distance
 			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
 		end,
-		init_dependencies = empty
 	},
 	
 	put = {
@@ -360,7 +361,7 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			local entity = get_entity_from_pos(command[2], myplayer)
 			if not entity then
-				return false
+				return "No entity found"
 			else
 				if not command.rect then
 					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
@@ -369,35 +370,26 @@ high_level_commands = {
 			end
 			
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
-				return false
+				return "Out of range"
 			end
 			
-			return true
+			return ""
 		end,
 		default_priority = 5,
 	},
 	
 	rotate = {
 		to_low_level = return_self_finished,
-		executable = return_true,
 		default_priority = 5,
-		initialize = empty,
-		init_dependencies = empty
 	},
 	
 	speed = {
 		to_low_level = return_self_finished,
-		executable = return_true,
 		default_priority = 100,
-		initialize = empty,
-		init_dependencies = empty
 	},
 	stop = {
-		to_low_level = return_self_finished,
-		executable = return_false,
+		to_low_level = return_phantom,
 		default_priority = 100,
-		initialize = empty,
-		init_dependencies = empty
 	},
 	
 	take = {
@@ -415,8 +407,9 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
 				command.data.entity = get_entity_from_pos(command[2], myplayer)
-				if not command.data.entity then
-					return false
+				if (not command.data.entity) or (not command.data.entity.valid) then
+					command.data.entity = nil
+					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 				end
 			end
 			
@@ -448,16 +441,16 @@ high_level_commands = {
 					if entity_inventory and entity_inventory[1] and entity_inventory[1].valid_for_read then
 						command.data.item = command.data.entity.get_inventory(command.data.inventory)[1].name
 					else
-						errprint("Take: Entity " .. command.data.entity.name .. " at (" .. command[2][1] .. "," .. command[2][2] .. ") has no valid inventory item to guess.")
+						return "Entity " .. command.data.entity.name .. " at (" .. command[2][1] .. "," .. command[2][2] .. ") has no valid inventory item to guess"
 					end
 				end
 			end
 			
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
-				return false
+				return "Player too far away"
 			end
 			
-			return true
+			return ""
 		end,
 		default_priority = 5,
 	},
@@ -467,23 +460,16 @@ high_level_commands = {
 			if command.oneshot then command.finished = true end
 			return command
 		end,
-		executable = return_true,
 		default_priority = 100,
-		initialize = empty,
-		init_dependencies = empty
 	},
 
 	recipe = {
 		to_low_level = return_self_finished,
-		executable = return_true,
 		default_priority = 5,
-		initialize = empty,
-		init_dependencies = empty
 	},
 
 	["stop-command"] = {
-		to_low_level = function () return {"phantom"} end,
-		executable = return_true,
+		to_low_level = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			local cancel = namespace_prefix(command[2], command.command_group)
@@ -494,16 +480,17 @@ high_level_commands = {
 				end
 			end
 		end,
-		init_dependencies = empty
 	},
 
 	tech = {
-		initialize = empty,
-		init_dependencies = empty,
 		default_priority = 5,
 		to_low_level = return_self_finished,
 		executable = function (command, myplayer, tick)
-			return (not myplayer.force.current_research) or command.change_research
+			if (not myplayer.force.current_research) or command.change_research then
+				return ""
+			else
+				return "There is something reasearching and changing is not allowed."
+			end
 		end,
 	}
 }
@@ -511,7 +498,7 @@ high_level_commands = {
 
 defaults = {
 	to_low_level = return_self_finished,
-	executable = return_false,
+	executable = function () return "" end,
 	initialize = empty,
 	init_dependencies = empty
 }
