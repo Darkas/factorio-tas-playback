@@ -30,11 +30,20 @@ function create_command_list_ui(player)
 	local top_flow = frame.add{type="flow", name="top_flow", style="flow_style", direction="horizontal"}
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Command List"}
 	title.style.font = "default-frame"
+
 	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
 	top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
 
-	frame.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
-	frame.add{type="label", style="label_style", name="required_for_next", caption = "Required for next"}
+	local group_flow = frame.add{type="flow", name="group_flow", style="flow_style", direction="horizontal"}
+	local label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
+	label.style.font = "default-semibold"
+	local button = group_flow.add{type="button", style="button_style", name="next_command_group", caption="Next Command Group"}
+	button.style.top_padding = 0
+	button.style.bottom_padding = 0
+	button.style.font = "default-semibold"
+
+	local label = frame.add{type="label", style="label_style", name="required_for_next", caption = "Required for next"}
+	label.style.font = "default-semibold"
 
 	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
 	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
@@ -85,7 +94,7 @@ function update_command_list_ui(player, command_list)
 	if show then
 
 		local current_command_group = command_list[global.current_command_group_index]
-		frame.current_command_group.caption = "Active Command Group: " .. current_command_group.name
+		frame.group_flow.current_command_group.caption = "Active Command Group: " .. current_command_group.name
 
 		local next_command_group = command_list[global.current_command_group_index + 1]
 		if next_command_group then

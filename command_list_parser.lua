@@ -96,7 +96,8 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	-- Add the next command group to the current command set.
 	
-	if finished then
+	if finished or global.next_command_group then
+		global.next_command_group = false
 		global.current_command_group_index = global.current_command_group_index + 1
 		
 		if (not command_list[global.current_command_group_index]) then
