@@ -47,7 +47,7 @@ function init_run(myplayer_index)
 		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"}, 
 		50, 
 		function(text, data, game_tick)
-			return "[" .. game.tick - (global.start_tick or 0) .. "]  ___WARNING___ " .. msg
+			return "[" .. game.tick - (global.start_tick or 0) .. "]  ___WARNING___ " .. text
 		end
 	)
 
