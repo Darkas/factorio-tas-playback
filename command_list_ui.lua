@@ -1,6 +1,6 @@
 require("mod-gui")
 
-NUM_LINES = 50
+NUM_LINES = 20
 --[[ 
 	
 --]]
@@ -31,19 +31,22 @@ function create_command_list_ui(player)
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Command List"}
 	title.style.font = "default-frame"
 	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
-	top_flow.add{type="checkbox", name="show_checkbox", state=true}
+	top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
 
 	frame.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
 	frame.add{type="label", style="label_style", name="required_for_next", caption = "Required for next"}
 
 	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
+	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
+	table.style.vertical_spacing = -1
+	scroll_pane.style.top_padding = 10
 	scroll_pane.style.maximal_height = 200
 	scroll_pane.style.maximal_width = 500
 	scroll_pane.style.minimal_height = 100
 	scroll_pane.style.minimal_width = 50
 
 	for index=1, NUM_LINES do
-		local label = scroll_pane.add{type="label", style="label_style", name = "text_" .. index, caption="", single_line=true, want_ellipsis=true}
+		local label = table.add{type="label", style="label_style", name = "text_" .. index, caption="_", single_line=true, want_ellipsis=true}
 		label.style.top_padding = 0
 		label.style.bottom_padding = 0
 		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
@@ -53,10 +56,12 @@ end
 
 
 function update_command_list_ui(player, command_list)
+	if not command_list then return end
+	if not global.current_command_group_index or not command_list[global.current_command_group_index] then return end
 	local flow = mod_gui.get_frame_flow(player)
 	local frame = flow.command_list_frame
 
-	if global.command_list_ui then init_command_list_ui(); return end
+	if not global.command_list_ui then init_command_list_ui() end
 
 	if not frame then 
 		create_command_list_ui(player) 
@@ -64,11 +69,11 @@ function update_command_list_ui(player, command_list)
 	end
 
 	-- Visibility
-	local show = frame.top_flow.show_checkbox.state
-	if global.log_data.ui_hidden[player.index] ~= not show then
+	local show = frame.top_flow.show_command_list_ui_checkbox.state
+	if global.command_list_ui.ui_hidden[player.index] ~= not show then
 		frame.scroll_pane.style.visible = show
 		--frame.type_flow.style.visible = show
-		global.log_data.ui_hidden[player.index] = not show
+		global.command_list_ui.ui_hidden[player.index] = not show
 	end
 
 	-- Scheduling
@@ -77,11 +82,10 @@ function update_command_list_ui(player, command_list)
 
 
 	-- Update
-	if show and not global.log_data.ui_paused[player.index] then
+	if show then
 
-		if not global.current_command_group_index or not command_list[global.current_command_group_index] then return end
 		local current_command_group = command_list[global.current_command_group_index]
-		frame.current_command_group.caption = current_command_group.name
+		frame.current_command_group.caption = "Active Command Group: " .. current_command_group.name
 
 		local next_command_group = command_list[global.current_command_group_index + 1]
 		if next_command_group then
@@ -113,9 +117,9 @@ function update_command_list_ui(player, command_list)
 				for key, value in pairs(command) do
 					s = s .. key .. "= " .. printable(value) .. " | "
 				end
-				frame.scroll_pane["text_" .. index].caption = s
+				frame.scroll_pane.table["text_" .. index].caption = s
 			else
-				frame.scroll_pane["text_" .. index].caption = ""
+				frame.scroll_pane.table["text_" .. index].caption = ""
 			end
 		end
 	end
