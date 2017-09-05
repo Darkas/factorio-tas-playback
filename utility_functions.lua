@@ -146,7 +146,7 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 		epsilon = 0.2
 	end
 	
-	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler"}
+	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity"}
 	
 	if type then
 		types = {type}
@@ -155,12 +155,11 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 	local entity = nil
 	local entities = nil
 	
-	for _,t in pairs(types) do
-		--game.print(serpent.block({area = {{-epsilon + pos[1], -epsilon + pos[2]}, {epsilon + pos[1], epsilon + pos[2]}}, type = type}))
-		entities = myplayer.surface.find_entities_filtered({area = {{-epsilon + pos[1], -epsilon + pos[2]}, {epsilon + pos[1], epsilon + pos[2]}}, type = type})
-		
-		if #entities > 0 then
-			entity = entities[1]
+	entities = myplayer.surface.find_entities_filtered({area = {{-epsilon + pos[1], -epsilon + pos[2]}, {epsilon + pos[1], epsilon + pos[2]}}})
+	
+	for _,ent in pairs(entities) do
+		if has_value(types, ent.type) then
+			entity = ent
 		end
 	end
 	

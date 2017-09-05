@@ -166,7 +166,7 @@ TAScommands["take"] = function (tokens, myplayer)
   local otherinv = myplayer.selected.get_inventory(slot)
 
   if not otherinv then
-     errprint("Take failed: Unable to access inventories")
+     errprint("Take failed: Unable to access inventories " .. slot)
     return
   end
 
