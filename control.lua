@@ -2,8 +2,9 @@ require("util")
 require("utility_functions")
 require("silo-script")
 require("command_list_parser")
-require("log_ui")
 
+require("log_ui")
+require("command_list_ui")
 
 -- Global variables initialization
 local max_tick = 0
@@ -153,7 +154,12 @@ end
 
 script.on_event(defines.events.on_tick, function(event)
 	for _, player in pairs(game.players) do
-		if player.connected then update_log_ui(player) end
+		if player.connected then 
+			update_log_ui(player) 
+			if commandqueue then
+				update_command_list_ui(player, commandqueue.command_list)
+			end
+		end
 	end
 
 	if commandqueue and global.running then
