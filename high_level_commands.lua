@@ -295,11 +295,17 @@ high_level_commands = {
 		default_priority = 6,
 		initialize = function (command, myplayer)
 			local entity = get_entity_from_pos(command[2], myplayer)
-		
-			command.data.ore_type = entity.name
+			
+			
 		
 			command.distance = myplayer.resource_reach_distance
-			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			
+			if entity then
+				command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			else
+				errprint("There is no mineable thing at (" .. command[2][1] .. "," .. command[2][2] .. ")")
+				command.rect = move_collision_box({left_top={x=0,y=0},right_bottom={x=0,y=0}}, command[2])
+			end
 		end,
 	},
 	
@@ -407,10 +413,14 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
 				command.data.entity = get_entity_from_pos(command[2], myplayer)
-				if (not command.data.entity) or (not command.data.entity.valid) then
-					command.data.entity = nil
+				if not command.data.entity then
 					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 				end
+			end
+			
+			if not command.data.entity.valid then
+				command.data.entity = nil
+				return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 			end
 			
 			if not command.rect then
@@ -430,6 +440,11 @@ high_level_commands = {
 						["mining-drill"] = defines.inventory.fuel
 					}
 					command.data.inventory = invs[command.data.entity.type]
+					
+					if not command.data.inventory then
+						errprint("No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type)
+						return "No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type
+					end
 				end
 			end
 			

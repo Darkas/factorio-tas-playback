@@ -266,6 +266,11 @@ function command_executable(command, myplayer, tick)
 		
 		if pos then
 			entity = get_entity_from_pos(pos, myplayer)
+			
+			if not entity then
+				errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
+				return false
+			end
 		else
 			entity = myplayer
 		end
