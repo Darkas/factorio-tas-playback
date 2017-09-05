@@ -34,24 +34,24 @@ function set_run_logging_types()
 		"run-debug", 
 		{font_color = {r=0.5, g=0.9, b=0.9}}, 
 		50, 
-		function(text, data, game_tick)
-			return "[" .. game_tick - (global.start_tick or 0) .. "] " .. text
+		function(message)
+			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
 	configure_log_type(
 		"tascommand-error", 
 		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"}, 
 		50, 
-		function(text, data, game_tick)
-			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
+		function(message)
+			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
 	configure_log_type(
 		"run-output", 
 		{font_color = {r=0.5, g=1, b=0.5}, font = "default"}, 
 		50, 
-		function(text, data, game_tick)
-			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
+		function(message)
+			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
 end

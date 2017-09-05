@@ -34,8 +34,8 @@ function log_to_ui(text, type_name, data)
 	if not global.log_data.log_type_settings[type_name] then configure_log_type(type_name) end
 	local type_settings = global.log_data.log_type_settings[type_name]
 
-	local display_text = type_settings.message_formatter(text, data, game.tick, type_settings.data)
-	local message = {text=text, data=data, type_name = type_name, display_text=display_text, tick=game.tick}
+	local message = {text=text, data=data, type_name = type_name, tick=game.tick}
+	message.display_text = type_settings.message_formatter(message)
 	table.insert(global.log_data.log_messages, 1, message)
 
 	-- Save number of messages per log type.
@@ -62,13 +62,15 @@ end
 -- type_name: 
 -- style (optional): style arguments that are set for the display style of the log messages. For example {font_color = {r=1, g=0.2, b=0.2}, font = "default-bold"}. Right now only font_color and font is suggested.
 -- max_size (optional): maximum number of log messages for this type that will be saved. We delete the oldest message first. Default is 50.
--- message_formatter (optional): formatter function that determines the actually shown text for each logged message. message_formatter(text, data, game_tick, type_settings_data). Default format is '[<type_name> | <game_tick>] <text>'.
+-- message_formatter (optional): formatter function that determines the actually shown text for each logged message. message_formatter{text=…, type_name=…, tick=…, data=…}. Default format is '[<type_name> | <game_tick>] <text>'.
 -- data (optional): type-global argument for formatter function
 function configure_log_type(type_name, style, max_size, message_formatter, data)
+	if not global.log_data then init_logging() end
+
 	if not global.log_data.log_type_settings[type_name] then global.log_data.log_type_settings[type_name] = {log_size = 0} end
 
 	local t = global.log_data.log_type_settings[type_name]
-	t.message_formatter = message_formatter or t.message_formatter or function(text, data, game_tick) return "[" .. type_name .. " | " .. game.tick .. "] " .. text end
+	t.message_formatter = message_formatter or t.message_formatter or function(message) return "[" .. message.type_name .. " | " .. message.game_tick .. "] " .. message.text end
 	t.max_log_size = max_size or t.max_log_size or 50
 	t.data = data or t.data
 	t.style = style or t.style
@@ -82,6 +84,8 @@ function update_log_ui(player)
 
 	local flow = mod_gui.get_frame_flow(player)
 	local frame = flow.log_frame
+
+	if not global.log_data then return end
 
 	if not frame then 
 		create_log_ui(player) 
