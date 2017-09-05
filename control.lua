@@ -28,12 +28,8 @@ end
 -- Get the commands that the speedrun can use
 local TAScommands = require("commands")
 
-------------------------------------
--- Functions that control the run --
-------------------------------------
--- This function initializes the run's clock and a few properties
-function init_run(myplayer_index)
 
+function set_run_logging_types()
 	configure_log_type(
 		"run-debug", 
 		{font_color = {r=0.5, g=0.9, b=0.9}}, 
@@ -58,7 +54,15 @@ function init_run(myplayer_index)
 			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
 		end
 	)
+end
 
+
+------------------------------------
+-- Functions that control the run --
+------------------------------------
+-- This function initializes the run's clock and a few properties
+function init_run(myplayer_index)
+	set_run_logging_types()
 	debugprint("Initializing the run")
 	-- Examine the command queue for errors. 
 	if not commandqueue then

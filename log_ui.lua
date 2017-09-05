@@ -59,7 +59,6 @@ function log_to_ui(text, type_name, data)
 		end
 	end
 
-	--game.print(type_settings.max_log_size)
 	global.log_data.need_update = true
 end
 
@@ -88,6 +87,7 @@ function init_logging()
 		-- UI
 		global.log_data = {}
 		global.log_data.ui_paused = {}
+		global.log_data.ui_hidden = {}
 
 		-- content
 		global.log_data.log_messages = {}
@@ -142,8 +142,11 @@ function update_log_ui(player)
 
 	-- Visibility
 	local show = frame.top_flow.show_checkbox.state
-	frame.scroll_pane.style.visible = show
-	frame.type_flow.style.visible = show
+	if global.log_data.ui_hidden[player.index] ~= not show then
+		frame.scroll_pane.style.visible = show
+		frame.type_flow.style.visible = show
+		global.log_data.ui_hidden[player.index] = not show
+	end
 
 	-- Scheduling
 	if game.tick % math.floor(game.speed * 20 + 1) ~= 0 then return end
