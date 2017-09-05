@@ -75,7 +75,7 @@ function configure_log_type(type_name, style, max_size, message_formatter, data)
 	--end
 
 	local t = global.log_data.log_type_settings[type_name]
-	t.message_formatter = message_formatter or t.message_formatter or function(text, data, game_tick) return "[" .. type_name .. " | " .. game_tick .. "] " .. text end
+	t.message_formatter = message_formatter or t.message_formatter or function(text, data, game_tick) return "[" .. type_name .. " | " .. game.tick .. "] " .. text end
 	t.max_log_size = max_size or t.max_log_size or 50
 	t.data = data or t.data
 	t.style = style or t.style
@@ -111,13 +111,15 @@ function create_log_ui(player)
 	top_flow.add{type="checkbox", name="show_checkbox", state=true}
 
 	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
+	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
+	table.style.vertical_spacing = 0
 	scroll_pane.style.maximal_height = 500
 	scroll_pane.style.maximal_width = 500
 	scroll_pane.style.minimal_height = 100
 	scroll_pane.style.minimal_width = 50
 
 	for index=1, NUM_LOG_LINES do
-		local label = scroll_pane.add{type="label", style="label_style", name = "text_" .. index, caption="", single_line=true, want_ellipsis=true}
+		local label = table.add{type="label", style="label_style", name = "text_" .. index, caption="", single_line=true, want_ellipsis=true}
 		label.style.top_padding = 0
 		label.style.bottom_padding = 0
 		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
@@ -186,11 +188,12 @@ function update_log_ui(player)
 		-- Display
 		local index = 1
 		for _, message in ipairs(displayable) do
-			if frame.scroll_pane["text_" .. index] then
-				local label = frame.scroll_pane["text_" .. index]
+			if frame.scroll_pane.table["text_" .. index] then
+				local label = frame.scroll_pane.table["text_" .. index]
 				label.caption = message.display_text
 				for k, v in pairs(default_style) do 
-					label.style[k] = global.log_data.log_type_settings[message.type_name].style[k] or default_style[k]
+					local st = global.log_data.log_type_settings[message.type_name].style
+					label.style[k] = (st and st[k]) or default_style[k]
 				end
 			else 
 				break
