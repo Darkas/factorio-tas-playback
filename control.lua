@@ -2,6 +2,8 @@ require("util")
 require("utility_functions")
 require("silo-script")
 require("command_list_parser")
+require("log_ui")
+
 
 -- Global variables initialization
 local max_tick = 0
@@ -27,11 +29,41 @@ end
 -- Get the commands that the speedrun can use
 local TAScommands = require("commands")
 
+
+function set_run_logging_types()
+	configure_log_type(
+		"run-debug", 
+		{font_color = {r=0.5, g=0.9, b=0.9}}, 
+		50, 
+		function(text, data, game_tick)
+			return "[" .. game_tick - (global.start_tick or 0) .. "] " .. text
+		end
+	)
+	configure_log_type(
+		"tascommand-error", 
+		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"}, 
+		50, 
+		function(text, data, game_tick)
+			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
+		end
+	)
+	configure_log_type(
+		"run-output", 
+		{font_color = {r=0.5, g=1, b=0.5}, font = "default"}, 
+		50, 
+		function(text, data, game_tick)
+			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
+		end
+	)
+end
+
+
 ------------------------------------
 -- Functions that control the run --
 ------------------------------------
 -- This function initializes the run's clock and a few properties
 function init_run(myplayer_index)
+	set_run_logging_types()
 	debugprint("Initializing the run")
 	-- Examine the command queue for errors. 
 	if not commandqueue then
@@ -120,6 +152,10 @@ function end_of_input(player)
 end
 
 script.on_event(defines.events.on_tick, function(event)
+	for _, player in pairs(game.players) do
+		if player.connected then update_log_ui(player) end
+	end
+
 	if commandqueue and global.running then
 		local tick = game.tick - global.start_tick
 		local myplayer = global.myplayer
@@ -180,6 +216,7 @@ script.on_init(function()
 	global.walkstate = {walking = false}
 	silo_script.init()
 	command_list_parser.init()
+	init_logging()
 end)
 
 remote.add_interface("TAS_playback", {launch = function() 
