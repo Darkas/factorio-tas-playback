@@ -156,19 +156,18 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	-- Process out of range command if it exists
 	if leaving_range_command then
 		commandqueue[tick] = create_commandqueue(executable_commands, leaving_range_command, myplayer, tick)
-	end
-	
-
-	-- Otherwise execute first command with highest priority.
-	if #executable_commands > 0 then
-		local command = executable_commands[1]
-		for _, com in pairs(executable_commands) do
-			if command.priority > com.priority then
-				command = com
+	else
+		-- Otherwise execute first command with highest priority.
+		if #executable_commands > 0 then
+			local command = executable_commands[1]
+			for _, com in pairs(executable_commands) do
+				if command.priority > com.priority then
+					command = com
+				end
 			end
-		end
 		
-		commandqueue[tick] = create_commandqueue(executable_commands, command, myplayer, tick)
+			commandqueue[tick] = create_commandqueue(executable_commands, command, myplayer, tick)
+		end
 	end
 	
 	return true
@@ -245,9 +244,18 @@ function command_executable(command, myplayer, tick)
 	-- on_tick, on_relative_tick
 	if command.on_tick and command.on_tick < tick then return false end
 	if command.on_relative_tick then
-		if type(command.on_relative_tick) == type(1) and tick < global.current_command_group_tick + command.on_relative_tick then fail_reason = "The tick has not been reached"
-		elseif type(command.on_relative_tick) == type({}) and not global.command_finished_times[command.on_relative_tick[2]] or tick < global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then fail_reason = "The tick has not been reached"
-		else error("Unrecognized format for on_relative_tick!")
+		if type(command.on_relative_tick) == type(1) then
+			if tick < global.current_command_group_tick + command.on_relative_tick then
+				fail_reason = "The tick has not been reached"
+			end
+		else
+			if type(command.on_relative_tick) == type({}) then
+				if not global.command_finished_times[command.on_relative_tick[2]] or tick < global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then
+					fail_reason = "The tick has not been reached"
+				end
+			else
+				error("Unrecognized format for on_relative_tick!")
+			end
 		end
 	end
 	
