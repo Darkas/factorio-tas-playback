@@ -18,6 +18,6 @@ function debugprint(msg)
 end
 
 function errprint(msg)
-	log_to_ui("[" .. game.tick - (global.start_tick or 0) .. "]  ___WARNING___ " .. msg, "tascommand-error")
+	log_to_ui(msg, "tascommand-error")
 	--game.print("[" .. game.tick - (global.start_tick or 0) .. "]  ___WARNING___ " .. msg)
 end
