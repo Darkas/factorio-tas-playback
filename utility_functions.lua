@@ -139,31 +139,28 @@ end
 -- Surface related
 -------------------
 
-function is_entity_at_pos(pos, myplayer, type, epsilon)
-	if not epsilon then
-		epsilon = 0.2
-	end
-	
-	local entities = myplayer.surface.find_entities_filtered({area = {{-epsilon + pos[1], -epsilon + pos[2]}, {epsilon + pos[1], epsilon + pos[2]}}, type = type})
-
-	if (not entities) or #entities ~= 1 then
-		return false
-	else
-		return true
-	end
-end
-
 function get_entity_from_pos(pos, myplayer, type, epsilon)
 	if not epsilon then
 		epsilon = 0.2
 	end
 	
-	local entities = myplayer.surface.find_entities_filtered({area = {{-epsilon + pos[1], -epsilon + pos[2]}, {epsilon + pos[1], epsilon + pos[2]}}, type = type})
-
-	if (not entities) or #entities ~= 1 then
-		game.print("There is not precisely one entity at this place!")
-		return entities[1]
+	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler"}
+	
+	if type then
+		types = {type}
 	end
 	
-	return entities[1]
+	local entity = nil
+	local entities = nil
+	
+	for _,t in pairs(types) do
+		--game.print(serpent.block({area = {{-epsilon + pos[1], -epsilon + pos[2]}, {epsilon + pos[1], epsilon + pos[2]}}, type = type}))
+		entities = myplayer.surface.find_entities_filtered({area = {{-epsilon + pos[1], -epsilon + pos[2]}, {epsilon + pos[1], epsilon + pos[2]}}, type = type})
+		
+		if #entities > 0 then
+			entity = entities[1]
+		end
+	end
+	
+	return entity
 end

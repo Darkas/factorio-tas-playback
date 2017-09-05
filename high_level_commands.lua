@@ -146,34 +146,31 @@ high_level_commands = {
 			return {"put", command[2], "coal", 1, defines.inventory.fuel}
 		end,
 		executable = function(command, myplayer, tick)
-			local type = nil
-			local entity = nil
-			
-			for _,t in pairs({"mining-drill", "furnace", "boiler"}) do
-				if is_entity_at_pos(command[2], myplayer, t) then
-					type = t
-					entity = get_entity_from_pos(command[2], myplayer, t)
+			if not command.data.entity then
+				command.data.entity = get_entity_from_pos(command[2], myplayer)
+				
+				if command.data.entity then
+					if not has_value({"boiler", "furnace", "mining-drill"}, command.data.entity.type) then
+						command.data.entity = nil
+						return false
+					else
+						command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
+						
+						if command.data.entity.type == "mining-drill" then
+							command.data.frequency = 1600
+						end
+		
+						if command.data.entity.type == "furnace" then -- stone furnace
+							command.data.frequency = 2660
+						end
+					end
+				else
+					return false
 				end
-			end
-			
-			if entity then
-				command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
-			else
-				return false
 			end
 			
 			if command.data.started then
-				local frequency = 0
-		
-				if type == "mining-drill" then
-					frequency = 1600
-				end
-		
-				if type == "furnace" then -- stone furnace
-					frequency = 2660
-				end
-		
-				if (command.data.started - tick) % frequency > 0 then
+				if (command.data.started - tick) % command.data.frequency > 0 then
 					return false
 				end
 			end
@@ -361,12 +358,11 @@ high_level_commands = {
 			return {command[1], command[2], item, amount, inventory}
 		end,
 		executable = function(command, myplayer, tick)
-			if not is_entity_at_pos(command[2], myplayer) then
+			local entity = get_entity_from_pos(command[2], myplayer)
+			if not entity then
 				return false
 			else
 				if not command.rect then
-					local entity = get_entity_from_pos(command[2], myplayer)
-			
 					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
 					command.distance = myplayer.reach_distance
 				end
@@ -406,45 +402,54 @@ high_level_commands = {
 	
 	take = {
 		to_low_level = function(command, myplayer, tick)
-			local item = command[3]
 			local amount = command[4]
-			local inventory = command.inventory
-			
-			local entity = get_entity_from_pos(command[2], myplayer)
-			
-			if not inventory then
-				local invs = {
-					furnace = defines.inventory.furnace_result,
-					["assembling-machine"] = defines.inventory.assembling_machine_output,
-					container = defines.inventory.chest,
-					car = defines.inventory.car_trunk,
-					["cargo-wagon"] = defines.inventory.cargo_wagon,
-					["mining-drill"] = defines.inventory.fuel
-				}
-				inventory = invs[entity.type]
-			end
-			
-			if not item then -- take the first thing in the inventory
-				item = entity.get_inventory(inventory)[1].name
-			end
 			
 			if not amount then -- take everything
-				amount = math.min(entity.get_item_count(item), game.item_prototypes[item].stack_size)
+				amount = math.min(command.data.entity.get_item_count(command.data.item), game.item_prototypes[command.data.item].stack_size)
 			end
 			
 			command.finished = true
 			
-			return {command[1], command[2], item, amount, inventory}
+			return {command[1], command[2], command.data.item, amount, command.data.inventory}
 		end,
 		executable = function(command, myplayer, tick)
-			if not is_entity_at_pos(command[2], myplayer) then
-				return false
-			else
-				if not command.rect then
-					local entity = get_entity_from_pos(command[2], myplayer)
+			if not command.data.entity then
+				command.data.entity = get_entity_from_pos(command[2], myplayer)
+				if not command.data.entity then
+					return false
+				end
+			end
 			
-					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
-					command.distance = myplayer.reach_distance
+			if not command.rect then
+				command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
+				command.distance = myplayer.reach_distance
+			end
+			
+			if not command.data.inventory then
+				command.data.inventory = command.inventory
+				if not command.data.inventory then
+					local invs = {
+						furnace = defines.inventory.furnace_result,
+						["assembling-machine"] = defines.inventory.assembling_machine_output,
+						container = defines.inventory.chest,
+						car = defines.inventory.car_trunk,
+						["cargo-wagon"] = defines.inventory.cargo_wagon,
+						["mining-drill"] = defines.inventory.fuel
+					}
+					command.data.inventory = invs[command.data.entity.type]
+				end
+			end
+			
+			if not command.data.item then
+				command.data.item = command[3]
+				if not command.data.item then -- take the first thing in the inventory
+					local entity_inventory = command.data.entity.get_inventory(command.data.inventory)
+				
+					if entity_inventory and entity_inventory[1] and entity_inventory[1].valid_for_read then
+						command.data.item = command.data.entity.get_inventory(command.data.inventory)[1].name
+					else
+						errprint("Take: Entity " .. command.data.entity.name .. " at (" .. command[2][1] .. "," .. command[2][2] .. ") has no valid inventory item to guess.")
+					end
 				end
 			end
 			
