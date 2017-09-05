@@ -101,6 +101,31 @@ high_level_commands = {
 	["auto-move-to-command"] = {
 		to_low_level = auto_move_to_low_level,
 		executable = function(command, myplayer, tick)
+			if not command.data.target_command then
+				for _, com in pairs(global.current_command_set) do
+					if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
+						command.data.target_command = com
+					end
+				end
+			end
+			
+			if not command.data.target_command then
+				return "There is no command named: " .. command[2]
+			end
+			
+			if command.data.target_command == "craft-build" then
+				errprint("auto-move-to-command is not compatible with craft-build! Please craft and build separately to avoid this command to stop unexpectedly!")
+			end
+			
+			if command.data.target_command.rect then
+				command.data.target_pos = {}
+				distance_from_rect(myplayer.position, command.data.target_command.rect, command.data.target_pos)
+				
+				debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+			else
+				return "The command does currently not have a location"
+			end
+			
 			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) == "" then
 				command.finished = true
 				return "finished"
@@ -110,19 +135,7 @@ high_level_commands = {
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
-			for _, com in pairs(global.current_command_set) do
-				if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
-					command.data.target_pos = {}
-					distance_from_rect(myplayer.position, com.rect, command.data.target_pos)
-					command.data.target_command = com
-
-					debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
-				end
-			end
 			
-			if not command.data.target_command then
-				debugprint("There is no command named: " .. command[2])
-			end
 		end,
 		init_dependencies = function (command)
 			return command[2]
