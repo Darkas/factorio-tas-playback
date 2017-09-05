@@ -1,8 +1,5 @@
 require("mod-gui")
 
-
--- TODO: Do we need this to be more efficient?
-
 --[[ 
 
 Usage
@@ -28,13 +25,12 @@ default_style = {
 -- type_name: log type
 -- data (optional): additional argument that is passed to the formatter function of a log type, if it is set.
 function log_to_ui(text, type_name, data)
+	if not global.log_data then init_logging() end
 	-- Defaults
 	if not type_name then type_name = "debug" end
 	if not text then text = "" end
 
-
 	-- Add message to log
-
 	if not global.log_data.log_type_settings[type_name] then configure_log_type(type_name) end
 	local type_settings = global.log_data.log_type_settings[type_name]
 
@@ -70,66 +66,18 @@ end
 -- data (optional): type-global argument for formatter function
 function configure_log_type(type_name, style, max_size, message_formatter, data)
 	if not global.log_data.log_type_settings[type_name] then global.log_data.log_type_settings[type_name] = {log_size = 0} end
-	--if not global.log_data.log_messages[type_name] then
-	--	global.log_data.log_messages[type_name] = {}
-	--end
 
 	local t = global.log_data.log_type_settings[type_name]
-	t.message_formatter = message_formatter or t.message_formatter or function(text, data, game_tick) return "[" .. type_name .. " | " .. game_tick .. "] " .. text end
+	t.message_formatter = message_formatter or t.message_formatter or function(text, data, game_tick) return "[" .. type_name .. " | " .. game.tick .. "] " .. text end
 	t.max_log_size = max_size or t.max_log_size or 50
 	t.data = data or t.data
 	t.style = style or t.style
 end
 
--- Init function that needs to be called before logging can be started.
-function init_logging()
-	if not global.log_data then 
-		-- UI
-		global.log_data = {}
-		global.log_data.ui_paused = {}
-		global.log_data.ui_hidden = {}
-
-		-- content
-		global.log_data.log_messages = {}
-		global.log_data.log_type_settings = {}
-	end
-end
-
-
--- create_log_ui
--- is called automatically when update_log_ui(player) is called
-function create_log_ui(player)
-	local flow = mod_gui.get_frame_flow(player)
-	local frame = flow.log_frame
-	if frame and frame.valid then frame.destroy() end
-	frame = flow.add{type="frame", name="log_frame", style="frame_style", direction="vertical"}
-
-	local top_flow = frame.add{type="flow", name="top_flow", style="flow_style", direction="horizontal"}
-	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Log"}
-	title.style.font = "default-frame"
-	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
-	top_flow.add{type="checkbox", name="show_checkbox", state=true}
-
-	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
-	scroll_pane.style.maximal_height = 500
-	scroll_pane.style.maximal_width = 500
-	scroll_pane.style.minimal_height = 100
-	scroll_pane.style.minimal_width = 50
-
-	for index=1, NUM_LOG_LINES do
-		local label = scroll_pane.add{type="label", style="label_style", name = "text_" .. index, caption="", single_line=true, want_ellipsis=true}
-		label.style.top_padding = 0
-		label.style.bottom_padding = 0
-		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
-
-	end
-	local type_flow = frame.add{type="flow", name="type_flow", style="flow_style", direction="horizontal"}
-end
-
 
 -- update_log_ui
 -- player: player
--- Since this is relatively expensive, it schedules itself automatically depending on game speed.
+-- Make sure to call this every tick. Since this is relatively expensive, it schedules itself automatically depending on game speed.
 function update_log_ui(player)
 
 	local flow = mod_gui.get_frame_flow(player)
@@ -186,11 +134,12 @@ function update_log_ui(player)
 		-- Display
 		local index = 1
 		for _, message in ipairs(displayable) do
-			if frame.scroll_pane["text_" .. index] then
-				local label = frame.scroll_pane["text_" .. index]
+			if frame.scroll_pane.table["text_" .. index] then
+				local label = frame.scroll_pane.table["text_" .. index]
 				label.caption = message.display_text
 				for k, v in pairs(default_style) do 
-					label.style[k] = global.log_data.log_type_settings[message.type_name].style[k] or default_style[k]
+					local st = global.log_data.log_type_settings[message.type_name].style
+					label.style[k] = (st and st[k]) or default_style[k]
 				end
 			else 
 				break
@@ -198,6 +147,54 @@ function update_log_ui(player)
 			index = index + 1
 		end
 	end
+end
+
+
+-- init_logging
+-- Is called automatically when log_to_gui is called. Calling it manually will reset logged information.
+function init_logging()
+	-- UI
+	global.log_data = {}
+	global.log_data.ui_paused = {}
+	global.log_data.ui_hidden = {}
+
+	-- content
+	global.log_data.log_messages = {}
+	global.log_data.log_type_settings = {}
+end
+
+
+
+-- create_log_ui
+-- Is called automatically when update_log_ui(player) is called.
+function create_log_ui(player)
+	local flow = mod_gui.get_frame_flow(player)
+	local frame = flow.log_frame
+	if frame and frame.valid then frame.destroy() end
+	frame = flow.add{type="frame", name="log_frame", style="frame_style", direction="vertical"}
+
+	local top_flow = frame.add{type="flow", name="top_flow", style="flow_style", direction="horizontal"}
+	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Log"}
+	title.style.font = "default-frame"
+	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
+	top_flow.add{type="checkbox", name="show_checkbox", state=true}
+
+	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
+	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
+	table.style.vertical_spacing = 0
+	scroll_pane.style.maximal_height = 500
+	scroll_pane.style.maximal_width = 500
+	scroll_pane.style.minimal_height = 100
+	scroll_pane.style.minimal_width = 50
+
+	for index=1, NUM_LOG_LINES do
+		local label = table.add{type="label", style="label_style", name = "text_" .. index, caption="", single_line=true, want_ellipsis=true}
+		label.style.top_padding = 0
+		label.style.bottom_padding = 0
+		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
+
+	end
+	local type_flow = frame.add{type="flow", name="type_flow", style="flow_style", direction="horizontal"}
 end
 
 function destroy_log_ui(player)

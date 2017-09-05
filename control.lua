@@ -201,7 +201,6 @@ script.on_init(function()
 	-- Global variables initialization
 	global.walkstate = {walking = false}
 	silo_script.init()
-	init_logging()
 end)
 
 remote.add_interface("TAS_playback", {launch = function() 
