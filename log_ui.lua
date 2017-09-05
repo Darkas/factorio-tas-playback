@@ -70,7 +70,7 @@ function configure_log_type(type_name, style, max_size, message_formatter, data)
 	if not global.log_data.log_type_settings[type_name] then global.log_data.log_type_settings[type_name] = {log_size = 0} end
 
 	local t = global.log_data.log_type_settings[type_name]
-	t.message_formatter = message_formatter or t.message_formatter or function(message) return "[" .. message.type_name .. " | " .. message.game_tick .. "] " .. message.text end
+	t.message_formatter = message_formatter or t.message_formatter or function(message) return "[" .. message.type_name .. " | " .. message.tick .. "] " .. message.text end
 	t.max_log_size = max_size or t.max_log_size or 50
 	t.data = data or t.data
 	t.style = style or t.style
@@ -183,7 +183,7 @@ function create_log_ui(player)
 	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
 	top_flow.add{type="checkbox", name="show_checkbox", state=true}
 
-	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
+	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical"}
 	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
 	table.style.vertical_spacing = 0
 	scroll_pane.style.maximal_height = 500
