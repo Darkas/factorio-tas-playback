@@ -36,7 +36,7 @@ function init_run(myplayer_index)
 
 	configure_log_type(
 		"run-debug", 
-		{font_color = {r=0.8, g=0.95, b=0.9}}, 
+		{font_color = {r=0.5, g=0.9, b=0.9}}, 
 		50, 
 		function(text, data, game_tick)
 			return "[" .. game_tick - (global.start_tick or 0) .. "] " .. text
@@ -45,6 +45,14 @@ function init_run(myplayer_index)
 	configure_log_type(
 		"tascommand-error", 
 		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"}, 
+		50, 
+		function(text, data, game_tick)
+			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
+		end
+	)
+	configure_log_type(
+		"run-output", 
+		{font_color = {r=0.5, g=1, b=0.5}, font = "default"}, 
 		50, 
 		function(text, data, game_tick)
 			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text

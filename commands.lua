@@ -199,7 +199,8 @@ TAScommands["tech"] = function (tokens, myplayer)
 end
 
 TAScommands["print"] = function (tokens, myplayer)
-  myplayer.print(tokens[2])
+  log_to_ui(tokens[2], "run-output")
+  --myplayer.print(tokens[2])
 end
 
 TAScommands["recipe"] = function (tokens, myplayer)
