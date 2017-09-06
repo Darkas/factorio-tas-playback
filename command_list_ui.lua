@@ -31,7 +31,7 @@ function create_command_list_ui(player)
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Command List"}
 	title.style.font = "default-frame"
 
-	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
+	local label = top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
 	top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
 
 	local group_flow = frame.add{type="flow", name="group_flow", style="flow_style", direction="horizontal"}

@@ -1,4 +1,5 @@
 require("high_level_commands")
+
 module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
 
 always_possible = {"speed"}
@@ -28,7 +29,6 @@ max_ranges = {
 
 function init()
 	global.current_command_set = {}
-	global.tech_queue = {}
 	global.command_finished_times = {}
 	global.loaded_command_groups = {}
 	global.initialized_names = {}
@@ -40,12 +40,6 @@ function init()
 	global.current_command_group_index = 0
 	global.current_command_group_tick = nil
 end
-
-script.on_event(defines.events.on_research_finished, function (event)
-	local force = event.research.force
-	commandqueue[game.tick][#commandqueue[game.tick] + 1] =	{"tech", global.tech_queue[1]}
-	table.delete(global.tech_queue, 1)
-end)
 
 script.on_event(defines.events.on_player_mined_item, function(event)
 	global.current_mining = global.current_mining + (event.item_stack.count or 1)

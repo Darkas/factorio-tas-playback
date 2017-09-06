@@ -44,7 +44,8 @@ function set_run_logging_types()
 		50, 
 		function(message)
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
-		end
+		end,
+		true
 	)
 	configure_log_type(
 		"tascommand-error", 

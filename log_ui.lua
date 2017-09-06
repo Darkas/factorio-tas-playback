@@ -64,7 +64,7 @@ end
 -- max_size (optional): maximum number of log messages for this type that will be saved. We delete the oldest message first. Default is 50.
 -- message_formatter (optional): formatter function that determines the actually shown text for each logged message. message_formatter{text=…, type_name=…, tick=…, data=…}. Default format is '[<type_name> | <game_tick>] <text>'.
 -- data (optional): type-global argument for formatter function
-function configure_log_type(type_name, style, max_size, message_formatter, data)
+function configure_log_type(type_name, style, max_size, message_formatter, default_hide, data)
 	if not global.log_data then init_logging() end
 
 	if not global.log_data.log_type_settings[type_name] then global.log_data.log_type_settings[type_name] = {log_size = 0} end
@@ -74,6 +74,7 @@ function configure_log_type(type_name, style, max_size, message_formatter, data)
 	t.max_log_size = max_size or t.max_log_size or 50
 	t.data = data or t.data
 	t.style = style or t.style
+	t.default_hide = default_hide
 end
 
 
@@ -119,7 +120,7 @@ function update_log_ui(player)
 					visible_types[log_type] = true
 				end
 			else
-				checkbox = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=true}
+				checkbox = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=not global.log_data.log_type_settings[log_type].default_hide}
 				type_flow.add{type="label", style="label_style", name=log_type .. "_text", caption=log_type}
 			end
 		end
