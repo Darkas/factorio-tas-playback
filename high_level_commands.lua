@@ -1,7 +1,12 @@
+
+if not global.command_list_parser then global.command_list_parser = {} end
+local our_global = global.command_list_parser
+
+
 function auto_move_to_low_level (command, myplayer, tick)
 	local auto_move_commands = 0
 	
-	for _, command in pairs(global.current_command_set) do
+	for _, command in pairs(our_global.current_command_set) do
 		if (not command.finished) and (command[1] == "auto-move-to" or command[1] == "auto-move-to-command") then
 			auto_move_commands = auto_move_commands + 1
 		end
@@ -70,11 +75,6 @@ function auto_move_to_low_level (command, myplayer, tick)
 	return {"move", move_dir}
 end
 
-function move_collision_box(collision_box, coords)
-	local x,y = get_coordinates(coords)
-	return {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
-end
-
 function empty()	
 end
 
@@ -85,10 +85,6 @@ end
 
 function return_phantom ()
 	return {"phantom"}
-end
-
-function in_range(command, myplayer)
-	return distance_from_rect(myplayer.position, command.rect) <= command.distance
 end
 
 high_level_commands = {
@@ -102,7 +98,7 @@ high_level_commands = {
 		to_low_level = auto_move_to_low_level,
 		executable = function(command, myplayer, tick)
 			if not command.data.target_command then
-				for _, com in pairs(global.current_command_set) do
+				for _, com in pairs(our_global.current_command_set) do
 					if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
 						command.data.target_command = com
 					end
@@ -297,9 +293,9 @@ high_level_commands = {
 				return "Out of range"
 			end
 		
-			if command.amount and global.current_mining >= command.amount then
+			if command.amount and our_global.current_mining >= command.amount then
 				command.finished = true
-				global.current_mining = 0
+				our_global.current_mining = 0
 				return "finished"
 			end
 			
@@ -505,7 +501,7 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			local cancel = namespace_prefix(command[2], command.command_group)
 			
-			for _,com in pairs(global.current_command_set) do
+			for _,com in pairs(our_global.current_command_set) do
 				if com.name == cancel then
 					com.finished = true
 				end

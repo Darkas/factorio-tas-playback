@@ -66,7 +66,7 @@ end
 
 function update_command_list_ui(player, command_list)
 	if not command_list then return end
-	if not global.current_command_group_index or not command_list[global.current_command_group_index] then return end
+	if not global.command_list_parser.current_command_group_index or not command_list[global.command_list_parser.current_command_group_index] then return end
 	local flow = mod_gui.get_frame_flow(player)
 	local frame = flow.command_list_frame
 
@@ -93,15 +93,15 @@ function update_command_list_ui(player, command_list)
 	-- Update
 	if show then
 
-		local current_command_group = command_list[global.current_command_group_index]
+		local current_command_group = command_list[global.command_list_parser.current_command_group_index]
 		frame.group_flow.current_command_group.caption = "Active Command Group: " .. current_command_group.name
 
-		local next_command_group = command_list[global.current_command_group_index + 1]
+		local next_command_group = command_list[global.command_list_parser.current_command_group_index + 1]
 		if next_command_group then
 			if next_command_group.required then
 				local s = ""
 				for _, name in ipairs(next_command_group.required) do
-					if not global.finished_command_names[name] then
+					if not global.command_list_parser.finished_command_names[name] then
 						s = s .. name .. " | "
 					end
 				end
@@ -117,9 +117,9 @@ function update_command_list_ui(player, command_list)
 		for index = 1, NUM_LINES do
 			local command = nil
 			repeat
-				command = global.current_command_set[command_set_index]
+				command = global.command_list_parser.current_command_set[command_set_index]
 				command_set_index = command_set_index + 1
-			until (command and not command.finished) or command_set_index > #global.current_command_set
+			until (command and not command.finished) or command_set_index > #global.command_list_parser.current_command_set
 
 			if command then 
 				s = "[" .. index .. "] | "
