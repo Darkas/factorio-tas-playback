@@ -1,4 +1,5 @@
 require("high_level_commands")
+
 module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
 
 always_possible = {"speed"}
@@ -28,7 +29,6 @@ max_ranges = {
 
 function init()
 	global.current_command_set = {}
-	global.tech_queue = {}
 	global.command_finished_times = {}
 	global.loaded_command_groups = {}
 	global.initialized_names = {}
@@ -40,12 +40,6 @@ function init()
 	global.current_command_group_index = 0
 	global.current_command_group_tick = nil
 end
-
-script.on_event(defines.events.on_research_finished, function (event)
-	local force = event.research.force
-	commandqueue[game.tick][#commandqueue[game.tick] + 1] =	{"tech", global.tech_queue[1]}
-	table.delete(global.tech_queue, 1)
-end)
 
 script.on_event(defines.events.on_player_mined_item, function(event)
 	global.current_mining = global.current_mining + (event.item_stack.count or 1)
@@ -156,19 +150,18 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	-- Process out of range command if it exists
 	if leaving_range_command then
 		commandqueue[tick] = create_commandqueue(executable_commands, leaving_range_command, myplayer, tick)
-	end
-	
-
-	-- Otherwise execute first command with highest priority.
-	if #executable_commands > 0 then
-		local command = executable_commands[1]
-		for _, com in pairs(executable_commands) do
-			if command.priority > com.priority then
-				command = com
+	else
+		-- Otherwise execute first command with highest priority.
+		if #executable_commands > 0 then
+			local command = executable_commands[1]
+			for _, com in pairs(executable_commands) do
+				if command.priority > com.priority then
+					command = com
+				end
 			end
-		end
 		
-		commandqueue[tick] = create_commandqueue(executable_commands, command, myplayer, tick)
+			commandqueue[tick] = create_commandqueue(executable_commands, command, myplayer, tick)
+		end
 	end
 	
 	return true
@@ -216,7 +209,7 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	
 	local queue = {}
 	
-	for _,com in pairs(command_collection) do
+	for i,com in pairs(command_collection) do
 		queue[#queue + 1] = high_level_commands[com[1]].to_low_level(com, myplayer, tick)
 	end
 
@@ -245,9 +238,18 @@ function command_executable(command, myplayer, tick)
 	-- on_tick, on_relative_tick
 	if command.on_tick and command.on_tick < tick then return false end
 	if command.on_relative_tick then
-		if type(command.on_relative_tick) == type(1) and tick < global.current_command_group_tick + command.on_relative_tick then fail_reason = "The tick has not been reached"
-		elseif type(command.on_relative_tick) == type({}) and not global.command_finished_times[command.on_relative_tick[2]] or tick < global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then fail_reason = "The tick has not been reached"
-		else error("Unrecognized format for on_relative_tick!")
+		if type(command.on_relative_tick) == type(1) then
+			if tick < global.current_command_group_tick + command.on_relative_tick then
+				fail_reason = "The tick has not been reached"
+			end
+		else
+			if type(command.on_relative_tick) == type({}) then
+				if not global.command_finished_times[command.on_relative_tick[2]] or tick < global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then
+					fail_reason = "The tick has not been reached"
+				end
+			else
+				error("Unrecognized format for on_relative_tick!")
+			end
 		end
 	end
 	
@@ -266,6 +268,11 @@ function command_executable(command, myplayer, tick)
 		
 		if pos then
 			entity = get_entity_from_pos(pos, myplayer)
+			
+			if not entity then
+				errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
+				return false
+			end
 		else
 			entity = myplayer
 		end

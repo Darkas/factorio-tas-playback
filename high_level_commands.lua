@@ -101,6 +101,31 @@ high_level_commands = {
 	["auto-move-to-command"] = {
 		to_low_level = auto_move_to_low_level,
 		executable = function(command, myplayer, tick)
+			if not command.data.target_command then
+				for _, com in pairs(global.current_command_set) do
+					if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
+						command.data.target_command = com
+					end
+				end
+			end
+			
+			if not command.data.target_command then
+				return "There is no command named: " .. command[2]
+			end
+			
+			if command.data.target_command == "craft-build" then
+				errprint("auto-move-to-command is not compatible with craft-build! Please craft and build separately to avoid this command to stop unexpectedly!")
+			end
+			
+			if command.data.target_command.rect then
+				command.data.target_pos = {}
+				distance_from_rect(myplayer.position, command.data.target_command.rect, command.data.target_pos)
+				
+				debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+			else
+				return "The command does currently not have a location"
+			end
+			
 			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) == "" then
 				command.finished = true
 				return "finished"
@@ -110,19 +135,7 @@ high_level_commands = {
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
-			for _, com in pairs(global.current_command_set) do
-				if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
-					command.data.target_pos = {}
-					distance_from_rect(myplayer.position, com.rect, command.data.target_pos)
-					command.data.target_command = com
-
-					debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
-				end
-			end
 			
-			if not command.data.target_command then
-				debugprint("There is no command named: " .. command[2])
-			end
 		end,
 		init_dependencies = function (command)
 			return command[2]
@@ -295,11 +308,17 @@ high_level_commands = {
 		default_priority = 6,
 		initialize = function (command, myplayer)
 			local entity = get_entity_from_pos(command[2], myplayer)
-		
-			command.data.ore_type = entity.name
+			
+			
 		
 			command.distance = myplayer.resource_reach_distance
-			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			
+			if entity then
+				command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			else
+				errprint("There is no mineable thing at (" .. command[2][1] .. "," .. command[2][2] .. ")")
+				command.rect = move_collision_box({left_top={x=0,y=0},right_bottom={x=0,y=0}}, command[2])
+			end
 		end,
 	},
 	
@@ -308,64 +327,67 @@ high_level_commands = {
 			local item = command[3]
 			local amount = command[4]
 			local inventory = command.inventory
-			
-			local entity = get_entity_from_pos(command[2], myplayer)
-			
-			if not inventory then
-				local item_type = game.item_prototypes[item].type
-				if entity.type == "furnace" then
-					if item == "raw-wood" or item == "coal" then
-						inventory = defines.inventory.fuel
-					else 
-						inventory = defines.inventory.furnace_source
-					end
-				elseif entity.type == "assembling-machine" then
-					if item_type == "module" then
-						inventory = defines.inventory.assembling_machine_modules
-					else
-						inventory = defines.inventory.assembling_machine_input
-					end
-				elseif entity.type == "lab" then
-					if item_type == "module" then
-						inventory = defines.inventory.lab_modules
-					else
-						inventory = defines.inventory.lab_input
-					end
-				elseif entity.type == "car" then
-					inventory = defines.inventory.car_trunk
-				elseif entity.type == "rocket-silo" then
-					if item_type == "module" then
-						inventory = defines.inventory.assembling_machine_modules
-					elseif item == "satellite" then 
-						inventory = defines.inventory.rocket_silo_rocket
-					else 
-						inventory = defines.inventory.assembling_machine_input
-					end
-				elseif entity.type == "container" then
-					inventory = defines.inventory.chest
-				end
-			end
-			
-			if not item then -- take the first thing in the inventory
-				item = entity.get_inventory(inventory)[1].name
-			end
-			
-			if not amount then -- take everything
-				amount = math.min(entity.get_item_count(item), game.item_prototypes[item].stack_size)
-			end
+		
 			
 			command.finished = true
 			
-			return {command[1], command[2], item, amount, inventory}
+			return {command[1], command[2], command[3], command[4], command.data.inventory}
 		end,
 		executable = function(command, myplayer, tick)
-			local entity = get_entity_from_pos(command[2], myplayer)
-			if not entity then
-				return "No entity found"
-			else
-				if not command.rect then
-					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
-					command.distance = myplayer.reach_distance
+			if not command.data.entity then
+				command.data.entity = get_entity_from_pos(command[2], myplayer)
+				if not command.data.entity then
+					return "No entity found"
+				else
+					if not command.rect then
+						command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
+						command.distance = myplayer.reach_distance
+					end
+				end
+			end
+			
+			local item = command[3]
+			
+			if not command.data.inventory then
+				command.data.inventory = command.inventory
+				if not command.data.inventory then
+					local item_type = game.item_prototypes[item].type
+					if command.data.entity.type == "furnace" then
+						if item == "raw-wood" or item == "coal" then
+							command.data.inventory = defines.inventory.fuel
+						else 
+							command.data.inventory = defines.inventory.furnace_source
+						end
+					elseif command.data.entity.type == "mining-drill" then
+						command.data.inventory = defines.inventory.fuel
+					elseif command.data.entity.type == "assembling-machine" then
+						if item_type == "module" then
+							command.data.inventory = defines.inventory.assembling_machine_modules
+						else
+							command.data.inventory = defines.inventory.assembling_machine_input
+						end
+					elseif command.data.entity.type == "lab" then
+						if item_type == "module" then
+							command.data.inventory = defines.inventory.lab_modules
+						else
+							command.data.inventory = defines.inventory.lab_input
+						end
+					elseif command.data.entity.type == "car" then
+						inventory = defines.inventory.car_trunk
+					elseif command.data.entity.type == "rocket-silo" then
+						if item_type == "module" then
+							command.data.inventory = defines.inventory.assembling_machine_modules
+						elseif item == "satellite" then 
+							command.data.inventory = defines.inventory.rocket_silo_rocket
+						else 
+							command.data.inventory = defines.inventory.assembling_machine_input
+						end
+					elseif command.data.entity.type == "container" then
+						command.data.inventory = defines.inventory.chest
+					end
+					if not command.data.inventory then
+						return "Inventory could not be determined"
+					end
 				end
 			end
 			
@@ -407,10 +429,14 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
 				command.data.entity = get_entity_from_pos(command[2], myplayer)
-				if (not command.data.entity) or (not command.data.entity.valid) then
-					command.data.entity = nil
+				if not command.data.entity then
 					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 				end
+			end
+			
+			if not command.data.entity.valid then
+				command.data.entity = nil
+				return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 			end
 			
 			if not command.rect then
@@ -430,6 +456,11 @@ high_level_commands = {
 						["mining-drill"] = defines.inventory.fuel
 					}
 					command.data.inventory = invs[command.data.entity.type]
+					
+					if not command.data.inventory then
+						errprint("No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type)
+						return "No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type
+					end
 				end
 			end
 			
@@ -479,6 +510,7 @@ high_level_commands = {
 					com.finished = true
 				end
 			end
+			command.finished = true
 		end,
 	},
 
@@ -500,7 +532,8 @@ defaults = {
 	to_low_level = return_self_finished,
 	executable = function () return "" end,
 	initialize = empty,
-	init_dependencies = empty
+	init_dependencies = empty,
+	default_priority = 5,
 }
 
 for _, command in pairs(high_level_commands) do

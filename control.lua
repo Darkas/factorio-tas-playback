@@ -27,6 +27,12 @@ else
 	-- Currently throw a standard lua error since the custom error management system we use cannot be used. Nothing's initialized !!! 
 	error("The run's scenario doesn't seem to be running. Please make sure you launched the scenario. ")
 end
+
+
+pcall (function ()  blueprints = require("scenarios." .. tas_name .. "." .. "blueprints") end)
+
+
+
 -- Get the commands that the speedrun can use
 local TAScommands = require("commands")
 
@@ -36,24 +42,25 @@ function set_run_logging_types()
 		"run-debug", 
 		{font_color = {r=0.5, g=0.9, b=0.9}}, 
 		50, 
-		function(text, data, game_tick)
-			return "[" .. game_tick - (global.start_tick or 0) .. "] " .. text
-		end
+		function(message)
+			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
+		end,
+		true
 	)
 	configure_log_type(
 		"tascommand-error", 
 		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"}, 
 		50, 
-		function(text, data, game_tick)
-			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
+		function(message)
+			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
 	configure_log_type(
 		"run-output", 
 		{font_color = {r=0.5, g=1, b=0.5}, font = "default"}, 
 		50, 
-		function(text, data, game_tick)
-			return "[" .. game.tick - (global.start_tick or 0) .. "] " .. text
+		function(message)
+			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
 end
@@ -225,6 +232,7 @@ script.on_init(function()
 	init_logging()
 end)
 
+
 remote.add_interface("TAS_playback", {launch = function() 
 	global.init_on_player_created = true
 end})
@@ -241,13 +249,21 @@ commands.add_command("init_run", "Start the speedrun", function(event)
 	end
 end)
 
---freeplay scenario rocket launch stuff
+
 script.on_event(defines.events.on_gui_click, function(event)
-  silo_script.on_gui_click(event)
+  	silo_script.on_gui_click(event)
+
+	if event.element.name == "next_command_group" then
+		if game.players[event.player_index].admin then
+			global.next_command_group = true
+		else
+			game.players[event.player_index].print("Only admins can do that!")
+		end
+	end
 end)
 
 script.on_event(defines.events.on_rocket_launched, function(event)
-  silo_script.on_rocket_launched(event)
+	silo_script.on_rocket_launched(event)
 end)
 
 silo_script.add_remote_interface()
