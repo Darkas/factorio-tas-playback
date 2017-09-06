@@ -91,6 +91,8 @@ function in_range(command, myplayer)
 	return distance_from_rect(myplayer.position, command.rect) <= command.distance
 end
 
+action_types = {always_possible = 1, selection = 2, ui = 3}
+
 high_level_commands = {
 	
 	["auto-move-to"] = {
@@ -154,7 +156,7 @@ high_level_commands = {
 			if not command.data.entity then
 				command.data.entity = get_entity_from_pos(command[2], myplayer)
 				
-				if command.data.entity then
+				if command.data.entity then -- TODO: instead, try using entity.burner to determine if refueling is needed
 					if not has_value({"boiler", "furnace", "mining-drill"}, command.data.entity.type) then
 						command.data.entity = nil
 						return "No refuelable entity found"
@@ -190,6 +192,7 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			command.distance = myplayer.reach_distance
 		end,
+		default_action_type = action_types.selection,
 	},
 	
 	build = {
@@ -320,6 +323,7 @@ high_level_commands = {
 				command.rect = move_collision_box({left_top={x=0,y=0},right_bottom={x=0,y=0}}, command[2])
 			end
 		end,
+		default_action_type = action_types.selection,
 	},
 	
 	put = {
@@ -398,11 +402,13 @@ high_level_commands = {
 			return ""
 		end,
 		default_priority = 5,
+		default_action_type = action_types.selection,
 	},
 	
 	rotate = {
 		to_low_level = return_self_finished,
 		default_priority = 5,
+		default_action_type = action_types.selection,
 	},
 	
 	speed = {
@@ -416,15 +422,9 @@ high_level_commands = {
 	
 	take = {
 		to_low_level = function(command, myplayer, tick)
-			local amount = command[4]
-			
-			if not amount then -- take everything
-				amount = math.min(command.data.entity.get_item_count(command.data.item), game.item_prototypes[command.data.item].stack_size)
-			end
-			
 			command.finished = true
 			
-			return {command[1], command[2], command.data.item, amount, command.data.inventory}
+			return {command[1], command[2], command.data.item, command.data.amount, command.data.inventory, action_type = command.action_type}
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
@@ -464,6 +464,8 @@ high_level_commands = {
 				end
 			end
 			
+			-- TODO: if no item and amount are given, take the entire inventory as a selection action. Otherwise, it is a ui action
+			
 			if not command.data.item then
 				command.data.item = command[3]
 				if not command.data.item then -- take the first thing in the inventory
@@ -475,6 +477,15 @@ high_level_commands = {
 						return "Entity " .. command.data.entity.name .. " at (" .. command[2][1] .. "," .. command[2][2] .. ") has no valid inventory item to guess"
 					end
 				end
+			end
+			
+			command.data.amount = command[4]
+			if not command.data.amount then
+				command.data.amount = command.data.entity.get_item_count(command.data.item)
+				command.action_type = action_types.selection
+			else
+				command.action_type = action_types.ui
+				command.ui = command[2]
 			end
 			
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
@@ -497,6 +508,7 @@ high_level_commands = {
 	recipe = {
 		to_low_level = return_self_finished,
 		default_priority = 5,
+		default_action_type = action_types.ui,
 	},
 
 	["stop-command"] = {
@@ -533,7 +545,7 @@ defaults = {
 	executable = function () return "" end,
 	initialize = empty,
 	init_dependencies = empty,
-	default_priority = 5,
+	default_action_type = action_types.always_possible
 }
 
 for _, command in pairs(high_level_commands) do
