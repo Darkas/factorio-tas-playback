@@ -180,6 +180,11 @@ TAScommands["take"] = function (tokens, myplayer)
     errprint("Take failed: No items at {" .. position[1] .. "," .. position[2] .. "}.")
     return
   end
+  
+  if totake == 0 then
+	errprint("Taking 0 items is not allowed!")
+	return
+  end
 
   local taken = myplayer.insert{name=item, count=totake}
   debugprint("Took " .. taken .. "x " .. item .. " from " .. myplayer.selected.name  .. " at {" .. position[1] .. "," .. position[2] .. "}.")

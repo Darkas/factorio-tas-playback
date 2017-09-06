@@ -5,21 +5,11 @@ if not global.command_list_parser then global.command_list_parser = {} end
 local our_global = global.command_list_parser
 
 
-always_possible = {"speed"}
-blocks_others = {"auto-refuel", "mine"}
-blocks_movement = {"move", "mine"}
-
-blocks_selection = {"auto-refuel", "build", "put", "take"}
-
-always_possible_actions = {"pickup", "speed", "stop-auto-move-to", "stop-auto-refuel", "stop-auto-take"}
-selection_actions = {"mine", "put", "rotate", "take-stack"}
-ui_actions = {"craft", "recipe", "take", "tech"}
-
 -- TODO: "throw" and "vehicle"
 -- TODO: Check if we need the type parameter in auto-refuel, add amount parameter?
 
 inherited_actions = {
-	["auto-refuel"] = "put-stack",
+	["auto-refuel"] = "put",
 	["auto-move-to"] = "move",
 	["auto-move-to-command"] = "move",
 	["auto-take"] = "take",
@@ -39,6 +29,7 @@ function init()
 	
 	our_global.current_mining = 0
 	our_global.stopped = true
+	our_global.current_ui = nil
 	
 	our_global.current_command_group_index = 0
 	our_global.current_command_group_tick = nil
@@ -157,6 +148,27 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
+	if commandqueue[tick - 1] then
+		local craft = false
+		local ui = false
+		
+		for _,queue in pairs({commandqueue[tick - 1], commandqueue[tick]}) do
+			for _,c in pairs(queue) do
+				if c[1] == "craft" then
+					craft = true
+				end
+			
+				if c.action_type == action_types.ui then
+					ui = true
+				end
+			end
+		end
+		
+		if craft and ui then
+			errprint("You are executing a craft and a ui action in adjacent frames! This is impossible!")
+		end
+	end
+	
 	return true
 end
 
@@ -185,6 +197,9 @@ function add_command_to_current_set(command, myplayer, tick, command_group)
 	if not command.priority then
 		command.priority = high_level_commands[command[1]].default_priority
 	end
+	
+	-- Set action type
+	command.action_type = high_level_commands[command[1]].default_action_type
 	
 	not_add = high_level_commands[command[1]].initialize(command, myplayer)
 
@@ -342,16 +357,16 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 	end
 	local command = commands[1]
 
-	if has_value(selection_actions, basic_action(command)) then -- if you want things to happen in the same frame, use the exact same coordinates!
+	if command.action_type == action_types.selection then -- if you want things to happen in the same frame, use the exact same coordinates!
 		coordinates = command[2] -- all selection actions have there coordinates at [2]
 		
 		local priority_take_or_put = nil
 		
-		if not has_value({"put-stack", "take"}, basic_action(command)) then
+		if not has_value({"put", "take"}, basic_action(command)) then
 			-- find the highest priority take or put-stack action at this position
 			
 			for _, comm in pairs(executable_commands) do
-				if has_value({"put-stack", "take"}, basic_action(comm)) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
+				if has_value({"put", "take"}, basic_action(comm)) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
 					if not priority_take_or_put and priority_take_or_put.priority > comm.priority then
 						priority_take_or_put = comm
 					end
@@ -363,14 +378,14 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 		
 		local forbidden_action = ""
 		
-		if priority_take_or_put and basic_action(priority_take_or_put) == "put-stack" then
+		if priority_take_or_put and basic_action(priority_take_or_put) == "put" then
 			forbidden_action = "take"
 		else
-			forbidden_action = "put-stack"
+			forbidden_action = "put"
 		end
 		
 		for _, comm in pairs(executable_commands) do
-			if has_value(selection_actions, basic_action(comm)) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
+			if comm.action_type == action_types.selection and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] and comm ~= command then
 				if basic_action(comm) ~= forbidden_action then
 					commands[#commands + 1] = comm
 				end
@@ -378,10 +393,21 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 		end
 	end
 	
-	-- TODO: move and mine are incompatible, do something about UI interactions
+	if command.action_type == action_types.ui then
+		if our_global.current_ui == nil then -- we have to open the ui first
+			our_global.current_ui = command.ui
+			
+			table.remove(commands, 1)
+		else
+			-- do the command, close the ui
+			our_global.current_ui = nil
+		end
+	end
+	
+	-- TODO: move and mine are incompatible
 	
 	for _, comm in pairs(executable_commands) do
-		if has_value(always_possible_actions, basic_action(comm)) then
+		if comm.action_type == action_types.always_possible and comm ~= command then
 			commands[#commands + 1] = comm
 		end
 	end
