@@ -96,8 +96,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	
 	-- Add the next command group to the current command set.
 	
-	if finished or global.next_command_group then
-		global.next_command_group = false
+	if finished then
 		global.current_command_group_index = global.current_command_group_index + 1
 		
 		if (not command_list[global.current_command_group_index]) then
@@ -216,7 +215,7 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	
 	local queue = {}
 	
-	for _,com in pairs(command_collection) do
+	for i,com in pairs(command_collection) do
 		queue[#queue + 1] = high_level_commands[com[1]].to_low_level(com, myplayer, tick)
 	end
 

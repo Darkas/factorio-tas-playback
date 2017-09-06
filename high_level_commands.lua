@@ -327,64 +327,67 @@ high_level_commands = {
 			local item = command[3]
 			local amount = command[4]
 			local inventory = command.inventory
-			
-			local entity = get_entity_from_pos(command[2], myplayer)
-			
-			if not inventory then
-				local item_type = game.item_prototypes[item].type
-				if entity.type == "furnace" then
-					if item == "raw-wood" or item == "coal" then
-						inventory = defines.inventory.fuel
-					else 
-						inventory = defines.inventory.furnace_source
-					end
-				elseif entity.type == "assembling-machine" then
-					if item_type == "module" then
-						inventory = defines.inventory.assembling_machine_modules
-					else
-						inventory = defines.inventory.assembling_machine_input
-					end
-				elseif entity.type == "lab" then
-					if item_type == "module" then
-						inventory = defines.inventory.lab_modules
-					else
-						inventory = defines.inventory.lab_input
-					end
-				elseif entity.type == "car" then
-					inventory = defines.inventory.car_trunk
-				elseif entity.type == "rocket-silo" then
-					if item_type == "module" then
-						inventory = defines.inventory.assembling_machine_modules
-					elseif item == "satellite" then 
-						inventory = defines.inventory.rocket_silo_rocket
-					else 
-						inventory = defines.inventory.assembling_machine_input
-					end
-				elseif entity.type == "container" then
-					inventory = defines.inventory.chest
-				end
-			end
-			
-			if not item then -- take the first thing in the inventory
-				item = entity.get_inventory(inventory)[1].name
-			end
-			
-			if not amount then -- take everything
-				amount = math.min(entity.get_item_count(item), game.item_prototypes[item].stack_size)
-			end
+		
 			
 			command.finished = true
 			
-			return {command[1], command[2], item, amount, inventory}
+			return {command[1], command[2], command[3], command[4], command.data.inventory}
 		end,
 		executable = function(command, myplayer, tick)
-			local entity = get_entity_from_pos(command[2], myplayer)
-			if not entity then
-				return "No entity found"
-			else
-				if not command.rect then
-					command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
-					command.distance = myplayer.reach_distance
+			if not command.data.entity then
+				command.data.entity = get_entity_from_pos(command[2], myplayer)
+				if not command.data.entity then
+					return "No entity found"
+				else
+					if not command.rect then
+						command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
+						command.distance = myplayer.reach_distance
+					end
+				end
+			end
+			
+			local item = command[3]
+			
+			if not command.data.inventory then
+				command.data.inventory = command.inventory
+				if not command.data.inventory then
+					local item_type = game.item_prototypes[item].type
+					if command.data.entity.type == "furnace" then
+						if item == "raw-wood" or item == "coal" then
+							command.data.inventory = defines.inventory.fuel
+						else 
+							command.data.inventory = defines.inventory.furnace_source
+						end
+					elseif command.data.entity.type == "mining-drill" then
+						command.data.inventory = defines.inventory.fuel
+					elseif command.data.entity.type == "assembling-machine" then
+						if item_type == "module" then
+							command.data.inventory = defines.inventory.assembling_machine_modules
+						else
+							command.data.inventory = defines.inventory.assembling_machine_input
+						end
+					elseif command.data.entity.type == "lab" then
+						if item_type == "module" then
+							command.data.inventory = defines.inventory.lab_modules
+						else
+							command.data.inventory = defines.inventory.lab_input
+						end
+					elseif command.data.entity.type == "car" then
+						inventory = defines.inventory.car_trunk
+					elseif command.data.entity.type == "rocket-silo" then
+						if item_type == "module" then
+							command.data.inventory = defines.inventory.assembling_machine_modules
+						elseif item == "satellite" then 
+							command.data.inventory = defines.inventory.rocket_silo_rocket
+						else 
+							command.data.inventory = defines.inventory.assembling_machine_input
+						end
+					elseif command.data.entity.type == "container" then
+						command.data.inventory = defines.inventory.chest
+					end
+					if not command.data.inventory then
+						return "Inventory could not be determined"
+					end
 				end
 			end
 			
@@ -507,6 +510,7 @@ high_level_commands = {
 					com.finished = true
 				end
 			end
+			command.finished = true
 		end,
 	},
 
