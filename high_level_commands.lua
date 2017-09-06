@@ -115,8 +115,8 @@ high_level_commands = {
 				return "There is no command named: " .. command[2]
 			end
 			
-			if command.data.target_command == "craft-build" then
-				errprint("auto-move-to-command is not compatible with craft-build! Please craft and build separately to avoid this command to stop unexpectedly!")
+			if command.data.target_command.name == "craft-build" then
+				return "auto-move-to-command cannot move to a craft-build command! Please use the name " .. command[2] .. "-build to go to the build part"
 			end
 			
 			if command.data.target_command.rect then
@@ -227,38 +227,23 @@ high_level_commands = {
 	},
 	
 	["craft-build"] = {
-		execute = function(command, myplayer, tick)
-			if command.data.stage == 1 and not command.data.crafted then
-				command.data.crafted = true
-				return {"craft", command[2], 1}
-			end
-			
-			if command.data.stage == 2 then
-				command.finished = true
-				return {"build", command[2], command[3], command[4]}
-			end
-		end,
-		executable = function(command, myplayer, tick)
-			command.data.stage = 0
-			
-			if high_level_commands.build.executable(command, myplayer, tick) == "" then
-				command.data.stage = 2
-			else
-				if high_level_commands.craft.executable({"craft", command[2], 1}, myplayer, tick) == "" and not command.data.crafted then
-					command.data.stage = 1
-				end
-			end
-			
-			if command.data.stage > 0 then
-				return ""
-			else
-				return "Can do neither craft nor build"
-			end
-		end,
 		default_priority = 5,
-		initialize = function (command, myplayer)
-			command.distance = myplayer.build_distance
-			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
+		execute = return_phantom,
+		executable = function (command)
+			if command.data.build_command then
+				if command.data.build_command.finished then
+					command.finished = true
+				end
+				
+				return "craft-build is never executable"
+			end
+			
+			return ""
+		end,
+		spawn_commands = function (command, myplayer, tick)
+			command.data.build_command = {"build", command[2], command[3], command[4]}
+			
+			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
 	},
 	
@@ -623,7 +608,7 @@ defaults = {
 	init_dependencies = empty,
 	default_action_type = action_types.always_possible,
 	default_priority = 5,
-	update = empty,
+	spawn_commands = function () return {} end,
 }
 
 for _, command in pairs(high_level_commands) do

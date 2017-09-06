@@ -98,7 +98,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				end
 				
 				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(our_global.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
-					add_command_to_current_set(command, myplayer, tick, command_group)
+					add_command_to_current_set(command, myplayer, command_group)
 					
 					if command.name then
 						our_global.initialized_names[#our_global.initialized_names + 1] = command.name
@@ -114,11 +114,30 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	-- 	Determine which commands we can execute this tick
 	local executable_commands = {}
 	
-	for _, command in pairs(our_global.current_command_set) do
-		if command_executable(command, myplayer, tick) then
-			executable_commands[#executable_commands + 1] = command
-			high_level_commands[command[1]].update(command, command_list, commandqueue, myplayer, tick)
+	local unchecked_commands = true
+	
+	while unchecked_commands do
+		unchecked_commands = false
+		
+		for _, command in pairs(our_global.current_command_set) do
+			if not command.tested then
+				if command_executable(command, myplayer, tick) then
+					executable_commands[#executable_commands + 1] = command
+					local new_commands = high_level_commands[command[1]].spawn_commands(command, myplayer, tick)
+				
+					for _,com in pairs(new_commands) do
+						unchecked_commands = true
+						add_command_to_current_set(com, myplayer, command.data.parent_command_group)
+					end
+				end
+			
+				command.tested = true
+			end
 		end
+	end
+	
+	for _, command in pairs(our_global.current_command_set) do
+		command.tested = false
 	end
 	
 	-- Determine first out of range command
@@ -175,7 +194,7 @@ end
 
 
 -- Add command to current command set and initialize the command. 
-function add_command_to_current_set(command, myplayer, tick, command_group)
+function add_command_to_current_set(command, myplayer, command_group)
 	local do_add = true -- At the end of this function we add the command to the set if this is still true
 
 	-- Reset on_relative_tick time.
