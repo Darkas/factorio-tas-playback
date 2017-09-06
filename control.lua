@@ -188,6 +188,7 @@ script.on_event(defines.events.on_tick, function(event)
 		end
 		if commandqueue[tick] then
 			for k,v in pairs(commandqueue[tick]) do
+				if not TAScommands[v[1]] then error("TAS-Command does not exist: " .. v[1]) end
 				TAScommands[v[1]](v, myplayer)
 			end
 		end
