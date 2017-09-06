@@ -60,17 +60,6 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	local finished = true
 	
 	for k, command in pairs(our_global.current_command_set) do
-		-- Handle stop command
-		if command[1] == "stop" and command_executable(command, myplayer, tick) then
-			for i, com in pairs(our_global.current_command_set) do
-				if com.name == command.name then
-					com.finished = true
-					command.finished = true
-					--table.remove(our_global.current_command_set, i)
-					break
-				end
-			end
-		end
 		if command.finished and command.name then
 			our_global.finished_command_names[command.name] = true
 			--table.remove(our_global.current_command_set, k)
@@ -118,7 +107,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				end
 				
 				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(our_global.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
-					add_command_to_current_set(command, myplayer, tick, commandqueue, command_group)
+					add_command_to_current_set(command, myplayer, tick, command_group)
 					
 					if command.name then
 						our_global.initialized_names[#our_global.initialized_names + 1] = command.name
@@ -137,6 +126,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	for _, command in pairs(our_global.current_command_set) do
 		if command_executable(command, myplayer, tick) then
 			executable_commands[#executable_commands + 1] = command
+			high_level_commands[command[1]].update(command, command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
@@ -173,7 +163,7 @@ end
 
 
 -- Add command to current command set and initialize the command. 
-function add_command_to_current_set(command, myplayer, tick, commandqueue, command_group)
+function add_command_to_current_set(command, myplayer, tick, command_group)
 	local do_add = true -- At the end of this function we add the command to the set if this is still true
 
 	-- Reset on_relative_tick time.
@@ -213,7 +203,10 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	local queue = {}
 	
 	for i,com in pairs(command_collection) do
-		queue[#queue + 1] = high_level_commands[com[1]].to_low_level(com, myplayer, tick)
+		local low_level_command = high_level_commands[com[1]].execute(com, myplayer, tick)
+		if low_level_command then
+			queue[#queue + 1] = low_level_command
+		end
 	end
 
 	-- save finishing time for on_relative_tick

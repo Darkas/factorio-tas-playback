@@ -90,12 +90,12 @@ end
 high_level_commands = {
 	
 	["auto-move-to"] = {
-		to_low_level = auto_move_to_low_level,
+		execute = auto_move_to_low_level,
 		default_priority = 7,
 	},
 	
 	["auto-move-to-command"] = {
-		to_low_level = auto_move_to_low_level,
+		execute = auto_move_to_low_level,
 		executable = function(command, myplayer, tick)
 			if not command.data.target_command then
 				for _, com in pairs(our_global.current_command_set) do
@@ -139,7 +139,7 @@ high_level_commands = {
 	},
 	
 	["auto-refuel"] = {
-		to_low_level = function(command, myplayer, tick)
+		execute = function(command, myplayer, tick)
 			if not command.data.started then
 				command.data.started = tick
 			end
@@ -189,7 +189,7 @@ high_level_commands = {
 	},
 	
 	build = {
-		to_low_level = return_self_finished,
+		execute = return_self_finished,
 		executable = function(command, myplayer, tick)
 			if in_range(command, myplayer, tick) and (myplayer.get_item_count(command[2]) > 0) then
 				return ""
@@ -205,7 +205,7 @@ high_level_commands = {
 	},
 	
 	craft = {
-		to_low_level = return_self_finished,
+		execute = return_self_finished,
 		executable = function(command, myplayer, tick)
 		--	-- Check for missing materials
 			local item = command[2]
@@ -220,7 +220,7 @@ high_level_commands = {
 	},
 	
 	["craft-build"] = {
-		to_low_level = function(command, myplayer, tick)
+		execute = function(command, myplayer, tick)
 			if command.data.stage == 1 and not command.data.crafted then
 				command.data.crafted = true
 				return {"craft", command[2], 1}
@@ -256,7 +256,7 @@ high_level_commands = {
 	},
 	
 	["entity-interaction"] = {
-		to_low_level = return_phantom,
+		execute = return_phantom,
 		executable = function (command, myplayer)
 			if in_range(command, myplayer) then
 				return ""
@@ -277,7 +277,7 @@ high_level_commands = {
 	},
 	
 	["freeze-daytime"] = {
-		to_low_level = return_phantom,
+		execute = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			myplayer.surface.freeze_daytime = true
@@ -285,7 +285,7 @@ high_level_commands = {
 	},
 	
 	mine = {
-		to_low_level = function (command, myplayer, tick)
+		execute = function (command, myplayer, tick)
 			return command
 		end,
 		executable = function(command, myplayer, tick)
@@ -319,7 +319,7 @@ high_level_commands = {
 	},
 	
 	put = {
-		to_low_level = function(command, myplayer, tick)
+		execute = function(command, myplayer, tick)
 			local item = command[3]
 			local amount = command[4]
 			local inventory = command.inventory
@@ -397,21 +397,21 @@ high_level_commands = {
 	},
 	
 	rotate = {
-		to_low_level = return_self_finished,
+		execute = return_self_finished,
 		default_priority = 5,
 	},
 	
 	speed = {
-		to_low_level = return_self_finished,
+		execute = return_self_finished,
 		default_priority = 100,
 	},
 	stop = {
-		to_low_level = return_phantom,
+		execute = return_phantom,
 		default_priority = 100,
 	},
 	
 	take = {
-		to_low_level = function(command, myplayer, tick)
+		execute = function(command, myplayer, tick)
 			local amount = command[4]
 			
 			if not amount then -- take everything
@@ -483,7 +483,7 @@ high_level_commands = {
 	},
 
 	pickup = {
-		to_low_level = function (command, myplayer, tick)
+		execute = function (command, myplayer, tick)
 			if command.oneshot then command.finished = true end
 			return command
 		end,
@@ -491,12 +491,12 @@ high_level_commands = {
 	},
 
 	recipe = {
-		to_low_level = return_self_finished,
+		execute = return_self_finished,
 		default_priority = 5,
 	},
 
 	["stop-command"] = {
-		to_low_level = return_phantom,
+		execute = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			local cancel = namespace_prefix(command[2], command.command_group)
@@ -512,24 +512,69 @@ high_level_commands = {
 
 	tech = {
 		default_priority = 5,
-		to_low_level = return_self_finished,
+		execute = return_self_finished,
 		executable = function (command, myplayer, tick)
 			if (not myplayer.force.current_research) or command.change_research then
 				return ""
 			else
-				return "There is something reasearching and changing is not allowed."
+				return "There is something researching and changing is not allowed."
 			end
 		end,
-	}
+	},
+	--[[
+	["auto-take"] = {
+		update = function(command, command_list, commandqueue, myplayer, tick)
+			if command._updated then return else command._updates = true end
+
+			if not command.exact then
+				command[3] = command[3] - myplayer.get_item_count()
+			end
+
+			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
+			local entities = {}
+			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
+				if (distance_from_rect(entity.collision_box, myplayer.position) and get_recipe(entity) == command[2]) or (entity.get_output_inventory()[1] and entity.get_output_inventory()[1].name == command[2]) then
+					table.insert(entities, entity)
+				end
+			end
+			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
+				if (distance_from_rect(entity.collision_box, myplayer.position) and get_recipe(entity) == command[2]) or (entity.get_output_inventory()[1] and entity.get_output_inventory()[1].name == command[2]) then
+					table.insert(entities, entity)
+				end
+			end
+
+			local ticks = 0
+			local lower = 0
+			local upper = nil
+			while not upper or upper - lower < 5 do
+				local amount = command[3]
+				for _, ent in pairs(entities) do 
+					amount = amount - craft_interpolate(entity, ticks)
+				end
+				if amount > 0 and upper == nil then ticks = ticks * 2 + 1 
+				elseif amount > 0 then ticks = (ticks + upper) / 2
+				elseif amount < 0 then ticks = (ticks + lower) / 2
+				end
+
+				if amount == 0 then break
+			end
+
+			for _, entity in pairs(entities) do
+				command = {"take", entity.position, item, craft_interpolate(entity, ticks)}
+				add_command_to_current_set(command, myplayer, tick, command.data.parent_command_group)
+			end
+		end
+	}--]]
 }
 
 
 defaults = {
-	to_low_level = return_self_finished,
+	execute = return_self_finished,
 	executable = function () return "" end,
 	initialize = empty,
 	init_dependencies = empty,
 	default_priority = 5,
+	update = empty,
 }
 
 for _, command in pairs(high_level_commands) do

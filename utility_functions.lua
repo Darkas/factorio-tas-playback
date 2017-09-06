@@ -197,11 +197,23 @@ function get_recipe(entity)
 	local x, y = get_coordinates(entity.position)
 	local recipe = pcall(function(ent) return ent.recipe end)
 	if ent.type == "furnace" then
-		if recipe then our_global.entity_recipe[x .. "_" .. y] = recipe.name end
-		return (recipe and recipe.name) or our_global.entity_recipe[x .. "_" .. y]
+		if recipe then our_global.entity_recipe[x .. "_" .. y] = recipe.name; return recipe.name end
+		if our_global.entity_recipe[x .. "_" .. y] then return our_global.entity_recipe[x .. "_" .. y] end
+		if ent.get_output_inventory()[1] then 
+			return ent.get_output_inventory()[1].name 
+		else
+			return nil
+		end
 	elseif ent.type == "assembling-machine" then
 		return recipe
 	else 
 		errprint("Trying to get recipe of entity without recipe.")
 	end
+end
+
+function craft_interpolate(entity, ticks)
+	local craft_speed = entity.prototype.crafting_speed
+	local recipe = get_recipe(entity)
+	local progress = entity.crafting_progress
+	return math.floor((progress + ticks * craft_speed) / recipe.energy)
 end
