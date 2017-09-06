@@ -532,7 +532,8 @@ defaults = {
 	to_low_level = return_self_finished,
 	executable = function () return "" end,
 	initialize = empty,
-	init_dependencies = empty
+	init_dependencies = empty,
+	default_priority = 5,
 }
 
 for _, command in pairs(high_level_commands) do
