@@ -94,7 +94,7 @@ Where :
 This fork is creating an abstracted language from the elementary actions given in the main mod. The goals are twofold, for one out input contains as little reference to ticks as possible and instead we determines the tick in which an action needs to run depending on the game state while the game is running. We also add some more abstracted commands. For example the action that takes items from a furnace depends not on a tick but on the inventory of the furnace. We enqueue technologies instead of giving the tick in which the technology finishes, we walk to a position, we automatically refuel burner-miners, we allow building a whole blueprint.
 
 The following is an example of our language in use.
-```
+```lua
 commandqueue["command_list"] = {
 	{
 		name = "start-1",
@@ -116,7 +116,47 @@ commandqueue["command_list"] = {
 		}
 	},
 }
+```
 
+The command list is a list of command groups. Each time a group finishes execution, all commands from the next group are loaded. If the `required` field is set in the block's properties, we instead wait for the named commands given in that field. Each group needs a unique name and a list of commands. 
+
+A command is a table of the following format: `{"<type>", "<arg1>", "<arg2>", ..., named_arg1 = value1, named_arg2 = value2, ... }`. The unnamed arguments are typically arguments without a clearly defined default, for example the type of building we want to build or the type of inventory we want to put items into. Unnamed arguments can still be omitted occasionally because we try to infer them sometimes, but there is no clear default. Other arguments are given by name, this includes arguments with a clear default, conditions to the execution of the command and the script name of a command. Typically all named arguments are optional. 
+
+In every tick we execute the executable command in the working set with the highest priority (commands with the `on_leaving_range` condition are preferred if we are leaving range). A command in the working set is thus generally executed as soon as possible unless there is a command with higher priority. For example a build command is usually executed as soon as we get into build range. The user can add conditions to a command which make it not executable until these conditions are satisfied, thus delaying the execution of the command. For example in `{"build", "furnace", {0,0}, on_leaving_range = true}`, the command will be executed when we leave the range. 
+
+The user can set a name in each command. Each command name has a name of the form `groupname.name`, if the groupname is omitted, we automatically prepend the name of the current command group. The name can then be used to refer to that command in later execution. Every command can have a `command_finished` field, if this is set then the command is only executable if that command is executed. Similarly, if a command block has a `required` list, it will only be started when all previous commands are executed. The name of a command is also used as a parameter for a number of commands that refer to other commands like `stop-command` and `auto-move-to-command`. This is demonstrated in the following example: We start by building a miner and stone furnace and mining two pieces of coal. We fuel the mining drill, then the furnace. When the mining finishes  we move to a rock and mine it.
+
+```lua
+commandqueue.command_list = {
+
+	{
+		name = "start-1",
+		{
+			{"build", "burner-mining-drill", {-15,15}, 2},
+			{"build", "stone-furnace", {-13,15}, 0},
+			{"mine", {-11.5,12.5}, amount=2, name="mine-coal"},
+			{"auto-refuel", {-13,15}},
+			{"auto-refuel", {-15,15}, priority=4, name="refuel.coal-1"},
+		},
+	},
+	{
+		name = "start-2",
+		required = {"mine-coal"},
+		commands = {
+			{"auto-move-to-command", "mine-rock"},
+			{"mine", {-40,11}, amount=1, name="mine-rock"},
+		}
+	},
+	...
+	{
+		name = "later",
+		required = "assembler-built",
+		{
+			{"stop-command", "first.coal-1"},
+			{"stop-command", "refuel.coal-1"},
+		}
+	}
+}
 ```
 
 Currently implemented commands:
@@ -133,6 +173,9 @@ Currently implemented commands:
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
 * `{"pickup", oneshot}`: Pick up items from floor. If `oneshot` is set, this will be active only once, otherwise it stays active until it is deactivated.
 * `{"recipe", {<X>,<Y>}, <recipe>}`
+* `{"stop-command", "<name>"}`: Remove the named command from the working set. Name can be of the form "name" or "group_name.name", if no group name is specified it refers only to the current group.
+* `{"pickup", oneshot=<bool>}`: Pick up items from ground. If `oneshot` is not set, we pick up until this command is stopped.
+
 
 To be implemented:
 
@@ -140,24 +183,16 @@ To be implemented:
 "move"
 "throw"
 "vehicle"
-"auto-take"
-"stop-auto-refuel"
-"stop-auto-take"
-"stop-auto-move-to"
-{"stop", name="<name>"} stop the command with the specified name. name can be of the form "name" or "group_name.name", if no group name is specified it refers only to the current group.
 
 Currently implemented conditions:
-* `on_entering_range=<bool>`: as soon as this action is possible
-* `on_leaving_range=<bool>`: right before this action becomes impossible
+* `on_leaving_range=<bool>`: shortly before this action becomes impossible
 * `on_tick={<tick>}`: do this on or after a certain tick
 * `on_relative_tick = {<tick>, <name>}`: do this on or after a given amount of ticks have passed since the command with given name finished or since the current command set began (if the name is not set or the param is a single int).
+* `items_available = {"<name>", <count>}`: Execute only when the specified amount of items is in inventory.
 
 
 To be implemented:
 on_player_in_range=<range> (player is range away from )
 on_exact_tick=<tick> (do this on exactly the tick - do we need this?)
 on_exact_relative_tick={<tick>, <name>} (do this a given amount of ticks after the command with the given name finished or after the current command set began (if name is not set))
-items_total={<item name>, <N>} (there are currently N of item name available (in the entire world))
 needs_fuel={<X>,<Y>} (entity needs fuel)
-
---]]
