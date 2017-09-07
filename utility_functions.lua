@@ -174,7 +174,7 @@ end
 function get_entity_from_pos(pos, myplayer, type, epsilon)
 	if not pos then game.print(debug.traceback()) end
 	local x, y = get_coordinates(pos)
-	
+
 	if not epsilon then
 		epsilon = 0.2
 	end
@@ -234,5 +234,5 @@ function craft_interpolate(entity, ticks)
 	local energy = game.recipe_prototypes[recipe].energy
 	local progress = entity.crafting_progress
 
-	return math.floor((progress + ticks * craft_speed) / energy)
+	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end

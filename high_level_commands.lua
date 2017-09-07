@@ -529,13 +529,13 @@ high_level_commands = {
 	},
 	
 	["auto-take"] = {
-		update = function(command, command_list, commandqueue, myplayer, tick)
-			if command.data.next_tick and command.data.next_tick < game.tick then return end
+		spawn_commands = function(command, myplayer, tick)
+			if command.data.next_tick and command.data.next_tick >= tick then return end
 
 			local item = command[2]
 			local count = command[3]
 			if not command.exact then
-				count = count - myplayer.get_item_count()
+				count = count - myplayer.get_item_count(item)
 			end
 
 			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
@@ -551,51 +551,72 @@ high_level_commands = {
 				end
 			end
 
-			game.print(#entities)
 
-			local ticks = 1
+			local function craft_interp(craft_data, ticks)
+				return math.floor((ticks / 60 * craft_data.craft_speed) / craft_data.energy + craft_data.progress)
+			end
+			local crafting_data = {}
+			for index, entity in pairs(entities) do
+				crafting_data[index] = {
+					craft_speed = entity.prototype.crafting_speed,
+					energy = game.recipe_prototypes[get_recipe(entity)].energy,
+					progress = entity.crafting_progress,
+				}
+			end
+
+			local lower = 0
 			local upper = nil
+			local ticks = 0
 			
-			while upper == nil or upper - ticks > 5 do
-				local amount = command[3]
-				for _, ent in pairs(entities) do 
-					amount = amount - craft_interpolate(ent, ticks)
+			local amount = count
+			while upper == nil or (upper - lower > 2 and amount ~= 0) do
+				amount = count
+				for index, ent in pairs(entities) do
+					local craft = craft_interp(crafting_data[index], ticks) + ent.get_item_count(item)
+					amount = amount - craft
 				end
 
-				game.print("amount " .. amount)
 
-				--amount = 80 - ticks
 				if upper == nil then 
 					if amount > 0 then 
-						ticks = ticks * 2
+						if ticks == 0 then
+							ticks = 1
+							lower = 0.5
+						else 
+							lower = lower * 2
+							ticks = ticks * 2
+						end
 					else
 						upper = ticks
-						ticks = ticks / 2
+						ticks = (upper + lower) / 2
 					end
 				elseif amount > 0 then 
-					ticks = (ticks + upper) / 2
-				elseif amount < 0 then upper = (ticks + upper) / 2
-				else break
+					lower = ticks
+					ticks = (upper + lower) / 2
+				else 
+					upper = ticks
+					ticks = (upper + lower) / 2
 				end
-
-				game.print("ticks " .. ticks)
 			end
 
-			-- local ticks = 300
-			for _, entity in pairs(entities) do
-				local amount = craft_interpolate(entity, ticks)
-				if amount > 0 then
-					local position = {entity.position.x, entity.position.y}
-					local cmd = {"take", position, item, amount}
-					if ticks < 15 then
-						command.command_finished = true
-						command_list_parser.add_command_to_current_set(cmd, myplayer, tick, command.data.parent_command_group)
+
+			local ret = {}
+			if ticks < 15 then
+				for index, entity in pairs(entities) do
+					local amount = craft_interp(crafting_data[index], ticks) + entity.get_item_count(item)
+					if amount > 0 then
+						local position = {entity.position.x, entity.position.y}
+						local cmd = {"take", position, item, amount}
+						command.finished = true
+						ret[#ret + 1] = cmd
 					end
 				end
 			end
 
-			command.data.next_tick = game.tick + ticks / 3
+			command.data.next_tick = tick + ticks / 3
+			return ret
 		end,
+
 		execute = empty,
 	}
 }
