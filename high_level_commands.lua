@@ -534,6 +534,8 @@ high_level_commands = {
 
 			local item = command[2]
 			local count = command[3]
+			if not count then return end
+
 			if not command.exact then
 				count = count - myplayer.get_item_count(item)
 			end
@@ -551,72 +553,35 @@ high_level_commands = {
 				end
 			end
 
-
-			local function craft_interp(craft_data, ticks)
-				return math.floor((ticks / 60 * craft_data.craft_speed) / craft_data.energy + craft_data.progress)
-			end
-			local crafting_data = {}
+			local count_to_craft = count
 			for index, entity in pairs(entities) do
-				crafting_data[index] = {
-					craft_speed = entity.prototype.crafting_speed,
-					energy = game.recipe_prototypes[get_recipe(entity)].energy,
-					progress = entity.crafting_progress,
-				}
+				count_to_craft = count_to_craft - entity.get_item_count(item)
 			end
 
-			local lower = 0
-			local upper = nil
-			local ticks = 0
-			
-			local amount = count
-			while upper == nil or (upper - lower > 2 and amount ~= 0) do
-				amount = count
-				for index, ent in pairs(entities) do
-					local craft = craft_interp(crafting_data[index], ticks) + ent.get_item_count(item)
-					amount = amount - craft
-				end
-
-
-				if upper == nil then 
-					if amount > 0 then 
-						if ticks == 0 then
-							ticks = 1
-							lower = 0.5
-						else 
-							lower = lower * 2
-							ticks = ticks * 2
-						end
-					else
-						upper = ticks
-						ticks = (upper + lower) / 2
-					end
-				elseif amount > 0 then 
-					lower = ticks
-					ticks = (upper + lower) / 2
-				else 
-					upper = ticks
-					ticks = (upper + lower) / 2
-				end
-			end
-
+			local count_crafts_all = math.floor(count_to_craft / #entities)
+			game.print(count_crafts_all)
+			local remaining = count_to_craft % #entities
 
 			local ret = {}
-			if ticks < 15 then
+			if count_crafts_all == 0 then
+				table.sort(entities, function(a, b) return a.crafting_progress > b.crafting_progress end)
 				for index, entity in pairs(entities) do
-					local amount = craft_interp(crafting_data[index], ticks) + entity.get_item_count(item)
+					local amount = entity.get_item_count(item) + count_crafts_all + (index <= remaining and 1 or 0)
 					if amount > 0 then
+						game.print("take: " .. amount)
 						local position = {entity.position.x, entity.position.y}
 						local cmd = {"take", position, item, amount}
 						command.finished = true
 						ret[#ret + 1] = cmd
-					end
+					end					
 				end
 			end
 
-			command.data.next_tick = tick + ticks / 3
+			local ticks = count_crafts_all * game.recipe_prototypes[get_recipe(entities[1])].energy * 60
+			command.data.next_tick = tick + math.max(ticks / 3, 40)
 			return ret
 		end,
-
+		default_priority = 100,
 		execute = empty,
 	}
 }
