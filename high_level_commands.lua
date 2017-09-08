@@ -23,6 +23,8 @@ function auto_move_to_low_level (command, myplayer, tick)
 	else
 		target_pos = command.data.target_pos
 	end
+
+	game.print(serpent.block(target_pos))
 			
 	if not command.data.moveData then
 		command.data.moveData = {}
@@ -121,7 +123,7 @@ high_level_commands = {
 			
 			if command.data.target_command.rect then
 				command.data.target_pos = {}
-				distance_from_rect(myplayer.position, command.data.target_command.rect, command.data.target_pos)
+				_, command.data.target_pos = distance_from_rect(myplayer.position, command.data.target_command.rect)
 				
 				debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 			else
@@ -244,6 +246,29 @@ high_level_commands = {
 			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
 	},
+
+	["auto-build-blueprint"] = {
+		default_priority = 5,
+		initialize = function(command, myplayer, tick)
+		end,
+		execute = return_phantom,
+		executable = function (command)
+			if command.data.build_command then
+				if command.data.build_command.finished then
+					command.finished = true
+				end
+				
+				return "auto-build-blueprint is never executable"
+			end
+			
+			return ""
+		end,
+		spawn_commands = function (command, myplayer, tick)
+			command.data.build_command = {"build", command[2], command[3], command[4]}
+			
+			return {{"craft", command[2], 1}, command.data.build_command}
+		end,
+	},
 	
 	["entity-interaction"] = {
 		execute = return_phantom,
@@ -295,8 +320,6 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			local entity = get_entity_from_pos(command[2], myplayer)
 			
-			
-		
 			command.distance = myplayer.resource_reach_distance
 			
 			if entity then

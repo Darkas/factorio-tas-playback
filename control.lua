@@ -63,6 +63,15 @@ function set_run_logging_types()
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
+	configure_log_type(
+		"command-not-executable", 
+		{font_color = {r=1, g=0.5, b=0.5}, font = "default"}, 
+		50, 
+		function(message)
+			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
+		end,
+		true
+	)
 end
 
 

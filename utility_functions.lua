@@ -72,16 +72,10 @@ end
 
 function debugprint(msg)
 	log_to_ui(msg, "run-debug")
-	-- for _, player in pairs(game.connected_players) do
-	-- 	if player.mod_settings["tas-verbose-logging"].value then 
-	-- 		-- player.print("[" .. game.tick - (global.start_tick or 0) .. "] " .. msg)
-	-- 	end
-	-- end
 end
 
 function errprint(msg)
 	log_to_ui(msg, "tascommand-error")
-	--game.print("[" .. game.tick - (global.start_tick or 0) .. "]  ___WARNING___ " .. msg)
 end
 
 
@@ -168,7 +162,7 @@ function in_range(command, myplayer)
 end
 
 -- Works only for axis-aligned rectangles.
-function distance_from_rect(pos, rect, closest)
+function distance_from_rect(pos, rect)
 	if not closest then closest = {} end
 	local posx, posy = get_coordinates(pos)
 	local rect1x, rect1y = get_coordinates(rect[1])
@@ -228,6 +222,15 @@ function namespace_prefix(name, command_group)
 	end
 end
 
+local direction_ints = {N = 0, NE = 1, E = 2, SE = 3, S = 4, SW = 5, W = 6, NW = 7}
+function rotation_stringtoint(rot)
+	if type(rot) == "int" then 
+		return rot
+	else 
+		return direction_ints[rot]
+	end
+end
+
 
 
 -- Surface related
@@ -264,6 +267,7 @@ end
 -- Entity related
 ------------------
 
+-- Note this should only be called for entities that are actually on a surface.
 function get_recipe(entity)
 	local x, y = get_coordinates(entity.position)
 	local recipe = nil
@@ -284,7 +288,7 @@ function get_recipe(entity)
 	elseif entity.type == "assembling-machine" then
 		return recipe
 	else 
-		errprint("Trying to get recipe of entity without recipe.")
+		error("Called get_recipe for entity without recipe.")
 	end
 end
 
@@ -297,15 +301,3 @@ function craft_interpolate(entity, ticks)
 	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end
 
-
--- Unsorted
-------------
-
-local direction_ints = {N = 0, NE = 1, E = 2, SE = 3, S = 4, SW = 5, W = 6, NW = 7}
-function rotation_stringtoint(rot)
-	if type(rot) == "int" then 
-		return rot
-	else 
-		return direction_ints[rot]
-	end
-end
