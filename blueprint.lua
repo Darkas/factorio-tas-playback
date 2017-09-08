@@ -2,7 +2,7 @@ local function init_blueprint_loader()
   global.blueprint_data.blueprints = {}
 end
 
-function bp_load(name, offset, chunk_size)
+function bp_load(name, offset, rotation, chunk_size)
   if not global.blueprint_data then init_blueprint() end
 
   if not blueprints then return end
@@ -24,6 +24,8 @@ function bp_load(name, offset, chunk_size)
       blueprint_data.counts[entity.name] = 1
     end
 
+    pos = rot(rotation, entity.position)
+    orientation = entity.orientation + rotation) % 8
     entity.position.x = entity.position.x + offset.x
     entity.position.y = entity.position.x + offset.y
 
