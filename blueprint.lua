@@ -1,59 +1,57 @@
-local function init_blueprint_loader()
-  global.blueprint_data.blueprints = {}
+
+function blueprint_path(name)
+  return "scenarios." .. tas_name .. "." .. "blueprints." .. name
 end
+
+global.blueprint_raw_data = global.blueprint_raw_data or {}
 
 function bp_load(name, offset, rotation, chunk_size)
-  if not global.blueprint_data then init_blueprint() end
+  local blueprint_raw = global.blueprint_raw_data[name]
+  if not blueprint_raw then
+    pcall(function() blueprint_raw = require(blueprint_path(name)))
+    global.blueprint_raw_data[name] = blueprint_raw
+  end
 
-  if not blueprints then return end
-  local blueprint = blueprints[name]
+  if not blueprint_raw then return end
 
-  local entities = blueprint.entity_data
+  local blueprint = {}
+  blueprint.type = name
+
+  local entities = blueprint_raw.entity_data
   if not entities then error("Loading empty blueprint!") end
 
-  global.blueprint_data.blueprints[name] = {name = name}
-  local blueprint_data = global.blueprint_data.blueprints[name]
-  blueprint_data.chunked_entities = {}
-  blueprint_data.counts = {}
-  blueprint_data.chunk_size = chunk_size or 9
+  blueprint.entities = {}
+  blueprint.counts = {}
+  blueprint.chunk_size = chunk_size or 9
 
-  for index, entity in pairs(entities) do
-    if blueprint_data.counts[entity.name] then
-      blueprint_data.counts[entity.name] = blueprint_data.counts[entity.name] + 1
+  for index, ent in pairs(entities) do
+    local entity = copy(ent)
+    if blueprint.counts[entity.name] then
+      blueprint.counts[entity.name] = blueprint.counts[entity.name] + 1
     else
-      blueprint_data.counts[entity.name] = 1
+      blueprint.counts[entity.name] = 1
     end
 
-    pos = rot(rotation, entity.position)
-    orientation = entity.orientation + rotation) % 8
-    entity.position.x = entity.position.x + offset.x
-    entity.position.y = entity.position.x + offset.y
+    if entity.direction and rotation then
+      entity.direction = (entity.direction + rotation) % 8
+    end
+    entity.position = translate(rotate_orthogonal(entity.position, rotation), offset)
 
     local key = key_from_position(entity.position)
-    if blueprint_data.chunked_entities[key] then
-      table.insert(blueprint_data.chunked_entities[key], entity)
+    if blueprint.chunked_entities[key] then
+      table.insert(blueprint.chunked_entities[key], entity)
     end
   end
+
+  return blueprint
 end
 
 
-function bp_remove_entity(name, entity)
-  local blueprint_data = global.blueprint_data.blueprints[name]
-  for index, ent in pairs(blueprint_data.entities[key_from_position(entity.position)]) do
-    if entity.entity_number == ent.number then
-      table.remove(blueprint_data.entities, entity)
-      break
-    end
-  end
-end
-
-
-function bp_get_entities_in_build_range(name, position)
+function bp_get_entities_in_build_range(blueprint_data, position)
   if not blueprint_data then error("Trying to get entities from blueprint that wasnt loaded"!) end
 
   local ret = {}
 
-  local blueprint_data = global.blueprint_data.blueprints[name]
   local entities = blueprint_data.entities
   local x = math.floor((position.x or position[1]) / blueprint_data.chunk_size)
   local y = math.floor((position.y or position[2]) / blueprint_data.chunk_size)
@@ -61,7 +59,7 @@ function bp_get_entities_in_build_range(name, position)
   for X = x-1, x+1 do
     for Y = y-1, y+1 do
       for _, entity in ipairs(entities[x .. "_" .. y]) do
-        local cbox = game.entity_prototypes.collision_box
+        local cbox = move_collision_box(game.entity_prototypes[entity.name].collision_box
         local rect = {{x=cbox[1][1], y=cbox[1][2]}, {x=cbox[2][1], y=cbox[2][2]}}
         if distance_from_rect(position, rect, {}) < range + 6.0024 then
           table.insert(ret, entity)

@@ -9,8 +9,20 @@ if not our_global.entity_recipe then our_global.entity_recipe = {} end
 -- Tables
 ----------
 
+-- This can obviously be done better but it works for now.
 function tables_equal(t1, t2)
 	return serpent.block(t1) == serpent.block(t2)
+end
+
+-- Taken from https://stackoverflow.com/questions/640642/how-do-you-copy-a-lua-table-by-value
+function copy(obj, seen)
+  if type(obj) ~= 'table' then return obj end
+  if seen and seen[obj] then return seen[obj] end
+  local s = seen or {}
+  local res = setmetatable({}, getmetatable(obj))
+  s[obj] = res
+  for k, v in pairs(obj) do res[copy(k, s)] = copy(v, s) end
+  return res
 end
 
 function has_value(table, element)
@@ -85,6 +97,22 @@ function inrange(position, myplayer)
   return ((position[1] - myplayer.position.x)^2 + (position[2] - myplayer.position.y)^2) < 36
 end
 
+-- rotation for angles multiple of 90°, encoded as 2 for 90°, 4 for 180°, 6 for 270°
+function rotate_orthogonal(position, rotation)
+	local x, y = get_coordinates(position)
+	if not rotation or rotation == 0 then return {x, y}
+	elseif rotation == 2 then return {-y, x} 
+	elseif rotation == 4 then return {-x, -y}
+	elseif rotation == 6 then return {y, -x}
+	else error("Bad rotation parameter! rotation = " .. printable(rotation))
+end
+
+function translate(position, offset)
+	local x, y = get_coordinates(position)
+	local dx, dy = get_coordinates(offset)
+	return {x+dx, y+dy}
+end
+
 function sqdistance(pos1, pos2)
 	local x1, y1 = get_coordinates(pos1)
 	local x2, y2 = get_coordinates(pos2)
@@ -98,6 +126,7 @@ function move_collision_box(collision_box, coords)
 end
 
 function collision_box(entity)
+	-- TODO: Only works for square entities so far!
 	return move_collision_box(entity.prototype.collision_box, entity.position)
 end
 
@@ -185,12 +214,10 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 		types = {type}
 	end
 	
+	local x, y = get_coordinates(pos)
 	local entity = nil
-	local entities = nil
 	
-	entities = myplayer.surface.find_entities_filtered({area = {{-epsilon + x, -epsilon + y}, {epsilon + x, epsilon + y}}})
-	
-	for _,ent in pairs(entities) do
+	for _,ent in pairs(myplayer.surface.find_entities_filtered({area = {{-epsilon + x, -epsilon + y}, {epsilon + x, epsilon + y}}})) do
 		if has_value(types, ent.type) then
 			entity = ent
 		end

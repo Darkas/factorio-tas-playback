@@ -115,8 +115,8 @@ high_level_commands = {
 				return "There is no command named: " .. command[2]
 			end
 			
-			if command.data.target_command.name == "craft-build" then
-				return "auto-move-to-command cannot move to a craft-build command! Please use the name " .. command[2] .. "-build to go to the build part"
+			if command.data.target_command.name == "craft-build" and command.data.target_command.build_command then
+				command.data.target_command = command.data.target_command.build_command
 			end
 			
 			if command.data.target_command.rect then
@@ -145,54 +145,52 @@ high_level_commands = {
 	},
 	
 	["auto-refuel"] = {
-		execute = function(command, myplayer, tick)
-			if not command.data.started then
-				command.data.started = tick
+		execute = return_phantom,
+		spawn_commands = function(command, myplayer, tick)
+			if not command.data.already_refueled then
+				command.data.already_refueled = {}
 			end
-		
-			return {"put", command[2], "coal", 1, defines.inventory.fuel}
-		end,
-		executable = function(command, myplayer, tick)
-			if not command.data.entity then
-				command.data.entity = get_entity_from_pos(command[2], myplayer)
+			
+			local target_fuel = command.target
+			
+			if not target_fuel then
+				target_fuel = command.min or 1
+			end
+			
+			local new_commands = {}
+			local priority = 5
+			
+			for i, entity in pairs(our_global.entities_with_burner) do
+				if entity.type == "mining-drill" then
+					priority = 4
+				end
 				
-				if command.data.entity then -- TODO: instead, try using entity.burner to determine if refueling is needed
-					if not has_value({"boiler", "furnace", "mining-drill"}, command.data.entity.type) then
-						command.data.entity = nil
-						return "No refuelable entity found"
-					else
-						command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
-						
-						if command.data.entity.type == "mining-drill" then
-							command.data.frequency = 1600
+				if distance_from_rect(myplayer.position, move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)) <= myplayer.reach_distance then
+					if command.min then
+						if entity.burner.inventory.get_item_count("coal") < command.min then
+							if not command.data.already_refueled[i] then
+								command.data.already_refueled[i] = true
+								new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
+							end
+						else
+							command.data.already_refueled[i] = false
 						end
-		
-						if command.data.entity.type == "furnace" then -- stone furnace
-							command.data.frequency = 2660
+					else
+						if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
+							if not command.data.already_refueled[i] then
+								command.data.already_refueled[i] = true
+								new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel, priority=priority}
+							end
+						else
+							command.data.already_refueled[i] = false
 						end
 					end
-				else
-					return "No refuelable entity found"
 				end
 			end
 			
-			if command.data.started then
-				if (command.data.started - tick) % command.data.frequency > 0 then
-					return "Needs no refueling now"
-				end
-			end
-			
-			if myplayer.get_item_count("coal") == 0 then
-				return "Player has no coal"
-			end
-			
-			return ""
+			return new_commands
 		end,
-		default_priority = 5,
-		initialize = function (command, myplayer)
-			command.distance = myplayer.reach_distance
-		end,
-		default_action_type = action_types.selection,
+		default_priority = 100,
 	},
 	
 	build = {
@@ -378,6 +376,10 @@ high_level_commands = {
 						return "Inventory could not be determined"
 					end
 				end
+			end
+			
+			if myplayer.get_item_count(item) < command[4] then
+				return "Not enough of " .. item .. " in inventory"
 			end
 			
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then

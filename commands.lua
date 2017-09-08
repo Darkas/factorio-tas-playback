@@ -82,8 +82,12 @@ TAScommands["build"] = function (tokens, myplayer)
   -- Place the item
   asm = myplayer.surface.create_entity{name = item, position = position, direction = direction, force="player"}
   -- Remove the placed item from the player (since he has now spent it)
-  if asm then myplayer.remove_item({name = item, count = 1})
-    else errprint("Build failed: Reason unknown.") end
+  if asm then
+	command_list_parser.add_entity_to_global(asm)
+    myplayer.remove_item({name = item, count = 1})
+  else
+    errprint("Build failed: Reason unknown.")
+  end
 
 end
 
