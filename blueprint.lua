@@ -48,9 +48,7 @@ end
 
 
 function bp_get_entities_in_build_range(blueprint_data, position)
-  if not blueprint_data then error("Trying to get entities from blueprint that wasnt loaded"!) end
-
-  local ret = {}
+  local res = {}
 
   local entities = blueprint_data.entities
   local x = math.floor((position.x or position[1]) / blueprint_data.chunk_size)
@@ -59,24 +57,20 @@ function bp_get_entities_in_build_range(blueprint_data, position)
   for X = x-1, x+1 do
     for Y = y-1, y+1 do
       for _, entity in ipairs(entities[x .. "_" .. y]) do
-        local cbox = move_collision_box(game.entity_prototypes[entity.name].collision_box
-        local rect = {{x=cbox[1][1], y=cbox[1][2]}, {x=cbox[2][1], y=cbox[2][2]}}
+        local cbox = collision_box(entity)
         if distance_from_rect(position, rect, {}) < range + 6.0024 then
-          table.insert(ret, entity)
+          table.insert(res, entity)
         end
       end
     end
   end
 
-  return ret
+  return res
 end
 
-function bp_get_entities_close(name, position)
-  if not blueprint_data then error("Trying to get entities from blueprint that wasnt loaded"!) end
+function bp_get_entities_close(blueprint_data, position)
+  local res = {}
 
-  local ret = {}
-
-  local blueprint_data = global.blueprint_data.blueprints[name]
   local entities = blueprint_data.entities
   local x = math.floor((position.x or position[1]) / blueprint_data.chunk_size)
   local y = math.floor((position.y or position[2]) / blueprint_data.chunk_size)
@@ -84,12 +78,12 @@ function bp_get_entities_close(name, position)
   for X = x-1, x+1 do
     for Y = y-1, y+1 do
       for _, entity in ipairs(entities[x .. "_" .. y]) do
-        table.insert(ret, entity)
+        table.insert(res, entity)
       end
     end
   end
 
-  return ret
+  return res
 end
 
 local function key_from_position(position)

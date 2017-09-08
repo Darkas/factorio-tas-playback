@@ -165,7 +165,7 @@ high_level_commands = {
 					priority = 4
 				end
 				
-				if distance_from_rect(myplayer.position, move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)) <= myplayer.reach_distance then
+				if distance_from_rect(myplayer.position, collision_box(entity)) <= myplayer.reach_distance then
 					if command.min then
 						if entity.burner.inventory.get_item_count("coal") < command.min then
 							if not command.data.already_refueled[i] then
@@ -205,7 +205,7 @@ high_level_commands = {
 		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
-			command.rect = move_collision_box(game.entity_prototypes[command[2]].collision_box, command[3])
+			command.rect = collision_box{name=command[2], position=copy(command[3])}
 		end,
 	},
 	
@@ -260,7 +260,7 @@ high_level_commands = {
 			
 			local entity = get_entity_from_pos(command[2], myplayer)
 		
-			command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+			command.rect = collision_box(entity)
 			
 			command.finished = true
 		end,
@@ -300,10 +300,10 @@ high_level_commands = {
 			command.distance = myplayer.resource_reach_distance
 			
 			if entity then
-				command.rect = move_collision_box(game.entity_prototypes[entity.name].collision_box, entity.position)
+				command.rect = collision_box(entity)
 			else
 				errprint("There is no mineable thing at (" .. command[2][1] .. "," .. command[2][2] .. ")")
-				command.rect = move_collision_box({left_top={x=0,y=0},right_bottom={x=0,y=0}}, command[2])
+				command.rect = {left_top=copy(command[2]), right_bottom=copy(command[2])}
 			end
 		end,
 		default_action_type = action_types.selection,
@@ -327,7 +327,7 @@ high_level_commands = {
 					return "No entity found"
 				else
 					if not command.rect then
-						command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
+						command.rect = collision_box(command.data.entity)
 						command.distance = myplayer.reach_distance
 					end
 				end
@@ -427,7 +427,7 @@ high_level_commands = {
 			end
 			
 			if not command.rect then
-				command.rect = move_collision_box(game.entity_prototypes[command.data.entity.name].collision_box, command.data.entity.position)
+				command.rect = collision_box(command.data.entity)
 				command.distance = myplayer.reach_distance
 			end
 			
@@ -561,7 +561,6 @@ high_level_commands = {
 			end
 
 			local count_crafts_all = math.floor(count_to_craft / #entities)
-			game.print(count_crafts_all)
 			local remaining = count_to_craft % #entities
 
 			local ret = {}
@@ -570,7 +569,6 @@ high_level_commands = {
 				for index, entity in pairs(entities) do
 					local amount = entity.get_item_count(item) + count_crafts_all + (index <= remaining and 1 or 0)
 					if amount > 0 then
-						game.print("take: " .. amount)
 						local position = {entity.position.x, entity.position.y}
 						local cmd = {"take", position, item, amount}
 						command.finished = true
