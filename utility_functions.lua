@@ -214,12 +214,10 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 		types = {type}
 	end
 	
+	local x, y = get_coordinates(pos)
 	local entity = nil
-	local entities = nil
 	
-	entities = myplayer.surface.find_entities_filtered({area = {{-epsilon + x, -epsilon + y}, {epsilon + x, epsilon + y}}})
-	
-	for _,ent in pairs(entities) do
+	for _,ent in pairs(myplayer.surface.find_entities_filtered({area = {{-epsilon + x, -epsilon + y}, {epsilon + x, epsilon + y}}})) do
 		if has_value(types, ent.type) then
 			entity = ent
 		end
