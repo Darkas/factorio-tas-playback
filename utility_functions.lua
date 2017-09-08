@@ -3,6 +3,9 @@
 if not global.utility_functions then global.utility_functions = {} end
 local our_global = global.utility_functions
 
+
+if not our_global.entity_recipe then our_global.entity_recipe = {} end
+
 -- Tables
 ----------
 
@@ -94,6 +97,10 @@ function move_collision_box(collision_box, coords)
 	return {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
 end
 
+function collision_box(entity)
+	return move_collision_box(entity.prototype.collision_box, entity.position)
+end
+
 function in_range(command, myplayer)
 	return distance_from_rect(myplayer.position, command.rect) <= command.distance
 end
@@ -134,6 +141,7 @@ function distance_from_rect(pos, rect, closest)
 end
 
 function get_coordinates(pos)
+	if not pos then game.print(debug.traceback()) end
 	if pos.x then 
 		return pos.x, pos.y
 	else
@@ -164,6 +172,9 @@ end
 -------------------
 
 function get_entity_from_pos(pos, myplayer, type, epsilon)
+	if not pos then game.print(debug.traceback()) end
+	local x, y = get_coordinates(pos)
+
 	if not epsilon then
 		epsilon = 0.2
 	end
@@ -193,16 +204,22 @@ end
 
 function get_recipe(entity)
 	local x, y = get_coordinates(entity.position)
-	local recipe = pcall(function(ent) return ent.recipe end)
-	if ent.type == "furnace" then
-		if recipe then our_global.entity_recipe[x .. "_" .. y] = recipe.name; return recipe.name end
+	local recipe = nil
+	pcall(function() recipe = entity.recipe end)
+	if entity.type == "furnace" then
+		if recipe then 
+			our_global.entity_recipe[x .. "_" .. y] = recipe.name
+			return recipe.name 
+		end
 		if our_global.entity_recipe[x .. "_" .. y] then return our_global.entity_recipe[x .. "_" .. y] end
-		if ent.get_output_inventory()[1] then 
-			return ent.get_output_inventory()[1].name 
+
+		local stack = entity.get_output_inventory()[1]
+		if stack and stack.valid_for_read then 
+			return stack.name 
 		else
 			return nil
 		end
-	elseif ent.type == "assembling-machine" then
+	elseif entity.type == "assembling-machine" then
 		return recipe
 	else 
 		errprint("Trying to get recipe of entity without recipe.")
@@ -212,6 +229,8 @@ end
 function craft_interpolate(entity, ticks)
 	local craft_speed = entity.prototype.crafting_speed
 	local recipe = get_recipe(entity)
+	local energy = game.recipe_prototypes[recipe].energy
 	local progress = entity.crafting_progress
-	return math.floor((progress + ticks * craft_speed) / recipe.energy)
+
+	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end

@@ -132,7 +132,8 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 					executable_commands[#executable_commands + 1] = command
 					local new_commands = high_level_commands[command[1]].spawn_commands(command, myplayer, tick)
 				
-					for _,com in pairs(new_commands) do
+					--if new_commands == nil then game.print(serpent.block(command)) end
+					for _,com in pairs(new_commands or {}) do
 						unchecked_commands = true
 						add_command_to_current_set(com, myplayer, command.data.parent_command_group)
 					end

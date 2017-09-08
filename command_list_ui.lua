@@ -121,7 +121,7 @@ function update_command_list_ui(player, command_list)
 				command_set_index = command_set_index + 1
 			until (command and not command.finished) or command_set_index > #global.command_list_parser.current_command_set
 
-			if command then 
+			if command and not command.finished then 
 				s = "[" .. index .. "] | "
 				for key, value in pairs(command) do
 					s = s .. key .. "= " .. printable(value) .. " | "

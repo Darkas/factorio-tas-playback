@@ -97,7 +97,7 @@ function init_run(myplayer_index)
 	local player = game.players[myplayer_index]
 	global.myplayer = player
 	player.surface.always_day = true
-	player.game_view_settings.update_entity_selection = false
+	--player.game_view_settings.update_entity_selection = false
 	player.game_view_settings.show_entity_info = true
 	-- Prepare the players:
 	-- Make all non-running players unable to interact with the world and have no body (character)
@@ -188,6 +188,7 @@ script.on_event(defines.events.on_tick, function(event)
 		end
 		if commandqueue[tick] then
 			for k,v in pairs(commandqueue[tick]) do
+				if not TAScommands[v[1]] then error("TAS-Command does not exist: " .. v[1]) end
 				TAScommands[v[1]](v, myplayer)
 			end
 		end

@@ -83,6 +83,10 @@ function return_self_finished(command, myplayer, tick)
 	return command
 end
 
+function set_finished(command)
+	command.finished = true
+end
+
 function return_phantom ()
 	return {"phantom"}
 end
@@ -457,11 +461,12 @@ high_level_commands = {
 					if entity_inventory and entity_inventory[1] and entity_inventory[1].valid_for_read then
 						command.data.item = command.data.entity.get_inventory(command.data.inventory)[1].name
 					else
-						return "Entity " .. command.data.entity.name .. " at (" .. command[2][1] .. "," .. command[2][2] .. ") has no valid inventory item to guess"
+						local x, y = get_coordinates(command[2])
+						return "Entity " .. command.data.entity.name .. " at (" .. x .. "," .. y .. ") has no valid inventory item to guess"
 					end
 				end
 			end
-			
+
 			command.data.amount = command[4]
 			if not command.data.amount then
 				command.data.amount = command.data.entity.get_item_count(command.data.item)
@@ -470,6 +475,10 @@ high_level_commands = {
 				command.action_type = action_types.ui
 				command.ui = command[2]
 			end
+
+			if command.data.entity.get_item_count(command.data.item) < command.data.amount then
+   				return "Not enough items available!"
+			end			
 			
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
 				return "Player too far away"
@@ -520,50 +529,63 @@ high_level_commands = {
 			end
 		end,
 	},
-	--[[
+	
 	["auto-take"] = {
-		update = function(command, command_list, commandqueue, myplayer, tick)
-			if command._updated then return else command._updates = true end
+		spawn_commands = function(command, myplayer, tick)
+			if command.data.next_tick and command.data.next_tick >= tick then return end
+
+			local item = command[2]
+			local count = command[3]
+			if not count then return end
 
 			if not command.exact then
-				command[3] = command[3] - myplayer.get_item_count()
+				count = count - myplayer.get_item_count(item)
 			end
 
 			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
 			local entities = {}
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
-				if (distance_from_rect(entity.collision_box, myplayer.position) and get_recipe(entity) == command[2]) or (entity.get_output_inventory()[1] and entity.get_output_inventory()[1].name == command[2]) then
+				if (distance_from_rect(myplayer.position, collision_box(entity)) and get_recipe(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
-				if (distance_from_rect(entity.collision_box, myplayer.position) and get_recipe(entity) == command[2]) or (entity.get_output_inventory()[1] and entity.get_output_inventory()[1].name == command[2]) then
+				if (distance_from_rect(myplayer.position, collision_box(entity)) and get_recipe(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
 
-			local ticks = 0
-			local lower = 0
-			local upper = nil
-			while not upper or upper - lower < 5 do
-				local amount = command[3]
-				for _, ent in pairs(entities) do 
-					amount = amount - craft_interpolate(entity, ticks)
-				end
-				if amount > 0 and upper == nil then ticks = ticks * 2 + 1 
-				elseif amount > 0 then ticks = (ticks + upper) / 2
-				elseif amount < 0 then ticks = (ticks + lower) / 2
-				end
-
-				if amount == 0 then break
+			local count_to_craft = count
+			for index, entity in pairs(entities) do
+				count_to_craft = count_to_craft - entity.get_item_count(item)
 			end
 
-			for _, entity in pairs(entities) do
-				command = {"take", entity.position, item, craft_interpolate(entity, ticks)}
-				add_command_to_current_set(command, myplayer, tick, command.data.parent_command_group)
+			local count_crafts_all = math.floor(count_to_craft / #entities)
+			game.print(count_crafts_all)
+			local remaining = count_to_craft % #entities
+
+			local ret = {}
+			if count_crafts_all == 0 then
+				table.sort(entities, function(a, b) return a.crafting_progress > b.crafting_progress end)
+				for index, entity in pairs(entities) do
+					local amount = entity.get_item_count(item) + count_crafts_all + (index <= remaining and 1 or 0)
+					if amount > 0 then
+						game.print("take: " .. amount)
+						local position = {entity.position.x, entity.position.y}
+						local cmd = {"take", position, item, amount}
+						command.finished = true
+						ret[#ret + 1] = cmd
+					end					
+				end
 			end
-		end
-	}--]]
+
+			local ticks = count_crafts_all * game.recipe_prototypes[get_recipe(entities[1])].energy * 60
+			command.data.next_tick = tick + math.max(ticks / 3, 40)
+			return ret
+		end,
+		default_priority = 100,
+		execute = empty,
+	}
 }
 
 
