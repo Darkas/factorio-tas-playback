@@ -30,6 +30,7 @@ function init()
 	our_global.current_mining = 0
 	our_global.stopped = true
 	our_global.current_ui = nil
+	our_global.entities_with_burner = {}
 	
 	our_global.current_command_group_index = 0
 	our_global.current_command_group_tick = nil
@@ -38,6 +39,12 @@ end
 script.on_event(defines.events.on_player_mined_item, function(event)
 	our_global.current_mining = our_global.current_mining + (event.item_stack.count or 1)
 end)
+
+function add_entity_to_global (entity)
+	if entity.burner then
+		our_global.entities_with_burner[#our_global.entities_with_burner + 1] = entity
+	end
+end
 
 function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
@@ -158,7 +165,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		if #executable_commands > 0 then
 			local command = executable_commands[1]
 			for _, com in pairs(executable_commands) do
-				if command.priority > com.priority then
+				if command.priority > com.priority  then --and com.action_type ~= action_types.always_possible then
 					command = com
 				end
 			end
@@ -385,7 +392,7 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 			-- find the highest priority take or put-stack action at this position
 			
 			for _, comm in pairs(executable_commands) do
-				if has_value({"put", "take"}, basic_action(comm)) and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
+				if has_value({"put", "take"}, basic_action(comm)) and comm.action_type == action_types.selection and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
 					if not priority_take_or_put and priority_take_or_put.priority > comm.priority then
 						priority_take_or_put = comm
 					end
