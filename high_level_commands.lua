@@ -115,8 +115,8 @@ high_level_commands = {
 				return "There is no command named: " .. command[2]
 			end
 			
-			if command.data.target_command.name == "craft-build" and command.data.target_command.build_command then
-				command.data.target_command = command.data.target_command.build_command
+			if command.data.target_command[1] == "craft-build" and command.data.target_command.data.build_command then
+				command.data.target_command = command.data.target_command.data.build_command
 			end
 			
 			if command.data.target_command.rect then
@@ -279,7 +279,7 @@ high_level_commands = {
 			return command
 		end,
 		executable = function(command, myplayer, tick)
-			if distance_from_rect(myplayer.position, command.rect) > command.distance then
+			if not in_range(command, myplayer) then
 				return "Out of range"
 			end
 		

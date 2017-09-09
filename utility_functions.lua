@@ -131,13 +131,53 @@ function distance_from_rect(pos, rect, closest)
 		else closest[2] = posy end
 	else
 		closest[2] = corner1.y
-		if corner1.x > corner2.y then corner1, corner2 = corner2, corner1 end
+		if corner1.x > corner2.x then corner1, corner2 = corner2, corner1 end
 		if posx < corner1.x then closest[1] = corner1.x
 		elseif posx > corner2.x then closest[1] = corner2.x
 		else closest[1] = posx end
 	end
 	
 	return math.sqrt(sqdistance(closest, pos)), closest
+end
+
+function distance_rect_to_rect(rect1, rect2)
+	local corners1 = {{rect1[1][1], rect1[1][2]}, {rect1[2][1], rect1[1][2]}, {rect1[2][1], rect1[2][2]}, {rect1[1][1], rect1[2][2]}} -- corners1[1] is the top left corner, continue clockwise
+	local corners2 = {{rect2[1][1], rect2[1][2]}, {rect2[2][1], rect2[1][2]}, {rect2[2][1], rect2[2][2]}, {rect2[1][1], rect2[2][2]}}
+	
+	local in_cross_x = false
+	local in_cross_y = false
+	
+	for _,corner in pairs(corners1) do
+		if corners2[1][1] <= corner[1] and corner[1] <= corners2[2][1] then
+			in_cross_x = true
+		end
+		
+		if corners2[2][2] <= corner[2] and corner[2] <= corners2[3][2] then
+			in_cross_y = true
+		end
+	end
+	
+	if in_cross_x then
+		return math.min(math.abs(corners1[1][2] - corners2[1][2]), math.abs(corners1[3][2] - corners2[1][2]), math.abs(corners1[1][2] - corners2[3][2]), math.abs(corners1[3][2] - corners2[3][2]))
+	end
+	
+	if in_cross_y then
+		return math.min(math.abs(corners1[2][1] - corners2[2][1]), math.abs(corners1[4][1] - corners2[2][1]), math.abs(corners1[2][1] - corners2[4][1]), math.abs(corners1[4][1] - corners2[4][1]))
+	end
+	
+	local min_distance = sqdistance(corners1[1], corners2[1])
+	
+	for _,corner1 in pairs(corners1) do
+		for _,corner2 in pairs(corners2) do
+			local distance = sqdistance(corner1, corner2)
+			
+			if distance < min_distance then
+				min_distance = distance
+			end
+		end
+	end
+	
+	return min_distance
 end
 
 function get_coordinates(pos)
