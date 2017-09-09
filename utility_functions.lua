@@ -9,8 +9,20 @@ if not our_global.entity_recipe then our_global.entity_recipe = {} end
 -- Tables
 ----------
 
+-- This can obviously be done better but it works for now.
 function tables_equal(t1, t2)
 	return serpent.block(t1) == serpent.block(t2)
+end
+
+-- Taken from https://stackoverflow.com/questions/640642/how-do-you-copy-a-lua-table-by-value
+function copy(obj, seen)
+  if type(obj) ~= 'table' then return obj end
+  if seen and seen[obj] then return seen[obj] end
+  local s = seen or {}
+  local res = setmetatable({}, getmetatable(obj))
+  s[obj] = res
+  for k, v in pairs(obj) do res[copy(k, s)] = copy(v, s) end
+  return res
 end
 
 function has_value(table, element)
@@ -60,16 +72,10 @@ end
 
 function debugprint(msg)
 	log_to_ui(msg, "run-debug")
-	-- for _, player in pairs(game.connected_players) do
-	-- 	if player.mod_settings["tas-verbose-logging"].value then 
-	-- 		-- player.print("[" .. game.tick - (global.start_tick or 0) .. "] " .. msg)
-	-- 	end
-	-- end
 end
 
 function errprint(msg)
 	log_to_ui(msg, "tascommand-error")
-	--game.print("[" .. game.tick - (global.start_tick or 0) .. "]  ___WARNING___ " .. msg)
 end
 
 
@@ -85,6 +91,44 @@ function inrange(position, myplayer)
   return ((position[1] - myplayer.position.x)^2 + (position[2] - myplayer.position.y)^2) < 36
 end
 
+-- rotation for angles multiple of 90°, encoded as 2 for 90°, 4 for 180°, 6 for 270°
+function rotate_orthogonal(position, rotation)
+	local x, y = get_coordinates(position)
+	if not rotation or rotation == 0 then return {x, y}
+	elseif rotation == 2 then return {-y, x} 
+	elseif rotation == 4 then return {-x, -y}
+	elseif rotation == 6 then return {y, -x}
+	else game.print(debug.traceback()) error("Bad rotation parameter! rotation = " .. printable(rotation)) end
+end
+
+function rotate_rect(rect, rotation)
+	if not rect then game.print(debug.traceback()) error("Called rotate_rect without rect param!") end
+	if not rotation or rotation == 0 then return {rect[1] or rect.left_top, rect[2] or rect.right_bottom} end
+	local x1, y1 = get_coordinates(rotate_orthogonal(rect[1] or rect.left_top, rotation))
+	local x2, y2 = get_coordinates(rotate_orthogonal(rect[2] or rect.right_bottom, rotation))
+
+	if x1 <= x2 then 
+		if y1 <= y2 then
+			return {{x1, y1}, {x2, y2}}
+		else
+			return {{x1, y2}, {x2, y1}}
+		end
+	else
+		if y1 <= y2 then
+			return {{x2, y1}, {x1, y2}}
+		else
+			return {{x2, y2}, {x1, y1}}
+		end
+	end
+end
+
+function translate(position, offset)
+	if not offset then return position end
+	local x, y = get_coordinates(position)
+	local dx, dy = get_coordinates(offset)
+	return {x+dx, y+dy}
+end
+
 function sqdistance(pos1, pos2)
 	local x1, y1 = get_coordinates(pos1)
 	local x2, y2 = get_coordinates(pos2)
@@ -92,13 +136,25 @@ function sqdistance(pos1, pos2)
 	return (x1 - x2)^2 + (y1 - y2)^2
 end
 
-function move_collision_box(collision_box, coords)
-	local x,y = get_coordinates(coords)
-	return {{collision_box.left_top.x + x, collision_box.left_top.y + y}, {collision_box.right_bottom.x + x, collision_box.right_bottom.y + y}}
-end
-
+-- works for name or entity or table {name, position, direction}
 function collision_box(entity)
-	return move_collision_box(entity.prototype.collision_box, entity.position)
+	if not entity then game.print(debug.traceback()) error("Called collision_box with parameter nil!") end
+
+	local rect = nil
+	if type(entity) == "string" then
+		return game.entity_prototypes[entity].collision_box
+	end
+	pcall(function()
+		if entity.prototype then 
+			rect = copy(entity.prototype.collision_box)
+		end
+	end)
+	if not rect then rect = copy(game.entity_prototypes[entity.name].collision_box) end
+
+	-- Note: copy outputs a rect as {left_top=..., right_bottom=...}, rotate_rect handles this and returns {[1]=..., [2]=...}.
+	rect = rotate_rect(rect, rotation_stringtoint(entity.direction))
+
+	return {translate(rect[1], entity.position), translate(rect[2], entity.position)}
 end
 
 function in_range(command, myplayer)
@@ -106,7 +162,7 @@ function in_range(command, myplayer)
 end
 
 -- Works only for axis-aligned rectangles.
-function distance_from_rect(pos, rect, closest)
+function distance_from_rect(pos, rect)
 	if not closest then closest = {} end
 	local posx, posy = get_coordinates(pos)
 	local rect1x, rect1y = get_coordinates(rect[1])
@@ -121,6 +177,8 @@ function distance_from_rect(pos, rect, closest)
 	local index, corner1 = get_minimum_index(corners, lt)
 	table.remove(corners, index)
 	local _, corner2 = get_minimum_index(corners, lt)
+
+	local closest = {}
 	
 	-- Set closest point on rectangle
 	if corner1.x == corner2.x then
@@ -181,7 +239,7 @@ function distance_rect_to_rect(rect1, rect2)
 end
 
 function get_coordinates(pos)
-	if not pos then game.print(debug.traceback()) end
+	if not pos then game.print(debug.traceback()); error("Trying to access coordinates of invalid point!") end
 	if pos.x then 
 		return pos.x, pos.y
 	else
@@ -203,6 +261,15 @@ function namespace_prefix(name, command_group)
 		return command_group .. "." .. name
 	else
 		return name
+	end
+end
+
+local direction_ints = {N = 0, NE = 1, E = 2, SE = 3, S = 4, SW = 5, W = 6, NW = 7}
+function rotation_stringtoint(rot)
+	if type(rot) == "int" then 
+		return rot
+	else 
+		return direction_ints[rot]
 	end
 end
 
@@ -242,6 +309,7 @@ end
 -- Entity related
 ------------------
 
+-- Note this should only be called for entities that are actually on a surface.
 function get_recipe(entity)
 	local x, y = get_coordinates(entity.position)
 	local recipe = nil
@@ -262,7 +330,7 @@ function get_recipe(entity)
 	elseif entity.type == "assembling-machine" then
 		return recipe
 	else 
-		errprint("Trying to get recipe of entity without recipe.")
+		error("Called get_recipe for entity without recipe.")
 	end
 end
 
@@ -274,3 +342,4 @@ function craft_interpolate(entity, ticks)
 
 	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end
+
