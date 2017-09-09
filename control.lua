@@ -179,7 +179,7 @@ function end_of_input(player)
 	end
 end
 
-script.on_event(defines.events.on_tick, function(event)
+script.on_event(defines.events.on_tick, function(_)
 	for _, player in pairs(game.players) do
 		if player.connected then
 			update_log_ui(player)

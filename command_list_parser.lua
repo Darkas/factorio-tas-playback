@@ -1,9 +1,8 @@
 require("high_level_commands")
 
 module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
-if not global.command_list_parser then global.command_list_parser = {} end
-local our_global = global.command_list_parser
 
+out_global = global.command_list_parser or {}
 
 -- TODO: "throw" and "vehicle"
 -- TODO: Check if we need the type parameter in auto-refuel, add amount parameter?
@@ -21,28 +20,28 @@ max_ranges = {
 }
 
 function init()
-	our_global.current_command_set = {}
-	our_global.command_finished_times = {}
-	our_global.loaded_command_groups = {}
-	our_global.initialized_names = {}
-	our_global.finished_command_names = {}
+	global.command_list_parser.current_command_set = {}
+	global.command_list_parser.command_finished_times = {}
+	global.command_list_parser.loaded_command_groups = {}
+	global.command_list_parser.initialized_names = {}
+	global.command_list_parser.finished_command_names = {}
 	
-	our_global.current_mining = 0
-	our_global.stopped = true
-	our_global.current_ui = nil
-	our_global.entities_with_burner = {}
+	global.command_list_parser.current_mining = 0
+	global.command_list_parser.stopped = true
+	global.command_list_parser.current_ui = nil
+	global.command_list_parser.entities_with_burner = {}
 	
-	our_global.current_command_group_index = 0
-	our_global.current_command_group_tick = nil
+	global.command_list_parser.current_command_group_index = 0
+	global.command_list_parser.current_command_group_tick = nil
 end
 
 script.on_event(defines.events.on_player_mined_item, function(event)
-	our_global.current_mining = our_global.current_mining + (event.item_stack.count or 1)
+	global.command_list_parser.current_mining = global.command_list_parser.current_mining + (event.item_stack.count or 1)
 end)
 
 function add_entity_to_global (entity)
 	if entity.burner then
-		our_global.entities_with_burner[#our_global.entities_with_burner + 1] = entity
+		global.command_list_parser.entities_with_burner[#global.command_list_parser.entities_with_burner + 1] = entity
 	end
 end
 
@@ -57,10 +56,10 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 
 	local finished = true
 	
-	for k, command in pairs(our_global.current_command_set) do
+	for k, command in pairs(global.command_list_parser.current_command_set) do
 		if command.finished and command.name then
-			our_global.finished_command_names[command.name] = true
-			--table.remove(our_global.current_command_set, k)
+			global.command_list_parser.finished_command_names[command.name] = true
+			--table.remove(global.command_list_parser.current_command_set, k)
 		end
 		
 		if not command.finished then
@@ -68,11 +67,11 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
-	if command_list[our_global.current_command_group_index + 1] and command_list[our_global.current_command_group_index + 1].required then
+	if command_list[global.command_list_parser.current_command_group_index + 1] and command_list[global.command_list_parser.current_command_group_index + 1].required then
 		finished = true
 		
-		for _,name in pairs(command_list[our_global.current_command_group_index + 1].required) do
-			if not our_global.finished_command_names[namespace_prefix(name, command_list[our_global.current_command_group_index].name)] then
+		for _,name in pairs(command_list[global.command_list_parser.current_command_group_index + 1].required) do
+			if not global.command_list_parser.finished_command_names[namespace_prefix(name, command_list[global.command_list_parser.current_command_group_index].name)] then
 				finished = false
 			end
 		end
@@ -81,16 +80,16 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	-- Add the next command group to the current command set.
 	
 	if finished then
-		our_global.current_command_group_index = our_global.current_command_group_index + 1
+		global.command_list_parser.current_command_group_index = global.command_list_parser.current_command_group_index + 1
 		
-		if (not command_list[our_global.current_command_group_index]) then
+		if (not command_list[global.command_list_parser.current_command_group_index]) then
 			return false
 		end
 
-		local command_group = command_list[our_global.current_command_group_index]
+		local command_group = command_list[global.command_list_parser.current_command_group_index]
 
-		if our_global.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
-		our_global.loaded_command_groups[command_group.name] = true
+		if global.command_list_parser.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
+		global.command_list_parser.loaded_command_groups[command_group.name] = true
 
 		--if command_group.save_before then 
 		--	game.server_save(tas_name .. "__" .. command_group.name)
@@ -104,18 +103,18 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 					error("The command with the name '" .. command[1] .. "' does not exist!")
 				end
 				
-				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(our_global.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
+				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(global.command_list_parser.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
 					add_command_to_current_set(command, myplayer, command_group)
 					
 					if command.name then
-						our_global.initialized_names[#our_global.initialized_names + 1] = command.name
+						global.command_list_parser.initialized_names[#global.command_list_parser.initialized_names + 1] = command.name
 					end
 					table.remove(command_group.commands, i)
 				end
 			end
 		end
 		
-		our_global.current_command_group_tick = tick
+		global.command_list_parser.current_command_group_tick = tick
 	end
 
 	-- 	Determine which commands we can execute this tick
@@ -126,7 +125,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	while unchecked_commands do
 		unchecked_commands = false
 		
-		for _, command in pairs(our_global.current_command_set) do
+		for _, command in pairs(global.command_list_parser.current_command_set) do
 			if not command.tested then
 				if command_executable(command, myplayer, tick) then
 					executable_commands[#executable_commands + 1] = command
@@ -144,7 +143,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 		end
 	end
 	
-	for _, command in pairs(our_global.current_command_set) do
+	for _, command in pairs(global.command_list_parser.current_command_set) do
 		command.tested = false
 	end
 	
@@ -206,7 +205,7 @@ function add_command_to_current_set(command, myplayer, command_group)
 	local do_add = true -- At the end of this function we add the command to the set if this is still true
 
 	-- Reset on_relative_tick time.
-	if command.name then our_global.command_finished_times[command.name] = nil end
+	if command.name then global.command_list_parser.command_finished_times[command.name] = nil end
 
 	command.data = {}
 	
@@ -232,7 +231,7 @@ function add_command_to_current_set(command, myplayer, command_group)
 
 	-- Add command to set
 	if not not_add then
-		our_global.current_command_set[#our_global.current_command_set + 1] = command
+		global.command_list_parser.current_command_set[#global.command_list_parser.current_command_set + 1] = command
 	end
 end
 
@@ -254,7 +253,7 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	-- save finishing time for on_relative_tick
 	for _, command in pairs(queue) do
 		if command.name then
-			our_global.command_finished_times[command.name] = tick
+			global.command_list_parser.command_finished_times[command.name] = tick
 		end
 	end
 	
@@ -277,12 +276,12 @@ function command_executable(command, myplayer, tick)
 	if command.on_tick and command.on_tick < tick then return false end
 	if command.on_relative_tick then
 		if type(command.on_relative_tick) == type(1) then
-			if tick < our_global.current_command_group_tick + command.on_relative_tick then
+			if tick < global.command_list_parser.current_command_group_tick + command.on_relative_tick then
 				fail_reason = "The tick has not been reached"
 			end
 		else
 			if type(command.on_relative_tick) == type({}) then
-				if not our_global.command_finished_times[command.on_relative_tick[2]] or tick < our_global.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then
+				if not global.command_list_parser.command_finished_times[command.on_relative_tick[2]] or tick < global.command_list_parser.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then
 					fail_reason = "The tick has not been reached"
 				end
 			else
@@ -323,7 +322,7 @@ function command_executable(command, myplayer, tick)
 	if command.command_finished then
 		local com_finished = false
 		
-		for _, com in pairs(our_global.current_command_set) do
+		for _, com in pairs(global.command_list_parser.current_command_set) do
 			if com.finished and com.name and com.name == command.command_finished then
 				com_finished = true
 			end
@@ -421,13 +420,13 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 	end
 	
 	if command.action_type == action_types.ui then
-		if our_global.current_ui == nil then -- we have to open the ui first
-			our_global.current_ui = command.ui
+		if global.command_list_parser.current_ui == nil then -- we have to open the ui first
+			global.command_list_parser.current_ui = command.ui
 			
 			table.remove(commands, 1)
 		else
 			-- do the command, close the ui
-			our_global.current_ui = nil
+			global.command_list_parser.current_ui = nil
 		end
 	end
 	

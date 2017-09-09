@@ -1,12 +1,13 @@
 
-if not global.command_list_parser then global.command_list_parser = {} end
-local our_global = global.command_list_parser
+
+global.command_list_parser = global.command_list_parser or {}
+
 
 
 function auto_move_to_low_level (command, myplayer, tick)
 	local auto_move_commands = 0
 	
-	for _, command in pairs(our_global.current_command_set) do
+	for _, command in pairs(global.command_list_parser.current_command_set) do
 		if (not command.finished) and (command[1] == "auto-move-to" or command[1] == "auto-move-to-command") then
 			auto_move_commands = auto_move_commands + 1
 		end
@@ -104,7 +105,7 @@ high_level_commands = {
 		execute = auto_move_to_low_level,
 		executable = function(command, myplayer, tick)
 			if not command.data.target_command then
-				for _, com in pairs(our_global.current_command_set) do
+				for _, com in pairs(global.command_list_parser.current_command_set) do
 					if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
 						command.data.target_command = com
 					end
@@ -160,7 +161,7 @@ high_level_commands = {
 			local new_commands = {}
 			local priority = 5
 			
-			for i, entity in pairs(our_global.entities_with_burner) do
+			for i, entity in pairs(global.command_list_parser.entities_with_burner) do
 				if entity.type == "mining-drill" then
 					priority = 4
 				end
@@ -306,9 +307,9 @@ high_level_commands = {
 				return "Out of range"
 			end
 		
-			if command.amount and our_global.current_mining >= command.amount then
+			if command.amount and global.command_list_parser.current_mining >= command.amount then
 				command.finished = true
-				our_global.current_mining = 0
+				global.command_list_parser.current_mining = 0
 				return "finished"
 			end
 			
@@ -530,7 +531,7 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			local cancel = namespace_prefix(command[2], command.command_group)
 			
-			for _,com in pairs(our_global.current_command_set) do
+			for _,com in pairs(global.command_list_parser.current_command_set) do
 				if com.name == cancel then
 					com.finished = true
 				end
