@@ -177,6 +177,8 @@ function distance_from_rect(pos, rect)
 	local index, corner1 = get_minimum_index(corners, lt)
 	table.remove(corners, index)
 	local _, corner2 = get_minimum_index(corners, lt)
+
+	local closest = {}
 	
 	-- Set closest point on rectangle
 	if corner1.x == corner2.x then
@@ -187,7 +189,7 @@ function distance_from_rect(pos, rect)
 		else closest[2] = posy end
 	else
 		closest[2] = corner1.y
-		if corner1.x > corner2.y then corner1, corner2 = corner2, corner1 end
+		if corner1.x > corner2.x then corner1, corner2 = corner2, corner1 end
 		if posx < corner1.x then closest[1] = corner1.x
 		elseif posx > corner2.x then closest[1] = corner2.x
 		else closest[1] = posx end
@@ -197,7 +199,7 @@ function distance_from_rect(pos, rect)
 end
 
 function get_coordinates(pos)
-	if not pos then game.print(debug.traceback()) end
+	if not pos then game.print(debug.traceback()); error("Trying to access coordinates of invalid point!") end
 	if pos.x then 
 		return pos.x, pos.y
 	else

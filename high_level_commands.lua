@@ -23,8 +23,6 @@ function auto_move_to_low_level (command, myplayer, tick)
 	else
 		target_pos = command.data.target_pos
 	end
-
-	game.print(serpent.block(target_pos))
 			
 	if not command.data.moveData then
 		command.data.moveData = {}

@@ -10,7 +10,7 @@ require("command_list_ui")
 local max_tick = 0
 
 -- Get the path of the scenario and the name of the run file through a very dirty trick
-for k,v in pairs(remote.interfaces) do
+for k,_ in pairs(remote.interfaces) do
 	tas_name = tas_name or string.match(k,"^TASName_(.+)$")
 	run_file = run_file or string.match(k,"^TASFile_(.+)$")
 end
@@ -18,19 +18,15 @@ end
 if tas_name and run_file then
 	commandqueue = require("scenarios." .. tas_name .. "." .. run_file)
 	-- determine last tick, each time the run is loaded
-	for k,v in pairs(commandqueue) do 
+	for k,_ in pairs(commandqueue) do
 		if type(k) == "number" and (k > max_tick) then -- Makes sure that k is actually bigger than our current max_tick
 			max_tick = k
 		end
 	end
 else
-	-- Currently throw a standard lua error since the custom error management system we use cannot be used. Nothing's initialized !!! 
+	-- Currently throw a standard lua error since the custom error management system we use cannot be used.
 	error("The run's scenario doesn't seem to be running. Please make sure you launched the scenario. ")
 end
-
-
-pcall (function ()  blueprints = require("scenarios." .. tas_name .. "." .. "blueprints") end)
-
 
 
 -- Get the commands that the speedrun can use
@@ -39,34 +35,34 @@ local TAScommands = require("commands")
 
 function set_run_logging_types()
 	configure_log_type(
-		"run-debug", 
-		{font_color = {r=0.5, g=0.9, b=0.9}}, 
-		50, 
+		"run-debug",
+		{font_color = {r=0.5, g=0.9, b=0.9}},
+		50,
 		function(message)
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end,
 		true
 	)
 	configure_log_type(
-		"tascommand-error", 
-		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"}, 
-		50, 
+		"tascommand-error",
+		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"},
+		50,
 		function(message)
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
 	configure_log_type(
-		"run-output", 
-		{font_color = {r=0.5, g=1, b=0.5}, font = "default"}, 
-		50, 
+		"run-output",
+		{font_color = {r=0.5, g=1, b=0.5}, font = "default"},
+		50,
 		function(message)
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
 	configure_log_type(
-		"command-not-executable", 
-		{font_color = {r=1, g=0.5, b=0.5}, font = "default"}, 
-		50, 
+		"command-not-executable",
+		{font_color = {r=1, g=0.5, b=0.5}, font = "default"},
+		50,
 		function(message)
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end,
@@ -82,7 +78,7 @@ end
 function init_run(myplayer_index)
 	set_run_logging_types()
 	debugprint("Initializing the run")
-	-- Examine the command queue for errors. 
+	-- Examine the command queue for errors.
 	if not commandqueue then
 		errprint("The command queue is empty! No point in starting.")
 		return
@@ -115,27 +111,42 @@ function init_run(myplayer_index)
 	for _, input_action in pairs(defines.input_action) do
 		spectators.set_allows_action(input_action, false)
 	end
-	local allowed_actions = {defines.input_action.start_walking, defines.input_action.open_gui, defines.input_action.open_technology_gui, defines.input_action.open_achievements_gui, defines.input_action.open_trains_gui, defines.input_action.open_train_gui, defines.input_action.open_train_station_gui, defines.input_action.open_bonus_gui, defines.input_action.open_production_gui, defines.input_action.open_kills_gui, defines.input_action.open_logistic_gui, defines.input_action.open_equipment, defines.input_action.open_item, defines.input_action.write_to_console}
+	local allowed_actions = {
+		defines.input_action.start_walking,
+		defines.input_action.open_gui,
+		defines.input_action.open_technology_gui,
+		defines.input_action.open_achievements_gui,
+		defines.input_action.open_trains_gui,
+		defines.input_action.open_train_gui,
+		defines.input_action.open_train_station_gui,
+		defines.input_action.open_bonus_gui,
+		defines.input_action.open_production_gui,
+		defines.input_action.open_kills_gui,
+		defines.input_action.open_logistic_gui,
+		defines.input_action.open_equipment,
+		defines.input_action.open_item,
+		defines.input_action.write_to_console
+	}
 	for _, input_action in pairs(allowed_actions) do
 		spectators.set_allows_action(input_action, true)
 	end
 	-- make everyone spectator except the runner
-	for _, player in pairs(game.connected_players) do
-		if player.index ~= myplayer_index then
-			local char_entity = player.character
-			player.character = nil
+	for _, pl in pairs(game.connected_players) do
+		if pl.index ~= myplayer_index then
+			local char_entity = pl.character
+			pl.character = nil
 			char_entity.destroy()
-			player.game_view_settings.show_entity_info = true
-			player.game_view_settings.show_controller_gui = false
-			spectators.add_player(player)
+			pl.game_view_settings.show_entity_info = true
+			pl.game_view_settings.show_controller_gui = false
+			spectators.add_player(pl)
 		end
 	end
 	-- Prepare the runner
 	init_player(player)
-	
+
 	global.start_tick = game.tick
 	debugprint("Starting tick is " .. global.start_tick)
-	
+
 	global.running = true
 end
 
@@ -170,8 +181,8 @@ end
 
 script.on_event(defines.events.on_tick, function(event)
 	for _, player in pairs(game.players) do
-		if player.connected then 
-			update_log_ui(player) 
+		if player.connected then
+			update_log_ui(player)
 			if commandqueue then
 				update_command_list_ui(player, commandqueue.command_list)
 			end
@@ -181,17 +192,17 @@ script.on_event(defines.events.on_tick, function(event)
 	if commandqueue and global.running then
 		local tick = game.tick - global.start_tick
 		local myplayer = global.myplayer
-		
+
 		-- Check what commands are to be executed next
 		if commandqueue.settings.enable_high_level_commands then
 			global.minestate = nil
 			global.walkstate = {walking = false}
-		
+
 			if not command_list_parser.evaluate_command_list(commandqueue["command_list"], commandqueue, myplayer, tick) then
 				end_of_input(myplayer)
 			end
 		end
-		
+
 		if not myplayer.connected then
 			error("The runner left.")
 		end
@@ -202,7 +213,7 @@ script.on_event(defines.events.on_tick, function(event)
 			end
 		end
 		myplayer.walking_state = global.walkstate
-		if not global.minestate then 
+		if not global.minestate then
 			myplayer.mining_state = {mining = false}
 		else
 			myplayer.update_selected_entity(global.minestate)
@@ -243,14 +254,14 @@ script.on_init(function()
 end)
 
 
-remote.add_interface("TAS_playback", {launch = function() 
+remote.add_interface("TAS_playback", {launch = function()
 	global.init_on_player_created = true
 end})
 
 commands.add_command("init_run", "Start the speedrun", function(event)
 	if not game.players[event.player_index].admin then
 		game.players[event.player_index].print("Only admins can start the run.")
-	elseif global.running then 
+	elseif global.running then
 		game.players[event.player_index].print("The run has already been started.")
 	elseif event.player_index ~= 1 then
 		game.players[event.player_index].print("Only the host can start the run, otherwise the run will fail. At some point. At a different point each run. Reason: http://i.imgur.com/kQykaQd.png")
