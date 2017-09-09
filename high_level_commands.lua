@@ -12,8 +12,9 @@ function auto_move_to_low_level (command, myplayer, tick)
 		end
 	end
 	
-	if auto_move_commands > 1 then
+	if auto_move_commands > 1 and not command.data.err_message then
 		errprint("You are using more than one auto-move command at once! Do this only if you know what you are doing!")
+		command.data.err_message = true
 	end
 	
 	local target_pos = nil
@@ -566,12 +567,12 @@ high_level_commands = {
 			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
 			local entities = {}
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
-				if (distance_from_rect(myplayer.position, collision_box(entity)) and get_recipe(entity) == item) then
+				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
-				if (distance_from_rect(myplayer.position, collision_box(entity)) and get_recipe(entity) == item) then
+				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
@@ -585,21 +586,25 @@ high_level_commands = {
 			local remaining = count_to_craft % #entities
 
 			local ret = {}
-			if count_crafts_all == 0 then
+			if count_crafts_all <= 0 then
+				if count_crafts_all < 0 then
+					errprint("Auto-take was not optimal: there were more resources in the entities than needed.")
+				end
+				
 				table.sort(entities, function(a, b) return a.crafting_progress > b.crafting_progress end)
 				for index, entity in pairs(entities) do
 					local amount = entity.get_item_count(item) + count_crafts_all + (index <= remaining and 1 or 0)
 					if amount > 0 then
 						local position = {entity.position.x, entity.position.y}
 						local cmd = {"take", position, item, amount}
-						command.finished = true
 						ret[#ret + 1] = cmd
 					end					
 				end
+				command.finished = true
 			end
 
-			local ticks = count_crafts_all * game.recipe_prototypes[get_recipe(entities[1])].energy * 60
-			command.data.next_tick = tick + math.max(ticks / 3, 40)
+			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[get_recipe(entities[1])].energy * 60
+			command.data.next_tick = tick + math.max(math.min(ticks / 3, 40), 1)
 			return ret
 		end,
 		default_priority = 100,
