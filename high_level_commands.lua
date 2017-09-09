@@ -6,47 +6,47 @@ global.command_list_parser = global.command_list_parser or {}
 
 function auto_move_to_low_level (command, myplayer, tick)
 	local auto_move_commands = 0
-	
-	for _, command in pairs(global.command_list_parser.current_command_set) do
-		if (not command.finished) and (command[1] == "auto-move-to" or command[1] == "auto-move-to-command") then
+
+	for _, cmd in pairs(global.command_list_parser.current_command_set) do
+		if (not cmd.finished) and (cmd[1] == "auto-move-to" or cmd[1] == "auto-move-to-command") then
 			auto_move_commands = auto_move_commands + 1
 		end
 	end
-	
+
 	if auto_move_commands > 1 then
 		errprint("You are using more than one auto-move command at once! Do this only if you know what you are doing!")
 	end
-	
-	local target_pos = nil
-	
+
+	local target_pos
+
 	if command[1] == "auto-move-to" then
 		target_pos = command[2]
 	else
 		target_pos = command.data.target_pos
 	end
-			
+
 	if not command.data.moveData then
 		command.data.moveData = {}
-	
+
 		if target_pos[2] < myplayer.position.y then
 			command.data.moveData.N = true
 		end
-	
+
 		if target_pos[2] > myplayer.position.y then
 			command.data.moveData.S = true
 		end
-	
+
 		if target_pos[1] > myplayer.position.x then
 			command.data.moveData.E = true
 		end
-	
+
 		if target_pos[1] < myplayer.position.x then
 			command.data.moveData.W = true
 		end
 	end
-	
+
 	local move_dir = ""
-	
+
 	-- TODO: Test if this works when we walk on transport belts
 	-- Could replace this by
 	-- if command[2][2] < myplayer.position.y - epsilon then
@@ -55,28 +55,28 @@ function auto_move_to_low_level (command, myplayer, tick)
 	if target_pos[2] < myplayer.position.y and not command.data.moveData.S then
 		move_dir = move_dir .. "N"
 	end
-	
+
 	if target_pos[2] > myplayer.position.y and not command.data.moveData.N then
 		move_dir = move_dir .. "S"
 	end
-	
+
 	if target_pos[1] > myplayer.position.x and not command.data.moveData.W then
 		move_dir = move_dir .. "E"
 	end
-	
+
 	if target_pos[1] < myplayer.position.x and not command.data.moveData.E then
 		move_dir = move_dir .. "W"
 	end
-	
+
 	if move_dir == "" then
 		move_dir = "STOP"
 		command.finished = true
 	end
-	
+
 	return {"move", move_dir}
 end
 
-function empty()	
+function empty()
 end
 
 function return_self_finished(command, myplayer, tick)
@@ -95,12 +95,12 @@ end
 action_types = {always_possible = 1, selection = 2, ui = 3}
 
 high_level_commands = {
-	
+
 	["auto-move-to"] = {
 		execute = auto_move_to_low_level,
 		default_priority = 7,
 	},
-	
+
 	["auto-move-to-command"] = {
 		execute = auto_move_to_low_level,
 		executable = function(command, myplayer, tick)
@@ -111,61 +111,61 @@ high_level_commands = {
 					end
 				end
 			end
-			
+
 			if not command.data.target_command then
 				return "There is no command named: " .. command[2]
 			end
-			
+
 			if command.data.target_command[1] == "craft-build" and command.data.target_command.data.build_command then
 				command.data.target_command = command.data.target_command.data.build_command
 			end
-			
+
 			if command.data.target_command.rect then
 				command.data.target_pos = {}
 				_, command.data.target_pos = distance_from_rect(myplayer.position, command.data.target_command.rect)
-				
+
 				debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 			else
 				return "The command does currently not have a location"
 			end
-			
+
 			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) == "" then
 				command.finished = true
 				return "finished"
 			end
-			
+
 			return ""
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
-			
+
 		end,
 		init_dependencies = function (command)
 			return command[2]
 		end
 	},
-	
+
 	["auto-refuel"] = {
 		execute = return_phantom,
 		spawn_commands = function(command, myplayer, tick)
 			if not command.data.already_refueled then
 				command.data.already_refueled = {}
 			end
-			
+
 			local target_fuel = command.target
-			
+
 			if not target_fuel then
 				target_fuel = command.min or 1
 			end
-			
+
 			local new_commands = {}
 			local priority = 5
-			
+
 			for i, entity in pairs(global.command_list_parser.entities_with_burner) do
 				if entity.type == "mining-drill" then
 					priority = 4
 				end
-				
+
 				if distance_from_rect(myplayer.position, collision_box(entity)) <= myplayer.reach_distance then
 					if command.min then
 						if entity.burner.inventory.get_item_count("coal") < command.min then
@@ -188,12 +188,12 @@ high_level_commands = {
 					end
 				end
 			end
-			
+
 			return new_commands
 		end,
 		default_priority = 100,
 	},
-	
+
 	build = {
 		execute = return_self_finished,
 		executable = function(command, myplayer, tick)
@@ -209,7 +209,7 @@ high_level_commands = {
 			command.rect = collision_box{name=command[2], position=copy(command[3])}
 		end,
 	},
-	
+
 	craft = {
 		execute = return_self_finished,
 		executable = function(command, myplayer, tick)
@@ -224,7 +224,7 @@ high_level_commands = {
 		end,
 		default_priority = 5,
 	},
-	
+
 	["craft-build"] = {
 		default_priority = 5,
 		execute = return_phantom,
@@ -233,15 +233,15 @@ high_level_commands = {
 				if command.data.build_command.finished then
 					command.finished = true
 				end
-				
+
 				return "craft-build is never executable"
 			end
-			
+
 			return ""
 		end,
 		spawn_commands = function (command, myplayer, tick)
 			command.data.build_command = {"build", command[2], command[3], command[4]}
-			
+
 			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
 	},
@@ -256,19 +256,19 @@ high_level_commands = {
 				if command.data.build_command.finished then
 					command.finished = true
 				end
-				
+
 				return "auto-build-blueprint is never executable"
 			end
-			
+
 			return ""
 		end,
 		spawn_commands = function (command, myplayer, tick)
 			command.data.build_command = {"build", command[2], command[3], command[4]}
-			
+
 			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
 	},
-	
+
 	["entity-interaction"] = {
 		execute = return_phantom,
 		executable = function (command, myplayer)
@@ -281,15 +281,15 @@ high_level_commands = {
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			command.distance = command[3] or myplayer.build_distance
-			
+
 			local entity = get_entity_from_pos(command[2], myplayer)
-		
+
 			command.rect = collision_box(entity)
-			
+
 			command.finished = true
 		end,
 	},
-	
+
 	["freeze-daytime"] = {
 		execute = return_phantom,
 		default_priority = 100,
@@ -297,7 +297,7 @@ high_level_commands = {
 			myplayer.surface.freeze_daytime = true
 		end,
 	},
-	
+
 	mine = {
 		execute = function (command, myplayer, tick)
 			return command
@@ -306,21 +306,21 @@ high_level_commands = {
 			if not in_range(command, myplayer) then
 				return "Out of range"
 			end
-		
+
 			if command.amount and global.command_list_parser.current_mining >= command.amount then
 				command.finished = true
 				global.command_list_parser.current_mining = 0
 				return "finished"
 			end
-			
+
 			return ""
 		end,
 		default_priority = 6,
 		initialize = function (command, myplayer)
 			local entity = get_entity_from_pos(command[2], myplayer)
-			
+
 			command.distance = myplayer.resource_reach_distance
-			
+
 			if entity then
 				command.rect = collision_box(entity)
 			else
@@ -330,16 +330,16 @@ high_level_commands = {
 		end,
 		default_action_type = action_types.selection,
 	},
-	
+
 	put = {
 		execute = function(command, myplayer, tick)
 			local item = command[3]
 			local amount = command[4]
 			local inventory = command.inventory
-		
-			
+
+
 			command.finished = true
-			
+
 			return {command[1], command[2], command[3], command[4], command.data.inventory}
 		end,
 		executable = function(command, myplayer, tick)
@@ -354,9 +354,9 @@ high_level_commands = {
 					end
 				end
 			end
-			
+
 			local item = command[3]
-			
+
 			if not command.data.inventory then
 				command.data.inventory = command.inventory
 				if not command.data.inventory then
@@ -364,7 +364,7 @@ high_level_commands = {
 					if command.data.entity.type == "furnace" then
 						if item == "raw-wood" or item == "coal" then
 							command.data.inventory = defines.inventory.fuel
-						else 
+						else
 							command.data.inventory = defines.inventory.furnace_source
 						end
 					elseif command.data.entity.type == "mining-drill" then
@@ -386,9 +386,9 @@ high_level_commands = {
 					elseif command.data.entity.type == "rocket-silo" then
 						if item_type == "module" then
 							command.data.inventory = defines.inventory.assembling_machine_modules
-						elseif item == "satellite" then 
+						elseif item == "satellite" then
 							command.data.inventory = defines.inventory.rocket_silo_rocket
-						else 
+						else
 							command.data.inventory = defines.inventory.assembling_machine_input
 						end
 					elseif command.data.entity.type == "container" then
@@ -399,27 +399,27 @@ high_level_commands = {
 					end
 				end
 			end
-			
+
 			if myplayer.get_item_count(item) < command[4] then
 				return "Not enough of " .. item .. " in inventory"
 			end
-			
+
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
 				return "Out of range"
 			end
-			
+
 			return ""
 		end,
 		default_priority = 5,
 		default_action_type = action_types.selection,
 	},
-	
+
 	rotate = {
 		execute = return_self_finished,
 		default_priority = 5,
 		default_action_type = action_types.selection,
 	},
-	
+
 	speed = {
 		execute = return_self_finished,
 		default_priority = 100,
@@ -428,11 +428,11 @@ high_level_commands = {
 		execute = return_phantom,
 		default_priority = 100,
 	},
-	
+
 	take = {
 		execute = function(command, myplayer, tick)
 			command.finished = true
-			
+
 			return {command[1], command[2], command.data.item, command.data.amount, command.data.inventory, action_type = command.action_type}
 		end,
 		executable = function(command, myplayer, tick)
@@ -442,17 +442,17 @@ high_level_commands = {
 					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 				end
 			end
-			
+
 			if not command.data.entity.valid then
 				command.data.entity = nil
 				return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 			end
-			
+
 			if not command.rect then
 				command.rect = collision_box(command.data.entity)
 				command.distance = myplayer.reach_distance
 			end
-			
+
 			if not command.data.inventory then
 				command.data.inventory = command.inventory
 				if not command.data.inventory then
@@ -465,21 +465,21 @@ high_level_commands = {
 						["mining-drill"] = defines.inventory.fuel
 					}
 					command.data.inventory = invs[command.data.entity.type]
-					
+
 					if not command.data.inventory then
 						errprint("No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type)
 						return "No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type
 					end
 				end
 			end
-			
+
 			-- TODO: if no item and amount are given, take the entire inventory as a selection action. Otherwise, it is a ui action
-			
+
 			if not command.data.item then
 				command.data.item = command[3]
 				if not command.data.item then -- take the first thing in the inventory
 					local entity_inventory = command.data.entity.get_inventory(command.data.inventory)
-				
+
 					if entity_inventory and entity_inventory[1] and entity_inventory[1].valid_for_read then
 						command.data.item = command.data.entity.get_inventory(command.data.inventory)[1].name
 					else
@@ -500,12 +500,12 @@ high_level_commands = {
 
 			if command.data.entity.get_item_count(command.data.item) < command.data.amount then
    				return "Not enough items available!"
-			end			
-			
+			end
+
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
 				return "Player too far away"
 			end
-			
+
 			return ""
 		end,
 		default_priority = 5,
@@ -530,7 +530,7 @@ high_level_commands = {
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			local cancel = namespace_prefix(command[2], command.command_group)
-			
+
 			for _,com in pairs(global.command_list_parser.current_command_set) do
 				if com.name == cancel then
 					com.finished = true
@@ -551,7 +551,7 @@ high_level_commands = {
 			end
 		end,
 	},
-	
+
 	["auto-take"] = {
 		spawn_commands = function(command, myplayer, tick)
 			if command.data.next_tick and command.data.next_tick >= tick then return end
@@ -595,7 +595,7 @@ high_level_commands = {
 						local cmd = {"take", position, item, amount}
 						command.finished = true
 						ret[#ret + 1] = cmd
-					end					
+					end
 				end
 			end
 

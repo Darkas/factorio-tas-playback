@@ -34,6 +34,7 @@ end
 
 TAScommands["mine"] = function (tokens, myplayer)
   local position = tokens[2]
+  local hasdecimals = false
   if position then
     if position[1] ~= roundn(position[1]) or position[2] ~= roundn(position[2]) then
       hasdecimals = true
@@ -63,27 +64,50 @@ TAScommands["build"] = function (tokens, myplayer)
     return
   end
 
-  -- Check if we are in range to build this  
-  if not (distance_from_rect(myplayer.position, collision_box{name=item, position=position, direction=direction}) < myplayer.build_distance) then
+  -- Check if we are in range to build this
+  local target_collision_box = collision_box{name=item, position=position, direction=direction}
+  local distance = distance_from_rect(myplayer.position, target_collision_box)
+  if not (distance < myplayer.build_distance) then
     errprint("Build failed: You are trying to place beyond realistic reach")
     return
   end
 
 
+  -- Remove Items on ground
+  local items = myplayer.surface.find_entities_filtered{area=target_collision_box, type="item-entity"}
+  local items_saved = {}
+
+  for _, _item in pairs(items) do
+    table.insert(items_saved, {name=_item.name, position=_item.position, count=_item.stack.count})
+    _item.destroy()
+  end
+
   -- Check if we can actually place the item at this tile
-  local canplace = myplayer.surface.can_place_entity{name = item, position = position, direction = direction, force = "player"}  
+  local canplace = myplayer.surface.can_place_entity{
+    name = item,
+    position = position,
+    direction = direction,
+    force = "player"
+  }
   if not canplace then
     errprint("Build failed: Something is in the way")
+    for _, _item in pairs(items_saved) do
+      myplayer.surface.create_entity{name=item, position=_item.position, stack={name=_item.name, count=_item.count}}
+    end
     return
   end
 
   -- If no errors, proceed to actually building things
   -- Place the item
-  asm = myplayer.surface.create_entity{name = item, position = position, direction = direction, force="player"}
+  local asm = myplayer.surface.create_entity{name = item, position = position, direction = direction, force="player"}
   -- Remove the placed item from the player (since he has now spent it)
   if asm then
 	command_list_parser.add_entity_to_global(asm)
     myplayer.remove_item({name = item, count = 1})
+
+    for _, _item in pairs(items_saved) do
+      myplayer.insert_item({name=_item.name, count=_item.count})
+    end
   else
     errprint("Build failed: Reason unknown.")
   end
@@ -183,7 +207,7 @@ TAScommands["take"] = function (tokens, myplayer)
     errprint("Take failed: No items at {" .. position[1] .. "," .. position[2] .. "}.")
     return
   end
-  
+
   if totake == 0 then
 	errprint("Taking 0 items is not allowed!")
 	return
@@ -247,8 +271,8 @@ TAScommands["pickup"] = function (tokens, myplayer)
   local pos = myplayer.position
   local r = myplayer.item_pickup_distance
   local area = {{pos.x - r, pos.y - r}, {pos.x + r, pos.y + r}}
-  local items = myplayer.surface.find_entities_filtered{area=area, type="item-entity"} 
-  
+  local items = myplayer.surface.find_entities_filtered{area=area, type="item-entity"}
+
   if #items > 0 then
 	debugprint("Picking up items (at position {" .. myplayer.position.x .. ", " .. myplayer.position.y .. "}).")
   end

@@ -12,13 +12,12 @@ function bp_load(name, offset, rotation, chunk_size)
     global.blueprint_raw_data[name] = blueprint_raw
   end
 
-  if not blueprint_raw then return end
+  if not blueprint_raw then game.print(debug.traceback()); error("Attempted to load not existing blueprint: " .. blueprint_path(name)) end
 
   local blueprint = {}
   blueprint.type = name
 
   local entities = blueprint_raw.entity_data
-  if not entities then error("Loading empty blueprint!") end
 
   blueprint.entities = {}
   blueprint.counts = {}
@@ -40,6 +39,8 @@ function bp_load(name, offset, rotation, chunk_size)
     local key = key_from_position(entity.position)
     if blueprint.chunked_entities[key] then
       table.insert(blueprint.chunked_entities[key], entity)
+    else 
+      blueprint.chunked_entities[key] = {entity}
     end
   end
 
@@ -57,8 +58,7 @@ function bp_get_entities_in_build_range(blueprint_data, position)
   for X = x-1, x+1 do
     for Y = y-1, y+1 do
       for _, entity in ipairs(entities[x .. "_" .. y]) do
-        local cbox = collision_box(entity)
-        if distance_from_rect(position, rect, {}) < range + 6.0024 then
+        if distance_from_rect(position, collision_box(entity)) < range + 6.0024 then
           table.insert(res, entity)
         end
       end
@@ -86,7 +86,7 @@ function bp_get_entities_close(blueprint_data, position)
   return res
 end
 
-local function key_from_position(position)
+function bp_key_from_position(position)
   return math.floor((position.x or position[1]) / blueprint_data.chunk_size) .. "_" .. math.floor((position.y or position[2]) / blueprint_data.chunk_size)
 end
 
