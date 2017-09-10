@@ -211,6 +211,32 @@ high_level_commands = {
 		end,
 	},
 
+	recipe = {
+		execute = return_self_finished,
+		executable = function(command, myplayer, tick)
+			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine")
+			if entity then
+				command.rect = collision_box(entity)
+			else
+				return "Entity not built"
+			end
+
+			if in_range(command, myplayer, tick) then
+				return ""
+			else
+				return "Player not in range"
+			end
+		end,
+		
+		default_priority = 5,
+		initialize = function (command, myplayer)
+			-- position: 2
+			--
+			command.distance = myplayer.build_distance
+			--command.rect = collision_box{name=command[2], position=copy(command[3])}
+		end,
+	},
+
 	craft = {
 		execute = return_self_finished,
 		executable = function(command, myplayer, tick)
@@ -249,25 +275,69 @@ high_level_commands = {
 
 	["auto-build-blueprint"] = {
 		default_priority = 5,
-		initialize = function(command, myplayer, tick)
-		end,
-		execute = return_phantom,
-		executable = function (command)
-			if command.data.build_command then
-				if command.data.build_command.finished then
-					command.finished = true
-				end
 
-				return "auto-build-blueprint is never executable"
+		execute = return_phantom,
+
+		executable = function (command)
+			if command.data.build_commands then
+				local finished = true
+				for index, cmd in pairs(command.data.build_commands) do
+					finished = cmd.finished and finished
+					if cmd.finished then table.remove(command.data.build_commands, index) end
+				end
+				for index, cmd in pairs(command.data.recipe_commands) do
+					if cmd.finished then table.remove(command.data.recipe_commands, index) end
+					finished = cmd.finished and finished
+				end
+				if finished then
+					return ""
+				end
+			end
+			return "auto-build-blueprint is never executable"
+		end,
+
+		spawn_commands = function (command, myplayer, tick)
+			local blueprint = command.data.blueprint_data
+			local entities = Blueprint.get_entities_in_build_range(blueprint_data, myplayer.position)
+			local build_commands = {}
+			local recipe_commands = {}
+			for _, entity in pairs(entities) do
+				local build_command = {
+					"build",
+					entity.name,
+					entity.position,
+					entity.direction,
+					name="blueprint_" .. entity.name .. "_" .. serpent.block(entity.position),
+					on_leaving_range = true
+				}
+				table.insert(build_commands, build_command)
+				if entity.recipe then
+					local recipe_command = {
+						"recipe",
+						entity.position,
+						entity.recipe,
+						on_leaving_range = true
+					}
+					table.insert(recipe_commands, recipe_command)
+				end
+				Blueprint.remove_entity(blueprint, entity)
 			end
 
-			return ""
-		end,
-		spawn_commands = function (command, myplayer, tick)
-			command.data.build_command = {"build", command[2], command[3], command[4]}
+			command.data.build_commands = build_commands
+			command.data.recipe_commands = recipe_commands
 
-			return {{"craft", command[2], 1}, command.data.build_command}
+			return command.data.build_commands
 		end,
+
+		initialize = function (command, myplayer, tick)
+			local name = command[2]
+			local offset = command[3]
+			local area = command.area
+			local rotation = command.rotation or defines.directions.north
+			command.data = command.data or {}
+			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
+			command.data.area = area
+		end
 	},
 
 	["entity-interaction"] = {
@@ -579,7 +649,7 @@ high_level_commands = {
 			end
 
 			local count_to_craft = count
-			for index, entity in pairs(entities) do
+			for _, entity in pairs(entities) do
 				count_to_craft = count_to_craft - entity.get_item_count(item)
 			end
 

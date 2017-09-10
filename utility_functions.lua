@@ -91,11 +91,18 @@ function inrange(position, myplayer)
   return ((position[1] - myplayer.position.x)^2 + (position[2] - myplayer.position.y)^2) < 36
 end
 
+function inside_rect(point, rect)
+	local x, y = get_coordinates(point)
+	local lower_x, lower_y = get_coordinates(rect[1] or rect.left_top)
+	local upper_x, upper_y = get_coordinates(rect[2] or rect.right_bottom)
+	return lower_x < x and x < upper_x and lower_y < y and y < upper_y
+end
+
 -- rotation for angles multiple of 90°, encoded as 2 for 90°, 4 for 180°, 6 for 270°
 function rotate_orthogonal(position, rotation)
 	local x, y = get_coordinates(position)
 	if not rotation or rotation == 0 then return {x, y}
-	elseif rotation == 2 then return {-y, x} 
+	elseif rotation == 2 then return {-y, x}
 	elseif rotation == 4 then return {-x, -y}
 	elseif rotation == 6 then return {y, -x}
 	else game.print(debug.traceback()) error("Bad rotation parameter! rotation = " .. printable(rotation)) end
@@ -107,7 +114,7 @@ function rotate_rect(rect, rotation)
 	local x1, y1 = get_coordinates(rotate_orthogonal(rect[1] or rect.left_top, rotation))
 	local x2, y2 = get_coordinates(rotate_orthogonal(rect[2] or rect.right_bottom, rotation))
 
-	if x1 <= x2 then 
+	if x1 <= x2 then
 		if y1 <= y2 then
 			return {{x1, y1}, {x2, y2}}
 		else
@@ -145,7 +152,7 @@ function collision_box(entity)
 		return game.entity_prototypes[entity].collision_box
 	end
 	pcall(function()
-		if entity.prototype then 
+		if entity.prototype then
 			rect = copy(entity.prototype.collision_box)
 		end
 	end)
@@ -167,10 +174,10 @@ function distance_from_rect(pos, rect)
 	local posx, posy = get_coordinates(pos)
 	local rect1x, rect1y = get_coordinates(rect[1])
 	local rect2x, rect2y = get_coordinates(rect[2])
-	
+
 	-- find the two closest corners to pos and the center
 	local corners = {{x=rect1x, y=rect1y}, {x=rect1x, y=rect2y}, {x=rect2x, y=rect1y}, {x=rect2x, y=rect2y}}
-	
+
 	function lt(a, b)
 		return sqdistance(a, pos) < sqdistance(b, pos)
 	end
@@ -179,7 +186,7 @@ function distance_from_rect(pos, rect)
 	local _, corner2 = get_minimum_index(corners, lt)
 
 	local closest = {}
-	
+
 	-- Set closest point on rectangle
 	if corner1.x == corner2.x then
 		closest[1] = corner1.x
@@ -194,53 +201,53 @@ function distance_from_rect(pos, rect)
 		elseif posx > corner2.x then closest[1] = corner2.x
 		else closest[1] = posx end
 	end
-	
+
 	return math.sqrt(sqdistance(closest, pos)), closest
 end
 
 function distance_rect_to_rect(rect1, rect2)
 	local corners1 = {{rect1[1][1], rect1[1][2]}, {rect1[2][1], rect1[1][2]}, {rect1[2][1], rect1[2][2]}, {rect1[1][1], rect1[2][2]}} -- corners1[1] is the top left corner, continue clockwise
 	local corners2 = {{rect2[1][1], rect2[1][2]}, {rect2[2][1], rect2[1][2]}, {rect2[2][1], rect2[2][2]}, {rect2[1][1], rect2[2][2]}}
-	
+
 	local in_cross_x = false
 	local in_cross_y = false
-	
+
 	for _,corner in pairs(corners1) do
 		if corners2[1][1] <= corner[1] and corner[1] <= corners2[2][1] then
 			in_cross_x = true
 		end
-		
+
 		if corners2[2][2] <= corner[2] and corner[2] <= corners2[3][2] then
 			in_cross_y = true
 		end
 	end
-	
+
 	if in_cross_x then
 		return math.min(math.abs(corners1[1][2] - corners2[1][2]), math.abs(corners1[3][2] - corners2[1][2]), math.abs(corners1[1][2] - corners2[3][2]), math.abs(corners1[3][2] - corners2[3][2]))
 	end
-	
+
 	if in_cross_y then
 		return math.min(math.abs(corners1[2][1] - corners2[2][1]), math.abs(corners1[4][1] - corners2[2][1]), math.abs(corners1[2][1] - corners2[4][1]), math.abs(corners1[4][1] - corners2[4][1]))
 	end
-	
+
 	local min_distance = sqdistance(corners1[1], corners2[1])
-	
+
 	for _,corner1 in pairs(corners1) do
 		for _,corner2 in pairs(corners2) do
 			local distance = sqdistance(corner1, corner2)
-			
+
 			if distance < min_distance then
 				min_distance = distance
 			end
 		end
 	end
-	
+
 	return min_distance
 end
 
 function get_coordinates(pos)
 	if not pos then game.print(debug.traceback()); error("Trying to access coordinates of invalid point!") end
-	if pos.x then 
+	if pos.x then
 		return pos.x, pos.y
 	else
 		return pos[1], pos[2]
@@ -256,7 +263,7 @@ function namespace_prefix(name, command_group)
 	if not name then
 		return nil
 	end
-	
+
 	if not string.find(name, "%.") then
 		return command_group .. "." .. name
 	else
@@ -266,9 +273,9 @@ end
 
 local direction_ints = {N = 0, NE = 1, E = 2, SE = 3, S = 4, SW = 5, W = 6, NW = 7}
 function rotation_stringtoint(rot)
-	if type(rot) == "int" then 
+	if type(rot) == "int" then
 		return rot
-	else 
+	else
 		return direction_ints[rot]
 	end
 end
@@ -285,22 +292,22 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 	if not epsilon then
 		epsilon = 0.2
 	end
-	
+
 	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity"}
-	
+
 	if type then
 		types = {type}
 	end
-	
+
 	local x, y = get_coordinates(pos)
 	local entity = nil
-	
+
 	for _,ent in pairs(myplayer.surface.find_entities_filtered({area = {{-epsilon + x, -epsilon + y}, {epsilon + x, epsilon + y}}})) do
 		if has_value(types, ent.type) then
 			entity = ent
 		end
 	end
-	
+
 	return entity
 end
 
@@ -315,21 +322,21 @@ function get_recipe(entity)
 	local recipe = nil
 	pcall(function() recipe = entity.recipe end)
 	if entity.type == "furnace" then
-		if recipe then 
+		if recipe then
 			our_global.entity_recipe[x .. "_" .. y] = recipe.name
-			return recipe.name 
+			return recipe.name
 		end
 		if our_global.entity_recipe[x .. "_" .. y] then return our_global.entity_recipe[x .. "_" .. y] end
 
 		local stack = entity.get_output_inventory()[1]
-		if stack and stack.valid_for_read then 
-			return stack.name 
+		if stack and stack.valid_for_read then
+			return stack.name
 		else
 			return nil
 		end
 	elseif entity.type == "assembling-machine" then
 		return recipe
-	else 
+	else
 		error("Called get_recipe for entity without recipe.")
 	end
 end
@@ -342,4 +349,3 @@ function craft_interpolate(entity, ticks)
 
 	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end
-
