@@ -293,6 +293,11 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 		epsilon = 0.2
 	end
 
+	if type == "resource" and x == math.floor(x) then
+		x = x + 0.5
+		y = y + 0.5
+	end
+
 	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity"}
 
 	if type then

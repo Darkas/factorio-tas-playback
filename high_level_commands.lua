@@ -227,7 +227,7 @@ high_level_commands = {
 				return "Player not in range"
 			end
 		end,
-		
+
 		default_priority = 5,
 		initialize = function (command, myplayer)
 			-- position: 2
@@ -373,30 +373,40 @@ high_level_commands = {
 		execute = function (command, myplayer, tick)
 			return command
 		end,
+
 		executable = function(command, myplayer, tick)
 			if not in_range(command, myplayer) then
 				return "Out of range"
 			end
-
 			if command.amount and global.command_list_parser.current_mining >= command.amount then
 				command.finished = true
 				global.command_list_parser.current_mining = 0
 				return "finished"
 			end
-
 			return ""
 		end,
+
 		default_priority = 6,
+
 		initialize = function (command, myplayer)
-			local entity = get_entity_from_pos(command[2], myplayer)
+			local position = command[2]
+			local x, y = get_coordinates(position)
+			if x == math.floor(x) then
+				x = x + 0.5
+				y = y + 0.5
+			end
+			position = {x, y}
+			command[2] = position
+
+			local entity = get_entity_from_pos(position, myplayer, "resource")
 
 			command.distance = myplayer.resource_reach_distance
 
 			if entity then
 				command.rect = collision_box(entity)
 			else
-				errprint("There is no mineable thing at (" .. command[2][1] .. "," .. command[2][2] .. ")")
-				command.rect = {left_top=copy(command[2]), right_bottom=copy(command[2])}
+				errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
+				command.rect = {left_top=copy(position), right_bottom=copy(position)}
 			end
 		end,
 		default_action_type = action_types.selection,
