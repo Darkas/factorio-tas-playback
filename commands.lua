@@ -78,7 +78,7 @@ TAScommands["build"] = function (tokens, myplayer)
   local items_saved = {}
 
   for _, _item in pairs(items) do
-    table.insert(items_saved, {name=_item.name, position=_item.position, count=_item.stack.count})
+    table.insert(items_saved, {name=_item.stack.name, position=_item.position, count=_item.stack.count})
     _item.destroy()
   end
 
@@ -106,7 +106,7 @@ TAScommands["build"] = function (tokens, myplayer)
     myplayer.remove_item({name = item, count = 1})
 
     for _, _item in pairs(items_saved) do
-      myplayer.insert_item({name=_item.name, count=_item.count})
+      myplayer.insert({name=_item.name, count=_item.count})
     end
   else
     errprint("Build failed: Reason unknown.")
