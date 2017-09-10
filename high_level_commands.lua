@@ -1,4 +1,4 @@
-
+require("blueprint")
 
 global.command_list_parser = global.command_list_parser or {}
 
@@ -279,26 +279,12 @@ high_level_commands = {
 		execute = return_phantom,
 
 		executable = function (command)
-			if command.data.build_commands then
-				local finished = true
-				for index, cmd in pairs(command.data.build_commands) do
-					finished = cmd.finished and finished
-					if cmd.finished then table.remove(command.data.build_commands, index) end
-				end
-				for index, cmd in pairs(command.data.recipe_commands) do
-					if cmd.finished then table.remove(command.data.recipe_commands, index) end
-					finished = cmd.finished and finished
-				end
-				if finished then
-					return ""
-				end
-			end
-			return "auto-build-blueprint is never executable"
+			return ""
 		end,
 
 		spawn_commands = function (command, myplayer, tick)
 			local blueprint = command.data.blueprint_data
-			local entities = Blueprint.get_entities_in_build_range(blueprint_data, myplayer.position)
+			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
 			local build_commands = {}
 			local recipe_commands = {}
 			for _, entity in pairs(entities) do
@@ -307,7 +293,7 @@ high_level_commands = {
 					entity.name,
 					entity.position,
 					entity.direction,
-					name="blueprint_" .. entity.name .. "_" .. serpent.block(entity.position),
+					name="blueprint_x" .. entity.position[1] .. "_y" .. entity.position[2],
 					on_leaving_range = true
 				}
 				table.insert(build_commands, build_command)
@@ -320,11 +306,26 @@ high_level_commands = {
 					}
 					table.insert(recipe_commands, recipe_command)
 				end
-				Blueprint.remove_entity(blueprint, entity)
+				command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 			end
 
 			command.data.build_commands = build_commands
 			command.data.recipe_commands = recipe_commands
+
+			if command.data.build_commands then
+				local finished = true
+				for index, cmd in pairs(command.data.build_commands) do
+					finished = cmd.finished and finished
+					if cmd.finished then table.remove(command.data.build_commands, index) end
+				end
+				for index, cmd in pairs(command.data.recipe_commands) do
+					if cmd.finished then table.remove(command.data.recipe_commands, index) end
+					finished = cmd.finished and finished
+				end
+				if command.data.added_all_entities and finished then
+					command.finished = true
+				end
+			end
 
 			return command.data.build_commands
 		end,
@@ -333,7 +334,7 @@ high_level_commands = {
 			local name = command[2]
 			local offset = command[3]
 			local area = command.area
-			local rotation = command.rotation or defines.directions.north
+			local rotation = command.rotation or defines.direction.north
 			command.data = command.data or {}
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
 			command.data.area = area
