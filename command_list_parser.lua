@@ -190,21 +190,23 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if commandqueue[tick - 1] then
 		local craft = false
 		local ui = false
+		local craft_action
+		local ui_action
 
 		for _,queue in pairs({commandqueue[tick - 1], commandqueue[tick]}) do
 			for _,c in pairs(queue) do
 				if c[1] == "craft" then
-					craft = true
+					craft_action = c
 				end
 
 				if c.action_type == action_types.ui then
-					ui = true
+					ui_action = c
 				end
 			end
 		end
 
-		if craft and ui then
-			errprint("You are executing a craft and a ui action in adjacent frames! This is impossible!")
+		if craft_action and ui_action then
+			errprint("You are executing a craft and a ui action in adjacent frames! This is impossible! The craft action is " .. serpent.block(craft_action) .. " and the ui action is " .. serpent.block(ui_action))
 		end
 	end
 

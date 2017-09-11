@@ -605,7 +605,7 @@ high_level_commands = {
 				command.action_type = action_types.selection
 			else
 				command.action_type = action_types.ui
-				command.ui = command[2]
+				command.data.ui = command[2]
 			end
 
 			if command.data.entity.get_item_count(command.data.item) < command.data.amount then
