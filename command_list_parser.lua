@@ -437,9 +437,9 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 		end
 	end
 
-	if command.action_type == action_types.ui then
+	if command.action_type == action_types.ui then	
 		if global.command_list_parser.current_ui == nil then -- we have to open the ui first
-			global.command_list_parser.current_ui = command.ui
+			global.command_list_parser.current_ui = command.data.ui
 
 			table.remove(commands, 1)
 		else

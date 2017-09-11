@@ -230,6 +230,7 @@ high_level_commands = {
 		default_priority = 5,
 		default_action_type = action_types.ui,
 		initialize = function (command, myplayer)
+			command.data.ui = command[2]
 			command.distance = myplayer.build_distance
 			--command.rect = collision_box{name=command[2], position=copy(command[3])}
 		end,
@@ -626,12 +627,6 @@ high_level_commands = {
 			return command
 		end,
 		default_priority = 100,
-	},
-
-	recipe = {
-		execute = return_self_finished,
-		default_priority = 5,
-		default_action_type = action_types.ui,
 	},
 
 	["stop-command"] = {
