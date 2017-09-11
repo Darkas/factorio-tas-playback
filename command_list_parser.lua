@@ -160,10 +160,12 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 			break
 		end
 	end
-
+	
+	local priority_command
+	
 	-- Process out of range command if it exists
 	if leaving_range_command then
-		commandqueue[tick] = create_commandqueue(executable_commands, leaving_range_command, myplayer, tick)
+		priority_command = leaving_range_command
 	else
 		-- Otherwise execute first command with highest priority.
 		if #executable_commands > 0 then
@@ -173,9 +175,16 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 					command = com
 				end
 			end
-
-			commandqueue[tick] = create_commandqueue(executable_commands, command, myplayer, tick)
+			
+			priority_command = command
 		end
+	end
+	
+	if priority_command then
+		log_to_ui("Priority command: " .. priority_command[1], "command-not-executable")
+		commandqueue[tick] = create_commandqueue(executable_commands, priority_command, myplayer, tick)
+	else
+		commandqueue[tick] = {}
 	end
 
 	if commandqueue[tick - 1] then
@@ -243,19 +252,21 @@ end
 function create_commandqueue(executable_commands, command, myplayer, tick)
 	local command_collection = {command}
 
-	game.print("Current command: " .. command[1])
 	add_compatible_commands(executable_commands, command_collection, myplayer)
-
+	
+	local current_commands = "Commands in this tick: "
 	local queue = {}
 
 	for _,cmd in pairs(command_collection) do
-		game.print(cmd[1])
+		current_commands = current_commands .. cmd[1] .. ", "
 		local low_level_command = high_level_commands[cmd[1]].execute(cmd, myplayer, tick)
 		if low_level_command then
 			queue[#queue + 1] = low_level_command
 		end
 	end
-
+	
+	log_to_ui(current_commands, "command-not-executable")
+	
 	-- save finishing time for on_relative_tick
 	for _, cmd in pairs(queue) do
 		if cmd.name then
