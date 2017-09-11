@@ -5,14 +5,15 @@ module("command_list_parser", package.seeall) -- TODO: This is apparently old-lu
 global.command_list_parser = global.command_list_parser or {}
 
 -- TODO: "throw" and "vehicle"
--- TODO: Check if we need the type parameter in auto-refuel, add amount parameter?
+-- TODO: amount parameter for mining is weird and mining currently doesnt work if amount isnt set.
+
 
 inherited_actions = {
 	["auto-refuel"] = "put",
 	["auto-move-to"] = "move",
 	["auto-move-to-command"] = "move",
 	["auto-take"] = "take",
-	["build-blueprint"] = "build",
+	["auto-build-blueprint"] = "build",
 }
 
 max_ranges = {
@@ -243,17 +244,17 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 
 	local queue = {}
 
-	for i,com in pairs(command_collection) do
-		local low_level_command = high_level_commands[com[1]].execute(com, myplayer, tick)
+	for _,cmd in pairs(command_collection) do
+		local low_level_command = high_level_commands[cmd[1]].execute(cmd, myplayer, tick)
 		if low_level_command then
 			queue[#queue + 1] = low_level_command
 		end
 	end
 
 	-- save finishing time for on_relative_tick
-	for _, command in pairs(queue) do
-		if command.name then
-			global.command_list_parser.command_finished_times[command.name] = tick
+	for _, cmd in pairs(queue) do
+		if cmd.name then
+			global.command_list_parser.command_finished_times[cmd.name] = tick
 		end
 	end
 
@@ -334,7 +335,7 @@ function command_executable(command, myplayer, tick)
 		end
 	end
 
-	if fail_reason ~= "" then
+ 	if fail_reason ~= "" then
 		log_to_ui(command[1] .. ": " .. fail_reason, "command-not-executable")
 		return false
 	end
@@ -381,7 +382,6 @@ end
 function add_compatible_commands(executable_commands, commands, myplayer)
 	-- TODO: Allow more than one command in the commands list here!
 	if #commands ~= 1 then
-		game.print(serpent.block(commands))
 		error("Function add_compatible_commands: commands parameter has not exactly one element.")
 	end
 	local command = commands[1]

@@ -274,7 +274,7 @@ high_level_commands = {
 	},
 
 	["auto-build-blueprint"] = {
-		default_priority = 5,
+		default_priority = 100,
 
 		execute = return_phantom,
 
@@ -285,8 +285,10 @@ high_level_commands = {
 		spawn_commands = function (command, myplayer, tick)
 			local blueprint = command.data.blueprint_data
 			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
-			local build_commands = {}
-			local recipe_commands = {}
+			command.data.build_commands = command.data.build_commands or {}
+			command.data.recipe_commands = command.data.recipe_commands or {}
+			local added_commands = {}
+
 			for _, entity in pairs(entities) do
 				local build_command = {
 					"build",
@@ -296,7 +298,8 @@ high_level_commands = {
 					name="blueprint_x" .. entity.position[1] .. "_y" .. entity.position[2],
 					on_leaving_range = true
 				}
-				table.insert(build_commands, build_command)
+				table.insert(command.data.build_commands, build_command)
+				table.insert(added_commands, build_command)
 				if entity.recipe then
 					local recipe_command = {
 						"recipe",
@@ -304,13 +307,11 @@ high_level_commands = {
 						entity.recipe,
 						on_leaving_range = true
 					}
-					table.insert(recipe_commands, recipe_command)
+					table.insert(added_commands, recipe_command)
+					table.insert(command.data.recipe_commands, recipe_command)
 				end
 				command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 			end
-
-			command.data.build_commands = build_commands
-			command.data.recipe_commands = recipe_commands
 
 			if command.data.build_commands then
 				local finished = true
@@ -327,7 +328,7 @@ high_level_commands = {
 				end
 			end
 
-			return command.data.build_commands
+			return added_commands
 		end,
 
 		initialize = function (command, myplayer, tick)
@@ -391,7 +392,13 @@ high_level_commands = {
 
 		initialize = function (command, myplayer)
 			local position = command[2]
+			if not command.amount then command.amount = 1 end
+			local type = command[3]
+			if type == "stone-rock" or type == "rock" then type = "simple-entity" end
+			if type == "res" or not type then type = "resource" end
+
 			local x, y = get_coordinates(position)
+
 			if x == math.floor(x) then
 				x = x + 0.5
 				y = y + 0.5
@@ -399,12 +406,13 @@ high_level_commands = {
 			position = {x, y}
 			command[2] = position
 
-			local entity = get_entity_from_pos(position, myplayer, "resource")
+			local entity = get_entity_from_pos(position, myplayer, type)
 
 			command.distance = myplayer.resource_reach_distance
 
 			if entity then
 				command.rect = collision_box(entity)
+				command[2] = {entity.position.x, entity.position.y}
 			else
 				errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
 				command.rect = {left_top=copy(position), right_bottom=copy(position)}

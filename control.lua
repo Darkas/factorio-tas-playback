@@ -15,7 +15,9 @@ for k,_ in pairs(remote.interfaces) do
 	run_file = run_file or string.match(k,"^TASFile_(.+)$")
 end
 
-blueprint_data_raw = require("scenarios." .. tas_name .. ".blueprint_list")
+pcall(function()
+	blueprint_data_raw = require("scenarios." .. tas_name .. ".blueprint_list")
+end)
 
 -- Get the run instructions every time the game is loaded
 if tas_name and run_file then

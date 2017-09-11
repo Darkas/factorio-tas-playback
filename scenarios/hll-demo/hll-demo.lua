@@ -11,17 +11,21 @@ commandqueue["command_list"] = {
 	{
 		name = "start-1",
 		commands = {
-			{"build", "stone-furnace", {0, 0}, on_leaving_range = true},
-			{"auto-build-blueprint", "smelter", {-6.5, 73.5}}, 
 			{"pickup"},
-			{"auto-refuel"},
+			{"auto-build-blueprint", "smelter", {1.5, 73.5}, name="build-smelter"}, 
+			{"mine", {2, 42}, "tree", name="mine-tree", amount=1},
+			{"auto-move-to-command", "mine-tree"},
+			{"mine", {3, 59}, "rock", name="mine-rock", command_finished = "mine-tree"},
+			{"auto-move-to-command", "mine-rock", command_finished = "mine-tree"},
+			--{"auto-refuel"},
 			{"craft", "iron-axe", 1},
-			{"auto-move-to", {-6.5, 110}, name="move-down"}
+			{"auto-move-to", {1.5, 120}, name="move-down", command_finished = "mine-rock"}
 		}
 	},
 	{
 		name = "slowdown",
-		required = {"blueprint_x-6.5_y98.5"},
+		required = {"build-smelter"},
+		--required = {"blueprint_x-6.5_y98.5"},
 		commands = {
 			{"stop-command", "start-1.move-down"},
 			{"speed", 0.05}

@@ -84,6 +84,7 @@ end
 ----------------------
 
 function roundn(x)
+  if not x then game.print(debug.traceback()); error("roundn called without valid parameter.") end
   return math.floor(x + 0.5)
 end
 
@@ -137,6 +138,7 @@ function translate(position, offset)
 end
 
 function sqdistance(pos1, pos2)
+	if not pos1[1] and not pos1.x then game.print(serpent.block(pos1)) game.print(debug.traceback()) error("Called distance with invalid parameter!") end
 	local x1, y1 = get_coordinates(pos1)
 	local x2, y2 = get_coordinates(pos2)
 
