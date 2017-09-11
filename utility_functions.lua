@@ -87,6 +87,8 @@ function roundn(x)
   return math.floor(x + 0.5)
 end
 
+-- don't use this function, use in_range instead
+-- TODO: remove this function
 function inrange(position, myplayer)
   return ((position[1] - myplayer.position.x)^2 + (position[2] - myplayer.position.y)^2) < 36
 end
