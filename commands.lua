@@ -56,6 +56,7 @@ TAScommands["build"] = function (tokens, myplayer)
   local item = tokens[2]
   local position = tokens[3]
   local direction = tokens[4]
+
   debugprint("Building: " .. item .. " on tile (" .. position[1] .. "," .. position[2] .. ")")
 
   -- Check if we have the item
@@ -99,10 +100,12 @@ TAScommands["build"] = function (tokens, myplayer)
 
   -- If no errors, proceed to actually building things
   -- Place the item
-  local asm = myplayer.surface.create_entity{name = item, position = position, direction = direction, force="player"}
+  local tocreate = {name = item, position = position, direction = direction, force="player"}
+  if item == "underground-belt" and tokens[5] then tocreate.type = tokens[5] end
+  local created = myplayer.surface.create_entity(tocreate)
   -- Remove the placed item from the player (since he has now spent it)
-  if asm then
-	command_list_parser.add_entity_to_global(asm)
+  if created then
+	command_list_parser.add_entity_to_global(created)
     myplayer.remove_item({name = item, count = 1})
 
     for _, _item in pairs(items_saved) do
