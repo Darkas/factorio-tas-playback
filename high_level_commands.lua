@@ -212,9 +212,8 @@ high_level_commands = {
 	},
 
 	recipe = {
-		execute = return_self_finished,
 		executable = function(command, myplayer, tick)
-			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine")
+			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
 			if entity then
 				command.rect = collision_box(entity)
 			else
@@ -229,9 +228,8 @@ high_level_commands = {
 		end,
 
 		default_priority = 5,
+		default_action_type = action_types.ui,
 		initialize = function (command, myplayer)
-			-- position: 2
-			--
 			command.distance = myplayer.build_distance
 			--command.rect = collision_box{name=command[2], position=copy(command[3])}
 		end,
@@ -285,43 +283,64 @@ high_level_commands = {
 		spawn_commands = function (command, myplayer, tick)
 			local blueprint = command.data.blueprint_data
 			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
-			command.data.build_commands = command.data.build_commands or {}
-			command.data.recipe_commands = command.data.recipe_commands or {}
+			command.data.all_commands = command.data.all_commands or {}
 			local added_commands = {}
 
 			for _, entity in pairs(entities) do
-				local build_command = {
-					"build",
-					entity.name,
-					entity.position,
-					entity.direction,
-					name="blueprint_x" .. entity.position[1] .. "_y" .. entity.position[2],
-					on_leaving_range = true
-				}
-				table.insert(command.data.build_commands, build_command)
-				table.insert(added_commands, build_command)
-				if entity.recipe then
+				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
+					entity.built = true
+				end
+				if not entity.built then
+					entity.built = true
+					local build_command = {
+						"build",
+						entity.name,
+						entity.position,
+						entity.direction,
+						name="blueprint_x" .. entity.position[1] .. "_y" .. entity.position[2],
+						on_leaving_range = true
+					}
+					if entity.name == "underground-belt" then
+						build_command[5] = entity.type
+					end
+					table.insert(command.data.all_commands, build_command)
+					table.insert(added_commands, build_command)
+					if not entity.recipe then
+						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+					end
+				end
+
+				if entity.recipe and entity.built and not entity.set_recipe then
+					entity.set_recipe = true
 					local recipe_command = {
 						"recipe",
 						entity.position,
 						entity.recipe,
-						on_leaving_range = true
 					}
 					table.insert(added_commands, recipe_command)
-					table.insert(command.data.recipe_commands, recipe_command)
+					table.insert(command.data.all_commands, recipe_command)
+
+					if entity.items then
+						for name, count in pairs(entity.items) do
+							local module_command = {
+								"put",
+								entity.position,
+								name,
+								count,
+							}
+							table.insert(command.data.all_commands, module_command)
+							table.insert(added_commands, module_command)
+						end
+					end
+					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 				end
-				command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 			end
 
-			if command.data.build_commands then
+			if command.data.all_commands then
 				local finished = true
-				for index, cmd in pairs(command.data.build_commands) do
+				for index, cmd in pairs(command.data.all_commands) do
 					finished = cmd.finished and finished
-					if cmd.finished then table.remove(command.data.build_commands, index) end
-				end
-				for index, cmd in pairs(command.data.recipe_commands) do
-					if cmd.finished then table.remove(command.data.recipe_commands, index) end
-					finished = cmd.finished and finished
+					if cmd.finished then table.remove(command.data.all_commands, index) end
 				end
 				if command.data.added_all_entities and finished then
 					command.finished = true

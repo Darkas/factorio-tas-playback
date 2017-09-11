@@ -1,6 +1,4 @@
 
-global.blueprint_raw_data = global.blueprint_raw_data or {}
-
 Blueprint = {}
 
 function Blueprint.load(name, offset, rotation, chunk_size, area)
@@ -50,6 +48,10 @@ end
 
 -- Returns wether the blueprint has entities left
 function Blueprint.remove_entity(blueprint, entity)
+  if not blueprint or not entity then
+      game.print(debug.traceback())
+      error("Called Blueprint.remove_blueprint with invalid param!")
+  end
   local key = Blueprint.key_from_position(entity.position, blueprint.chunk_size)
   blueprint.chunked_entities[key][entity._index] = nil
   local finished = true

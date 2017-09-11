@@ -71,6 +71,9 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if command_list[global.command_list_parser.current_command_group_index + 1] and command_list[global.command_list_parser.current_command_group_index + 1].required then
 		finished = true
 
+		if type(command_list[global.command_list_parser.current_command_group_index + 1].required) == "string" then
+			command_list[global.command_list_parser.current_command_group_index + 1].required = {command_list[global.command_list_parser.current_command_group_index + 1].required}
+		end
 		for _,name in pairs(command_list[global.command_list_parser.current_command_group_index + 1].required) do
 			if not global.command_list_parser.finished_command_names[namespace_prefix(name, command_list[global.command_list_parser.current_command_group_index].name)] then
 				finished = false
@@ -240,11 +243,13 @@ end
 function create_commandqueue(executable_commands, command, myplayer, tick)
 	local command_collection = {command}
 
+	game.print("Current command: " .. command[1])
 	add_compatible_commands(executable_commands, command_collection, myplayer)
 
 	local queue = {}
 
 	for _,cmd in pairs(command_collection) do
+		game.print(cmd[1])
 		local low_level_command = high_level_commands[cmd[1]].execute(cmd, myplayer, tick)
 		if low_level_command then
 			queue[#queue + 1] = low_level_command
@@ -278,12 +283,14 @@ function command_executable(command, myplayer, tick)
 	if command.on_relative_tick then
 		if type(command.on_relative_tick) == type(1) then
 			if tick < global.command_list_parser.current_command_group_tick + command.on_relative_tick then
-				fail_reason = "The tick has not been reached"
+				log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
+				return false
 			end
 		else
 			if type(command.on_relative_tick) == type({}) then
 				if not global.command_list_parser.command_finished_times[command.on_relative_tick[2]] or tick < global.command_list_parser.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then
-					fail_reason = "The tick has not been reached"
+					log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
+					return false
 				end
 			else
 				error("Unrecognized format for on_relative_tick!")
@@ -317,7 +324,8 @@ function command_executable(command, myplayer, tick)
 		end
 
 		if entity.get_item_count(command.items_available[1]) < command.items_available[2] then
-			fail_reason = "Not enough items available!"
+			log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
+			return false
 		end
 	end
 
@@ -331,13 +339,9 @@ function command_executable(command, myplayer, tick)
 		end
 
 		if not com_finished then
-			fail_reason = "The prerequisite command has not finished"
+			log_to_ui(command[1] .. ": " .. "The prerequisite command has not finished", "command-not-executable")
+			return false
 		end
-	end
-
- 	if fail_reason ~= "" then
-		log_to_ui(command[1] .. ": " .. fail_reason, "command-not-executable")
-		return false
 	end
 
 	return true
@@ -352,7 +356,7 @@ function leaving_range(command, myplayer, tick)
 		command.data.last_range_sq = distsq
 	else
 		local max_range = command.leaving_range or max_ranges[command[1]] or 6
-		if command.data.last_range_sq < distsq and distsq < max_range*max_range and 0.9*max_range*max_range < command.data.last_range_sq then
+		if command.data.last_range_sq < distsq and distsq < max_range*max_range and 0.8*max_range*max_range < command.data.last_range_sq then
 			command.data.last_range_sq = distsq
 			command.data.leaving_range = true
 			return true
@@ -387,7 +391,7 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 	local command = commands[1]
 
 	if command.action_type == action_types.selection then -- if you want things to happen in the same frame, use the exact same coordinates!
-		coordinates = command[2] -- all selection actions have there coordinates at [2]
+		local coordinates = command[2] -- all selection actions have there coordinates at [2]
 
 		local priority_take_or_put = nil
 
@@ -405,7 +409,7 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 			priority_take_or_put = command
 		end
 
-		local forbidden_action = ""
+		local forbidden_action
 
 		if priority_take_or_put and basic_action(priority_take_or_put) == "put" then
 			forbidden_action = "take"
