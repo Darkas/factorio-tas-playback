@@ -1,4 +1,4 @@
-
+require("blueprint")
 
 global.command_list_parser = global.command_list_parser or {}
 
@@ -211,6 +211,32 @@ high_level_commands = {
 		end,
 	},
 
+	recipe = {
+		execute = return_self_finished,
+		executable = function(command, myplayer, tick)
+			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine")
+			if entity then
+				command.rect = collision_box(entity)
+			else
+				return "Entity not built"
+			end
+
+			if in_range(command, myplayer, tick) then
+				return ""
+			else
+				return "Player not in range"
+			end
+		end,
+
+		default_priority = 5,
+		initialize = function (command, myplayer)
+			-- position: 2
+			--
+			command.distance = myplayer.build_distance
+			--command.rect = collision_box{name=command[2], position=copy(command[3])}
+		end,
+	},
+
 	craft = {
 		execute = return_self_finished,
 		executable = function(command, myplayer, tick)
@@ -248,26 +274,72 @@ high_level_commands = {
 	},
 
 	["auto-build-blueprint"] = {
-		default_priority = 5,
-		initialize = function(command, myplayer, tick)
-		end,
+		default_priority = 100,
+
 		execute = return_phantom,
+
 		executable = function (command)
-			if command.data.build_command then
-				if command.data.build_command.finished then
-					command.finished = true
-				end
-
-				return "auto-build-blueprint is never executable"
-			end
-
 			return ""
 		end,
-		spawn_commands = function (command, myplayer, tick)
-			command.data.build_command = {"build", command[2], command[3], command[4]}
 
-			return {{"craft", command[2], 1}, command.data.build_command}
+		spawn_commands = function (command, myplayer, tick)
+			local blueprint = command.data.blueprint_data
+			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
+			command.data.build_commands = command.data.build_commands or {}
+			command.data.recipe_commands = command.data.recipe_commands or {}
+			local added_commands = {}
+
+			for _, entity in pairs(entities) do
+				local build_command = {
+					"build",
+					entity.name,
+					entity.position,
+					entity.direction,
+					name="blueprint_x" .. entity.position[1] .. "_y" .. entity.position[2],
+					on_leaving_range = true
+				}
+				table.insert(command.data.build_commands, build_command)
+				table.insert(added_commands, build_command)
+				if entity.recipe then
+					local recipe_command = {
+						"recipe",
+						entity.position,
+						entity.recipe,
+						on_leaving_range = true
+					}
+					table.insert(added_commands, recipe_command)
+					table.insert(command.data.recipe_commands, recipe_command)
+				end
+				command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+			end
+
+			if command.data.build_commands then
+				local finished = true
+				for index, cmd in pairs(command.data.build_commands) do
+					finished = cmd.finished and finished
+					if cmd.finished then table.remove(command.data.build_commands, index) end
+				end
+				for index, cmd in pairs(command.data.recipe_commands) do
+					if cmd.finished then table.remove(command.data.recipe_commands, index) end
+					finished = cmd.finished and finished
+				end
+				if command.data.added_all_entities and finished then
+					command.finished = true
+				end
+			end
+
+			return added_commands
 		end,
+
+		initialize = function (command, myplayer, tick)
+			local name = command[2]
+			local offset = command[3]
+			local area = command.area
+			local rotation = command.rotation or defines.direction.north
+			command.data = command.data or {}
+			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
+			command.data.area = area
+		end
 	},
 
 	["entity-interaction"] = {
@@ -303,30 +375,47 @@ high_level_commands = {
 		execute = function (command, myplayer, tick)
 			return command
 		end,
+
 		executable = function(command, myplayer, tick)
 			if not in_range(command, myplayer) then
 				return "Out of range"
 			end
-
 			if command.amount and global.command_list_parser.current_mining >= command.amount then
 				command.finished = true
 				global.command_list_parser.current_mining = 0
 				return "finished"
 			end
-
 			return ""
 		end,
+
 		default_priority = 6,
+
 		initialize = function (command, myplayer)
-			local entity = get_entity_from_pos(command[2], myplayer)
+			local position = command[2]
+			if not command.amount then command.amount = 1 end
+			local type = command[3]
+			if type == "stone-rock" or type == "rock" then type = "simple-entity" end
+			if type == "res" or not type then type = "resource" end
+
+			local x, y = get_coordinates(position)
+
+			if x == math.floor(x) then
+				x = x + 0.5
+				y = y + 0.5
+			end
+			position = {x, y}
+			command[2] = position
+
+			local entity = get_entity_from_pos(position, myplayer, type)
 
 			command.distance = myplayer.resource_reach_distance
 
 			if entity then
 				command.rect = collision_box(entity)
+				command[2] = {entity.position.x, entity.position.y}
 			else
-				errprint("There is no mineable thing at (" .. command[2][1] .. "," .. command[2][2] .. ")")
-				command.rect = {left_top=copy(command[2]), right_bottom=copy(command[2])}
+				errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
+				command.rect = {left_top=copy(position), right_bottom=copy(position)}
 			end
 		end,
 		default_action_type = action_types.selection,
@@ -579,7 +668,7 @@ high_level_commands = {
 			end
 
 			local count_to_craft = count
-			for index, entity in pairs(entities) do
+			for _, entity in pairs(entities) do
 				count_to_craft = count_to_craft - entity.get_item_count(item)
 			end
 

@@ -14,6 +14,11 @@ for k,_ in pairs(remote.interfaces) do
 	tas_name = tas_name or string.match(k,"^TASName_(.+)$")
 	run_file = run_file or string.match(k,"^TASFile_(.+)$")
 end
+
+pcall(function()
+	blueprint_data_raw = require("scenarios." .. tas_name .. ".blueprint_list")
+end)
+
 -- Get the run instructions every time the game is loaded
 if tas_name and run_file then
 	commandqueue = require("scenarios." .. tas_name .. "." .. run_file)
