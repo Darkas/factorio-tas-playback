@@ -1,6 +1,8 @@
 require("high_level_commands")
 
-module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
+command_list_parser = {}
+
+--module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
 
 global.command_list_parser = global.command_list_parser or {}
 
@@ -20,7 +22,7 @@ max_ranges = {
 	["build"] = 6,
 }
 
-function init()
+function command_list_parser.init()
 	global.command_list_parser.current_command_set = {}
 	global.command_list_parser.command_finished_times = {}
 	global.command_list_parser.loaded_command_groups = {}
@@ -40,13 +42,56 @@ script.on_event(defines.events.on_player_mined_item, function(event)
 	global.command_list_parser.current_mining = global.command_list_parser.current_mining + (event.item_stack.count or 1)
 end)
 
-function add_entity_to_global (entity)
+function command_list_parser.add_entity_to_global (entity)
 	if entity.burner then
 		global.command_list_parser.entities_with_burner[#global.command_list_parser.entities_with_burner + 1] = entity
 	end
 end
 
-function evaluate_command_list(command_list, commandqueue, myplayer, tick)
+
+
+-- Add command to current command set and initialize the command.
+function command_list_parser.add_command_to_current_set(command, myplayer, command_group)
+	-- Reset on_relative_tick time.
+	if command.name then global.command_list_parser.command_finished_times[command.name] = nil end
+
+	command.data = {}
+
+	command.data.parent_command_group = command_group
+
+	if command.name then
+		command.name = namespace_prefix(command.name, command_group.name)
+		-- Filter duplicate named commands. This is used e.g. for building blueprints with the same raw data but different areas.
+		if global.command_list_parser.initialized_names[command.name] then return end
+		if command.name then
+			global.command_list_parser.initialized_names[#global.command_list_parser.initialized_names + 1] = command.name
+		end
+	end
+
+	if command.command_finished then
+		command.command_finished = namespace_prefix(command.command_finished, command_group.name)
+	end
+
+	-- Set default priority
+	if not command.priority then
+		command.priority = high_level_commands[command[1]].default_priority
+	end
+
+	-- Set action type
+	command.action_type = high_level_commands[command[1]].default_action_type
+
+	local not_add = high_level_commands[command[1]].initialize(command, myplayer)
+	if not_add then return end
+
+	-- Add command to set
+	if not not_add then
+		global.command_list_parser.current_command_set[#global.command_list_parser.current_command_set + 1] = command
+	end
+end
+
+
+
+function command_list_parser.evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	if not command_list then
 		return true
 	end
@@ -57,7 +102,7 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 
 	local finished = true
 
-	for k, command in pairs(global.command_list_parser.current_command_set) do
+	for _, command in pairs(global.command_list_parser.current_command_set) do
 		if command.finished and command.name then
 			global.command_list_parser.finished_command_names[command.name] = true
 			--table.remove(global.command_list_parser.current_command_set, k)
@@ -108,11 +153,8 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 				end
 
 				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(global.command_list_parser.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
-					add_command_to_current_set(command, myplayer, command_group)
+					command_list_parser.add_command_to_current_set(command, myplayer, command_group)
 
-					if command.name then
-						global.command_list_parser.initialized_names[#global.command_list_parser.initialized_names + 1] = command.name
-					end
 					table.remove(command_group.commands, i)
 				end
 			end
@@ -131,14 +173,14 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 
 		for _, command in pairs(global.command_list_parser.current_command_set) do
 			if not command.tested then
-				if command_executable(command, myplayer, tick) then
+				if command_list_parser.command_executable(command, myplayer, tick) then
 					executable_commands[#executable_commands + 1] = command
 					local new_commands = high_level_commands[command[1]].spawn_commands(command, myplayer, tick)
 
 					--if new_commands == nil then game.print(serpent.block(command)) end
 					for _, com in pairs(new_commands or {}) do
 						unchecked_commands = true
-						add_command_to_current_set(com, myplayer, command.data.parent_command_group)
+						command_list_parser.add_command_to_current_set(com, myplayer, command.data.parent_command_group)
 					end
 				end
 
@@ -155,14 +197,14 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 	local leaving_range_command = nil
 
 	for _, command in pairs(executable_commands) do
-		if leaving_range(command, myplayer, tick) then
+		if command_list_parser.leaving_range(command, myplayer, tick) then
 			leaving_range_command = command
 			break
 		end
 	end
-	
+
 	local priority_command
-	
+
 	-- Process out of range command if it exists
 	if leaving_range_command then
 		priority_command = leaving_range_command
@@ -175,21 +217,21 @@ function evaluate_command_list(command_list, commandqueue, myplayer, tick)
 					command = com
 				end
 			end
-			
+
 			priority_command = command
 		end
 	end
-	
+
 	if priority_command then
 		log_to_ui("Priority command: " .. priority_command[1], "command-not-executable")
-		commandqueue[tick] = create_commandqueue(executable_commands, priority_command, myplayer, tick)
+		commandqueue[tick] = command_list_parser.create_commandqueue(executable_commands, priority_command, myplayer, tick)
 	else
 		commandqueue[tick] = {}
 	end
 
 	if commandqueue[tick - 1] then
-		local craft = false
-		local ui = false
+		--local craft = false
+		--local ui = false
 		local craft_action
 		local ui_action
 
@@ -215,47 +257,11 @@ end
 
 
 
--- Add command to current command set and initialize the command.
-function add_command_to_current_set(command, myplayer, command_group)
-	local do_add = true -- At the end of this function we add the command to the set if this is still true
-
-	-- Reset on_relative_tick time.
-	if command.name then global.command_list_parser.command_finished_times[command.name] = nil end
-
-	command.data = {}
-
-	command.data.parent_command_group = command_group
-
-	if command.name then
-		command.name = namespace_prefix(command.name, command_group.name)
-	end
-
-	if command.command_finished then
-		command.command_finished = namespace_prefix(command.command_finished, command_group.name)
-	end
-
-	-- Set default priority
-	if not command.priority then
-		command.priority = high_level_commands[command[1]].default_priority
-	end
-
-	-- Set action type
-	command.action_type = high_level_commands[command[1]].default_action_type
-
-	not_add = high_level_commands[command[1]].initialize(command, myplayer)
-
-	-- Add command to set
-	if not not_add then
-		global.command_list_parser.current_command_set[#global.command_list_parser.current_command_set + 1] = command
-	end
-end
-
-
-function create_commandqueue(executable_commands, command, myplayer, tick)
+function command_list_parser.create_commandqueue(executable_commands, command, myplayer, tick)
 	local command_collection = {command}
 
-	add_compatible_commands(executable_commands, command_collection, myplayer)
-	
+	command_list_parser.add_compatible_commands(executable_commands, command_collection, myplayer)
+
 	local current_commands = "Commands in this tick: "
 	local queue = {}
 
@@ -266,9 +272,9 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 			queue[#queue + 1] = low_level_command
 		end
 	end
-	
+
 	log_to_ui(current_commands, "command-not-executable")
-	
+
 	-- save finishing time for on_relative_tick
 	for _, cmd in pairs(queue) do
 		if cmd.name then
@@ -279,7 +285,7 @@ function create_commandqueue(executable_commands, command, myplayer, tick)
 	return queue
 end
 
-function command_executable(command, myplayer, tick)
+function command_list_parser.command_executable(command, myplayer, tick)
 	if command.finished then
 		return false
 	end
@@ -311,13 +317,14 @@ function command_executable(command, myplayer, tick)
 		end
 	end
 
-	if command.on_leaving_range and not leaving_range(command, myplayer, tick) then
+	if command.on_leaving_range and not command_list_parser.leaving_range(command, myplayer, tick) then
 		log_to_ui(command[1] .. ": Not leaving range.", "command-not-executable")
 		return false
 	end
 
 	if command.items_available then
-		local pos = nil
+		local pos
+		local entity
 
 		if command[1] == "take" and not command.items_available.pos then -- we can use the default position here
 			pos = command[2]
@@ -360,11 +367,11 @@ function command_executable(command, myplayer, tick)
 	return true
 end
 
-function leaving_range(command, myplayer, tick)
+function command_list_parser.leaving_range(command, myplayer, tick)
 	if command.data.range_check_tick == game.tick then return command.data.leaving_range end
 
 	command.data.range_check_tick = game.tick
-	local distsq = command_sqdistance(command, myplayer)
+	local distsq = command_list_parser.command_sqdistance(command, myplayer)
 	if not command.data.last_range_sq then
 		command.data.last_range_sq = distsq
 	else
@@ -380,7 +387,7 @@ function leaving_range(command, myplayer, tick)
 	return false
 end
 
-function command_sqdistance(command, player)
+function command_list_parser.command_sqdistance(command, player)
 	local position = nil
 	if in_list(command[1], {"rotate", "recipe", "take", "put", "mine"}) then position = command[2]
 	elseif command[1] == "auto-move-to" or command[1] == "build" then position = command[3]
@@ -396,7 +403,7 @@ function command_sqdistance(command, player)
 end
 
 -- Given the set commands, add commands from the set executable_commands
-function add_compatible_commands(executable_commands, commands, myplayer)
+function command_list_parser.add_compatible_commands(executable_commands, commands, myplayer)
 	-- TODO: Allow more than one command in the commands list here!
 	if #commands ~= 1 then
 		error("Function add_compatible_commands: commands parameter has not exactly one element.")
@@ -439,7 +446,7 @@ function add_compatible_commands(executable_commands, commands, myplayer)
 		end
 	end
 
-	if command.action_type == action_types.ui then	
+	if command.action_type == action_types.ui then
 		if global.command_list_parser.current_ui == nil then -- we have to open the ui first
 			global.command_list_parser.current_ui = command.data.ui
 

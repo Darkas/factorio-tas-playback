@@ -22,6 +22,7 @@ script.on_event(defines.events.on_tick, function(event)
 		{"small-electric-pole", 24},
 		{"underground-belt", 4},
 		{"splitter", 3},
+		{"coal", 50},
 	}
 	for _, item in pairs(items) do
 		game.players[1].insert{name=item[1], count=item[2]}

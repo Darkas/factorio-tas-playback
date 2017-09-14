@@ -20,8 +20,9 @@ function Blueprint.load(name, offset, rotation, chunk_size, area)
   blueprint.chunk_size = chunk_size or 9
 
   for _, ent in pairs(entities) do
-    if not area or inside_rect(ent.position, area) then
-      local entity = copy(ent)
+    local entity = copy(ent)
+    entity.position = translate(rotate_orthogonal(entity.position, rotation), offset)
+    if not area or inside_rect(entity.position, area) then
       if blueprint.counts[entity.name] then
         blueprint.counts[entity.name] = blueprint.counts[entity.name] + 1
       else
@@ -31,7 +32,6 @@ function Blueprint.load(name, offset, rotation, chunk_size, area)
       if entity.direction and rotation then
         entity.direction = (entity.direction + rotation) % 8
       end
-      entity.position = translate(rotate_orthogonal(entity.position, rotation), offset)
 
       local key = Blueprint.key_from_position(entity.position, chunk_size)
       if blueprint.chunked_entities[key] then

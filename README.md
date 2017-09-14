@@ -202,3 +202,4 @@ To be implemented:
 on_player_in_range=<range> (player is range away from )
 on_exact_tick=<tick> (do this on exactly the tick - do we need this?)
 on_exact_relative_tick={<tick>, <name>} (do this a given amount of ticks after the command with the given name finished or after the current command set began (if name is not set))
+on_moving_away (player is moving away from the command target)

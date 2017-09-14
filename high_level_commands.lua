@@ -298,7 +298,7 @@ high_level_commands = {
 						entity.name,
 						entity.position,
 						entity.direction,
-						name="blueprint_x" .. entity.position[1] .. "_y" .. entity.position[2],
+						name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
 						on_leaving_range = true
 					}
 					if entity.name == "underground-belt" then
@@ -317,6 +317,7 @@ high_level_commands = {
 						"recipe",
 						entity.position,
 						entity.recipe,
+						name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
 					}
 					table.insert(added_commands, recipe_command)
 					table.insert(command.data.all_commands, recipe_command)
@@ -328,6 +329,7 @@ high_level_commands = {
 								entity.position,
 								name,
 								count,
+								name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
 							}
 							table.insert(command.data.all_commands, module_command)
 							table.insert(added_commands, module_command)
