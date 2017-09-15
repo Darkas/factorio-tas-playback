@@ -11,6 +11,8 @@ commandqueue["command_list"] = {
 	{
 		name = "start-1",
 		commands = {
+            {"throw-grenade", {0, 0}},
+            {"throw-grenade", {0, 30}},
 			{"pickup"},
 			{"auto-build-blueprint", "smelter", {1.5, 73.5}, name="build-smelter", area={{1, -400}, {10, 500}}},
 			{"mine", {2, 42}, "tree", name="mine-tree", amount=1},
@@ -32,7 +34,7 @@ commandqueue["command_list"] = {
 		name = "start-2",
         required = "build-chips",
 		commands = {
-			{"auto-build-blueprint", "smelter", {1.5, 73.5}, name="build-smelter", area={{-6, -400}, {1, 500}}},
+			{"auto-build-blueprint", "smelter", {1.5, 73.5}, name="build-smelter"},
 			{"auto-move-to", {1, 52}, name="move-up"},
 			{"auto-move-to", {-7, 74}, command_finished = "move-up", name="move-to-mining"},
 			{"mine", {-7.5, 71.5}, amount = 1, name = "mine-coal"}

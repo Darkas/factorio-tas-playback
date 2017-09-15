@@ -20,6 +20,7 @@ inherited_actions = {
 
 max_ranges = {
 	["build"] = 6,
+	["throw-grenade"] = 15,
 }
 
 function command_list_parser.init()
@@ -389,7 +390,7 @@ end
 
 function command_list_parser.command_sqdistance(command, player)
 	local position = nil
-	if in_list(command[1], {"rotate", "recipe", "take", "put", "mine"}) then position = command[2]
+	if in_list(command[1], {"rotate", "recipe", "take", "put", "mine", "throw-grenade"}) then position = command[2]
 	elseif command[1] == "auto-move-to" or command[1] == "build" then position = command[3]
 	end
 

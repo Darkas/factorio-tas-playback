@@ -291,4 +291,42 @@ TAScommands["pickup"] = function (tokens, myplayer)
   end
 end
 
+
+TAScommands["throw-grenade"] = function(tokens, myplayer)
+    -- We could generalize this to arbitrary capsules but then we'd have to parse through item.capsule_action
+    local target = tokens[2]
+
+    if myplayer.get_item_count("grenade") < 1 then
+        errprint("Throw Grenade failed! No grenade item in inventory. ")
+        return
+    end
+
+    -- TODO: Is this < or <=?
+    if global.last_grenade_throw and game.tick - global.last_grenade_throw < 30 then
+        errprint("Throw Grenade failed! Grenade is not off cooldown yet. ")
+        return
+    end
+
+    if sqdistance(target, myplayer.position) > 15^2 then
+        errprint("Throw Grenade failed! Not in throwing distance. ")
+    end
+
+
+    -- Interpolate for projectile_creation_distance.
+    local grenade_spawn
+    if sqdistance(myplayer.position, target) < 0.6 then
+        grenade_spawn = target
+    else
+        local origin_x, origin_y = get_coordinates(myplayer.position)
+        local target_x, target_y = get_coordinates(target)
+        local direction_x, direction_y = target_x - origin_x, target_y - origin_y
+        local norm = math.sqrt(direction_x^2 + direction_y^2)
+        grenade_spawn = {origin_x + direction_x / norm * 0.6, origin_y + direction_y / norm * 0.6}
+    end
+
+    myplayer.surface.create_entity{name="grenade", position=grenade_spawn, target=target, speed=0.3}
+    myplayer.remove_item({name = "grenade", count = 1})
+end
+
+
 return TAScommands

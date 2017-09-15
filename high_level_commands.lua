@@ -93,7 +93,7 @@ function return_phantom ()
 	return {"phantom"}
 end
 
-action_types = {always_possible = 1, selection = 2, ui = 3}
+action_types = {always_possible = 1, selection = 2, ui = 3, throw = 4}
 
 high_level_commands = {
 
@@ -715,6 +715,20 @@ high_level_commands = {
 		end,
 		default_priority = 100,
 		execute = empty,
+	},
+	["throw-grenade"] =
+	{
+		default_action_type = action_types.throw,
+		executable = function (command, myplayer, tick)
+			if myplayer.get_item_count("grenade") < 1 then
+				return "Need more grenades!"
+			end
+			if sqdistance(myplayer.position, command[2]) > 15^2 then
+				return "Not in range!"
+			end
+			return ""
+		end
+		-- TODO: type?
 	}
 }
 

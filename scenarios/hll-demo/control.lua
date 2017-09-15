@@ -13,6 +13,15 @@ script.on_event(defines.events.on_tick, function(event)
 
 	if game.tick ~= 1 then return end
 
+	game.print("Inserting items for general testing purposes.")
+	items = {
+		{"grenade", 50},
+	}
+	for _, item in pairs(items) do
+		game.players[1].insert{name=item[1], count=item[2]}
+	end
+
+
 	-- Insert items for blueprint build.
 	game.print("Inserting items for blueprint build.")
 	items = {
