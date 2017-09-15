@@ -12,6 +12,7 @@ commandqueue["command_list"] = {
 		name = "start-1",
 		commands = {
             {"throw-grenade", {0, 0}},
+            {"throw-grenade", {5, 5}},
             {"throw-grenade", {0, 30}},
 			{"pickup"},
 			{"auto-build-blueprint", "smelter", {1.5, 73.5}, name="build-smelter", area={{1, -400}, {10, 500}}},

@@ -3,6 +3,8 @@ require("blueprint")
 global.command_list_parser = global.command_list_parser or {}
 
 
+global.command_list_parser.throw_cooldown = nil
+
 
 function auto_move_to_low_level (command, myplayer, tick)
 	local auto_move_commands = 0
@@ -718,6 +720,11 @@ high_level_commands = {
 	},
 	["throw-grenade"] =
 	{
+		execute = function(command)
+			command.finished = true
+			global.command_list_parser.throw_cooldown = game.tick
+			return command
+		end,
 		default_action_type = action_types.throw,
 		executable = function (command, myplayer, tick)
 			if myplayer.get_item_count("grenade") < 1 then
@@ -726,6 +733,10 @@ high_level_commands = {
 			if sqdistance(myplayer.position, command[2]) > 15^2 then
 				return "Not in range!"
 			end
+			if global.command_list_parser.throw_cooldown and game.tick - global.command_list_parser.throw_cooldown < 30 then
+				return "Cooldown not expired yet!"
+			end
+
 			return ""
 		end
 		-- TODO: type?
