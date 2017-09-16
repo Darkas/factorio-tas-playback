@@ -1,4 +1,5 @@
 require("blueprint")
+local TAScommands = require("commands")
 
 global.command_list_parser = global.command_list_parser or {}
 
@@ -239,7 +240,16 @@ high_level_commands = {
 	},
 
 	craft = {
-		execute = return_self_finished,
+		execute = function(command, myplayer)
+			if myplayer.get_craftable_count(command[2]) >= command[3] then
+				TAScommands["craft"](command, myplayer)
+				command.finished = true
+				command.already_executed = true
+				return command
+			else
+				return
+			end
+		end,
 		executable = function(command, myplayer, tick)
 		--	-- Check for missing materials
 			local item = command[2]

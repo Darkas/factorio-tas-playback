@@ -24,19 +24,18 @@ commandqueue["command_list"] = {
 			{"auto-move-to-command", "mine-rock", command_finished = "mine-tree"},
 			{"auto-refuel"},
 			{"craft", "iron-axe", 1},
-			{"auto-move-to", {1.5, 120.5}, name="move-down", command_finished = "mine-rock"},
-            {"auto-build-blueprint", "bad-bluechips", {-15, 120}, name="build-chips", command_finished = "build-smelter"},
-            {"auto-move-to", {-24.5, 120.5}, name="move-right", command_finished = "move-down"},
-			{"auto-move-to", {-0.05, 120}, command_finished="move-right"},
+			{"auto-move-to", {1.5, 130.5}, name="move-down", command_finished = "mine-rock"},
+            {"auto-build-blueprint", "bad-bluechips", {0, 120}, name="build-chips", rotation = defines.direction.east, command_finished = "build-smelter"},
+            {"auto-move-to", {-0.05, 110}, name="move", command_finished = "move-down"},
 			{"craft", "stone-furnace", 4, },
 		}
 	},
 	{
 		name = "start-2",
-        required = "build-chips",
+        required = "move",
 		commands = {
 			{"auto-build-blueprint", "smelter", {1.5, 73.5}, name="build-smelter"},
-			{"auto-move-to", {1, 52}, name="move-up"},
+			{"auto-move-to", {0.9, 52}, name="move-up"},
 			{"auto-move-to", {-7, 74}, command_finished = "move-up", name="move-to-mining"},
 			{"mine", {-7.5, 71.5}, amount = 1, name = "mine-coal"}
 		}

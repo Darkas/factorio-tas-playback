@@ -89,12 +89,7 @@ function init_run(myplayer_index)
 		return
 	end
 	debugprint("Command queue size is " .. table_size(commandqueue)) --includes settings "field"
-	--[[
-	if max_tick == 0 then
-		errprint("The command queue is empty! No point in starting.")
-		return
-	end
-	--]]
+
 	if not commandqueue.settings then
 		errmessage("The settings for of the command queue don't exist.")
 		return
@@ -212,9 +207,11 @@ script.on_event(defines.events.on_tick, function(_)
 			error("The runner left.")
 		end
 		if commandqueue[tick] then
-			for k,v in pairs(commandqueue[tick]) do
-				if not TAScommands[v[1]] then error("TAS-Command does not exist: " .. v[1]) end
-				TAScommands[v[1]](v, myplayer)
+			for _, command in pairs(commandqueue[tick]) do
+				if not TAScommands[command[1]] then error("TAS-Command does not exist: " .. v[1]) end
+				if not command.already_executed then
+					TAScommands[command[1]](command, myplayer)
+				end
 			end
 		end
 		myplayer.walking_state = global.walkstate
