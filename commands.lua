@@ -104,7 +104,7 @@ TAScommands["build"] = function (tokens, myplayer)
   if item == "underground-belt" and tokens[5] then tocreate.type = tokens[5] end
   local created = myplayer.surface.create_entity(tocreate)
   -- Remove the placed item from the player (since he has now spent it)
-  if created then
+  if created and created.valid then
 	command_list_parser.add_entity_to_global(created)
     myplayer.remove_item({name = item, count = 1})
 
@@ -262,8 +262,9 @@ TAScommands["rotate"] = function (tokens, myplayer)
     errprint ("Rotate failed, no object at position {" .. position[1] .. "," .. position[2] .. "}")
   end
 
-  myplayer.selected.direction = directions[direction]
+  myplayer.selected.direction = directions[direction].direction
   debugprint("Rotating " .. myplayer.selected.name  .. " so that it faces " .. direction .. ".")
+  game.print("Rotate" .. game.tick .. tokens[3] .. serpent.block(tokens[2]))
 end
 
 TAScommands["phantom"] = function (tokens, myplayer)

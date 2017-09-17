@@ -6,6 +6,8 @@ global.command_list_parser = global.command_list_parser or {}
 
 global.command_list_parser.throw_cooldown = nil
 
+-- TODO: Extend auto-take s.t. it can take coal if we run out?
+-- TODO: That rotate command.
 
 function auto_move_to_low_level (command, myplayer, tick)
 	local auto_move_commands = 0
@@ -29,26 +31,6 @@ function auto_move_to_low_level (command, myplayer, tick)
 		target_pos = command.data.target_pos
 	end
 
-	if not command.data.moveData then
-		command.data.moveData = {}
-
-		if target_pos[2] < myplayer.position.y then
-			command.data.moveData.N = true
-		end
-
-		if target_pos[2] > myplayer.position.y then
-			command.data.moveData.S = true
-		end
-
-		if target_pos[1] > myplayer.position.x then
-			command.data.moveData.E = true
-		end
-
-		if target_pos[1] < myplayer.position.x then
-			command.data.moveData.W = true
-		end
-	end
-
 	local move_dir = ""
 
 	-- TODO: Test if this works when we walk on transport belts
@@ -56,20 +38,18 @@ function auto_move_to_low_level (command, myplayer, tick)
 	-- if command[2][2] < myplayer.position.y - epsilon then
 	-- 	move_dir = move_dir .. "N"
 	-- end
-	if target_pos[2] < myplayer.position.y and not command.data.moveData.S then
+	local epsilon = 0.1 -- TODO: This should depend on the velocity.
+	if myplayer.position.y > target_pos[2] + epsilon then
 		move_dir = move_dir .. "N"
 	end
-
-	if target_pos[2] > myplayer.position.y and not command.data.moveData.N then
+	if myplayer.position.y < target_pos[2] - epsilon then
 		move_dir = move_dir .. "S"
 	end
-
-	if target_pos[1] > myplayer.position.x and not command.data.moveData.W then
-		move_dir = move_dir .. "E"
-	end
-
-	if target_pos[1] < myplayer.position.x and not command.data.moveData.E then
+	if myplayer.position.x > target_pos[1] + epsilon then
 		move_dir = move_dir .. "W"
+	end
+	if myplayer.position.x < target_pos[1] - epsilon then
+		move_dir = move_dir .. "E"
 	end
 
 	if move_dir == "" then
@@ -166,28 +146,32 @@ high_level_commands = {
 			local priority = 5
 
 			for i, entity in pairs(global.command_list_parser.entities_with_burner) do
-				if entity.type == "mining-drill" then
-					priority = 4
-				end
+				if not entity.valid then
+					game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
+				else
+					if entity.type == "mining-drill" then
+						priority = 4
+					end
 
-				if distance_from_rect(myplayer.position, collision_box(entity)) <= myplayer.reach_distance then
-					if command.min then
-						if entity.burner.inventory.get_item_count("coal") < command.min then
-							if not command.data.already_refueled[i] then
-								command.data.already_refueled[i] = true
-								new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
+					if distance_from_rect(myplayer.position, collision_box(entity)) <= myplayer.reach_distance then
+						if command.min then
+							if entity.burner.inventory.get_item_count("coal") < command.min then
+								if not command.data.already_refueled[i] then
+									command.data.already_refueled[i] = true
+									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
+								end
+							else
+								command.data.already_refueled[i] = false
 							end
 						else
-							command.data.already_refueled[i] = false
-						end
-					else
-						if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
-							if not command.data.already_refueled[i] then
-								command.data.already_refueled[i] = true
-								new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel, priority=priority}
+							if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
+								if not command.data.already_refueled[i] then
+									command.data.already_refueled[i] = true
+									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel, priority=priority}
+								end
+							else
+								command.data.already_refueled[i] = false
 							end
-						else
-							command.data.already_refueled[i] = false
 						end
 					end
 				end
@@ -278,7 +262,9 @@ high_level_commands = {
 			return ""
 		end,
 		spawn_commands = function (command, myplayer, tick)
-			command.data.build_command = {"build", command[2], command[3], command[4]}
+			local x, y = get_coordinates(command[3])
+			local name = "craftbuild_build_{" .. x .. ", " .. y .. "}"
+			command.data.build_command = {"build", command[2], command[3], command[4], name=name}
 
 			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
@@ -431,14 +417,14 @@ high_level_commands = {
 			if type == "stone-rock" or type == "rock" then type = "simple-entity" end
 			if type == "res" or not type then type = "resource" end
 
-			local x, y = get_coordinates(position)
+			--local x, y = get_coordinates(position)
 
-			if x == math.floor(x) then
-				x = x + 0.5
-				y = y + 0.5
-			end
-			position = {x, y}
-			command[2] = position
+			--if x == math.floor(x) then
+			--	x = x + 0.5
+			--	y = y + 0.5
+			--end
+			--position = {x, y}
+			--command[2] = position
 
 			local entity = get_entity_from_pos(position, myplayer, type)
 
@@ -457,14 +443,9 @@ high_level_commands = {
 
 	put = {
 		execute = function(command, myplayer, tick)
-			local item = command[3]
-			local amount = command[4]
-			local inventory = command.inventory
-
-
 			command.finished = true
 
-			return {command[1], command[2], command[3], command[4], command.data.inventory}
+			return {command[1], command[2], command[3], command.data.count, command.data.inventory}
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
@@ -480,6 +461,12 @@ high_level_commands = {
 			end
 
 			local item = command[3]
+
+			if not command.data.count then
+				command.data.count = math.min(myplayer.get_item_count(item), game.item_prototypes[item].stack_size)
+			elseif myplayer.get_item_count(item) < command[4] then
+				return "Not enough of " .. item .. " in inventory"
+			end
 
 			if not command.data.inventory then
 				command.data.inventory = command.inventory
@@ -506,7 +493,7 @@ high_level_commands = {
 							command.data.inventory = defines.inventory.lab_input
 						end
 					elseif command.data.entity.type == "car" then
-						inventory = defines.inventory.car_trunk
+						command.data.inventory = defines.inventory.car_trunk
 					elseif command.data.entity.type == "rocket-silo" then
 						if item_type == "module" then
 							command.data.inventory = defines.inventory.assembling_machine_modules
@@ -517,15 +504,10 @@ high_level_commands = {
 						end
 					elseif command.data.entity.type == "container" then
 						command.data.inventory = defines.inventory.chest
-					end
-					if not command.data.inventory then
+					else
 						return "Inventory could not be determined"
 					end
 				end
-			end
-
-			if myplayer.get_item_count(item) < command[4] then
-				return "Not enough of " .. item .. " in inventory"
 			end
 
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
@@ -536,6 +518,10 @@ high_level_commands = {
 		end,
 		default_priority = 5,
 		default_action_type = action_types.selection,
+		initialize = function (command, myplayer)
+			command.data.count = command[4]
+			command.data.inventory = command[5]
+		end
 	},
 
 	rotate = {
@@ -561,7 +547,7 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
-				command.data.entity = get_entity_from_pos(command[2], myplayer)
+				command.data.entity = get_entity_from_pos(command[2], myplayer, command.type)
 				if not command.data.entity then
 					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 				end

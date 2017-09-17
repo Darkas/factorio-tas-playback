@@ -114,11 +114,13 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		end
 	end
 
-	if command_list[global.command_list_parser.current_command_group_index + 1] and command_list[global.command_list_parser.current_command_group_index + 1].required then
+	if command_list[global.command_list_parser.current_command_group_index + 1]
+	and command_list[global.command_list_parser.current_command_group_index + 1].required then
 		finished = true
 
 		if type(command_list[global.command_list_parser.current_command_group_index + 1].required) == "string" then
-			command_list[global.command_list_parser.current_command_group_index + 1].required = {command_list[global.command_list_parser.current_command_group_index + 1].required}
+			command_list[global.command_list_parser.current_command_group_index + 1].required
+				= {command_list[global.command_list_parser.current_command_group_index + 1].required}
 		end
 		for _,name in pairs(command_list[global.command_list_parser.current_command_group_index + 1].required) do
 			if not global.command_list_parser.finished_command_names[namespace_prefix(name, command_list[global.command_list_parser.current_command_group_index].name)] then
@@ -137,13 +139,12 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		end
 
 		local command_group = command_list[global.command_list_parser.current_command_group_index]
+		if command_group.force_save then
+			global.system.save = command_group.name
+		end
 
 		if global.command_list_parser.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
 		global.command_list_parser.loaded_command_groups[command_group.name] = true
-
-		--if command_group.save_before then
-		--	game.server_save(tas_name .. "__" .. command_group.name)
-		--end
 
 		local iterations = command_group.iterations or 5
 
@@ -178,7 +179,6 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 					executable_commands[#executable_commands + 1] = command
 					local new_commands = high_level_commands[command[1]].spawn_commands(command, myplayer, tick)
 
-					--if new_commands == nil then game.print(serpent.block(command)) end
 					for _, com in pairs(new_commands or {}) do
 						unchecked_commands = true
 						command_list_parser.add_command_to_current_set(com, myplayer, command.data.parent_command_group)
@@ -346,6 +346,38 @@ function command_list_parser.command_executable(command, myplayer, tick)
 
 		if entity.get_item_count(command.items_available[1]) < command.items_available[2] then
 			log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
+			return false
+		end
+	end
+
+	if command.items_total then
+		local pos
+		local entity
+
+		local count = myplayer.get_item_count(command.items_total[1])
+
+		if command[1] == "take" and not command.items_total.pos then -- we can use the default position here
+			pos = command[2]
+		else
+			pos = command.items_total.pos
+		end
+
+		if pos then
+			entity = get_entity_from_pos(pos, myplayer)
+
+			if not entity then
+				errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
+				return false
+			end
+
+			count = count + entity.get_item_count(command.items_total[1])
+		end
+
+		if not command.items_total.min and count < command.items_total[2] then
+			log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
+			return false
+		elseif command.items_total.min and count > command.items_total[2] then
+			log_to_ui(command[1] .. ": " .. "Too many items available!", "command-not-executable")
 			return false
 		end
 	end

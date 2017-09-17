@@ -195,6 +195,7 @@ Currently implemented conditions:
 * `on_tick={<tick>}`: do this on or after a certain tick
 * `on_relative_tick = {<tick>, <name>}`: do this on or after a given amount of ticks have passed since the command with given name finished or since the current command set began (if the name is not set or the param is a single int).
 * `items_available = {"<name>", <count>}`: Execute only when the specified amount of items is in inventory.
+* `item_total = {"<name>", <count>}`: Execute only when the specified amount of items is in player inventory (plus other inventory if this is "take").
 * `command_finished = "<name>"`: Name of command that needs to terminate before this one is executable.
 
 

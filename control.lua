@@ -7,21 +7,24 @@ require("log_ui")
 require("command_list_ui")
 
 -- Global variables initialization
+global.system = global.system or {}
+global.system.save = false -- if true, save at the end of this tick.
+
 local max_tick = 0
 
 -- Get the path of the scenario and the name of the run file through a very dirty trick
 for k,_ in pairs(remote.interfaces) do
-	tas_name = tas_name or string.match(k,"^TASName_(.+)$")
-	run_file = run_file or string.match(k,"^TASFile_(.+)$")
+	global.system.tas_name = global.system.tas_name or string.match(k,"^TASName_(.+)$")
+	global.system.run_file = global.system.run_file or string.match(k,"^TASFile_(.+)$")
 end
 
 pcall(function()
-	blueprint_data_raw = require("scenarios." .. tas_name .. ".blueprint_list")
+	blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list")
 end)
 
 -- Get the run instructions every time the game is loaded
-if tas_name and run_file then
-	commandqueue = require("scenarios." .. tas_name .. "." .. run_file)
+if global.system.tas_name and global.system.run_file then
+	commandqueue = require("scenarios." .. global.system.tas_name .. "." .. global.system.run_file)
 	-- determine last tick, each time the run is loaded
 	for k,_ in pairs(commandqueue) do
 		if type(k) == "number" and (k > max_tick) then -- Makes sure that k is actually bigger than our current max_tick
@@ -179,7 +182,7 @@ function end_of_input(player)
 	end
 end
 
-script.on_event(defines.events.on_tick, function(_)
+script.on_event(defines.events.on_tick, function()
 	for _, player in pairs(game.players) do
 		if player.connected then
 			update_log_ui(player)
@@ -224,6 +227,13 @@ script.on_event(defines.events.on_tick, function(_)
 		if tick == max_tick then
 			end_of_input(myplayer)
 		end
+	end
+
+	if global.system.save then
+		if type(global.system.save) ~= "string" then error("Save name must be a string! Is: " .. printable(global.system.save)) end
+		local name = global.system.save
+		global.system.save = false
+		game.server_save("_TAS_" .. name)
 	end
 end)
 
