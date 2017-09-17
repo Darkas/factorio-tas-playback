@@ -356,7 +356,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 
 		local count = myplayer.get_item_count(command.items_total[1])
 
-		if command[1] == "take" and not command.items_total.pos then -- we can use the default position here
+		if command[1] == "take" and not command.items_total.pos then
 			pos = command[2]
 		else
 			pos = command.items_total.pos

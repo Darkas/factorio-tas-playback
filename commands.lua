@@ -264,7 +264,6 @@ TAScommands["rotate"] = function (tokens, myplayer)
 
   myplayer.selected.direction = directions[direction].direction
   debugprint("Rotating " .. myplayer.selected.name  .. " so that it faces " .. direction .. ".")
-  game.print("Rotate" .. game.tick .. tokens[3] .. serpent.block(tokens[2]))
 end
 
 TAScommands["phantom"] = function (tokens, myplayer)
