@@ -1,6 +1,6 @@
 require("mod-gui")
 
---[[ 
+--[[
 
 Usage
 Init logging system by init_logging()
@@ -8,7 +8,7 @@ Regularly call update_log_ui for relevant players
 You can configure log types via configure_log_type.
 Add a log message by log_to_ui.
 
-Each log message has an associated log type, which allows filtering based on log type. 
+Each log message has an associated log type, which allows filtering based on log type.
 Each log type can have an associated formatter function which allows postprocessing the message, for example to add the current tick or the log category. A log type can also make changes to the style of its messages
 --]]
 
@@ -39,17 +39,15 @@ function log_to_ui(text, type_name, data)
 	table.insert(global.log_data.log_messages, 1, message)
 
 	-- Save number of messages per log type.
-	type_settings.log_size = type_settings.log_size + 1 
+	type_settings.log_size = type_settings.log_size + 1
 
 	-- Delete something if we have too many messages of the type.
-	if type_settings.log_size > (type_settings.max_log_size or MAX_LOG_TYPE_SIZE) then 
-		local tick = game.tick
-
+	if type_settings.log_size > (type_settings.max_log_size or MAX_LOG_TYPE_SIZE) then
 		for index = #global.log_data.log_messages, 1, -1 do
 			local message = global.log_data.log_messages[index]
-			if message.type_name == type_name then 
+			if message.type_name == type_name then
 				table.remove(global.log_data.log_messages, index)
-				type_settings.log_size = type_settings.log_size - 1 
+				type_settings.log_size = type_settings.log_size - 1
 				break
 			end
 		end
@@ -59,12 +57,12 @@ function log_to_ui(text, type_name, data)
 end
 
 -- configure_log_type
--- type_name: 
+-- type_name:
 -- style (optional): style arguments that are set for the display style of the log messages. For example {font_color = {r=1, g=0.2, b=0.2}, font = "default-bold"}. Right now only font_color and font is suggested.
 -- max_size (optional): maximum number of log messages for this type that will be saved. We delete the oldest message first. Default is 50.
 -- message_formatter (optional): formatter function that determines the actually shown text for each logged message. message_formatter{text=…, type_name=…, tick=…, data=…}. Default format is '[<type_name> | <game_tick>] <text>'.
 -- data (optional): type-global argument for formatter function
-function configure_log_type(type_name, style, max_size, message_formatter, data)
+function configure_log_type(type_name, style, max_size, message_formatter, default_hide, data)
 	if not global.log_data then init_logging() end
 
 	if not global.log_data.log_type_settings[type_name] then global.log_data.log_type_settings[type_name] = {log_size = 0} end
@@ -74,6 +72,7 @@ function configure_log_type(type_name, style, max_size, message_formatter, data)
 	t.max_log_size = max_size or t.max_log_size or 50
 	t.data = data or t.data
 	t.style = style or t.style
+	t.default_hide = default_hide
 end
 
 
@@ -87,8 +86,8 @@ function update_log_ui(player)
 
 	if not global.log_data then return end
 
-	if not frame then 
-		create_log_ui(player) 
+	if not frame then
+		create_log_ui(player)
 		frame = flow.log_frame
 	end
 
@@ -119,7 +118,7 @@ function update_log_ui(player)
 					visible_types[log_type] = true
 				end
 			else
-				checkbox = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=true}
+				checkbox = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=not global.log_data.log_type_settings[log_type].default_hide}
 				type_flow.add{type="label", style="label_style", name=log_type .. "_text", caption=log_type}
 			end
 		end
@@ -141,11 +140,11 @@ function update_log_ui(player)
 			if frame.scroll_pane.table["text_" .. index] then
 				local label = frame.scroll_pane.table["text_" .. index]
 				label.caption = message.display_text
-				for k, v in pairs(default_style) do 
+				for k, v in pairs(default_style) do
 					local st = global.log_data.log_type_settings[message.type_name].style
 					label.style[k] = (st and st[k]) or default_style[k]
 				end
-			else 
+			else
 				break
 			end
 			index = index + 1
@@ -176,6 +175,7 @@ function create_log_ui(player)
 	local frame = flow.log_frame
 	if frame and frame.valid then frame.destroy() end
 	frame = flow.add{type="frame", name="log_frame", style="frame_style", direction="vertical"}
+	if flow.direction ~= "vertical" then flow.direction = "vertical" end
 
 	local top_flow = frame.add{type="flow", name="top_flow", style="flow_style", direction="horizontal"}
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Log"}
@@ -201,8 +201,8 @@ function create_log_ui(player)
 	local type_flow = frame.add{type="flow", name="type_flow", style="flow_style", direction="horizontal"}
 end
 
+
 function destroy_log_ui(player)
 	local fr = mod_gui.get_frame_flow(player).log_frame
 	if fr and fr.valid then fr.destroy() end
 end
-
