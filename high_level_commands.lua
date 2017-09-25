@@ -7,7 +7,6 @@ global.command_list_parser = global.command_list_parser or {}
 global.command_list_parser.throw_cooldown = nil
 
 -- TODO: Extend auto-take s.t. it can take coal if we run out?
--- TODO: That rotate command.
 
 function auto_move_to_low_level (command, myplayer, tick)
 	local auto_move_commands = 0
@@ -245,6 +244,9 @@ high_level_commands = {
 			end
 		end,
 		default_priority = 5,
+		initialize = function(command)
+			command[3] = command[3] or 1
+		end
 	},
 
 	["craft-build"] = {
@@ -400,11 +402,6 @@ high_level_commands = {
 			if not in_range(command, myplayer) then
 				return "Out of range"
 			end
-			if command.amount and global.command_list_parser.current_mining >= command.amount then
-				command.finished = true
-				global.command_list_parser.current_mining = 0
-				return "finished"
-			end
 			return ""
 		end,
 
@@ -417,14 +414,12 @@ high_level_commands = {
 			if type == "stone-rock" or type == "rock" then type = "simple-entity" end
 			if type == "res" or not type then type = "resource" end
 
-			--local x, y = get_coordinates(position)
+			local x, y = get_coordinates(position)
+			if x == math.floor(x) and y == math.floor(y) then
+				errprint("Mining at integer coordinates. This is probably not what you want!")
+			end
 
-			--if x == math.floor(x) then
-			--	x = x + 0.5
-			--	y = y + 0.5
-			--end
-			--position = {x, y}
-			--command[2] = position
+			command.data.amount = command.amount or 1
 
 			local entity = get_entity_from_pos(position, myplayer, type)
 

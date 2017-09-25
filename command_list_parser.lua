@@ -2,13 +2,9 @@ require("high_level_commands")
 
 command_list_parser = {}
 
---module("command_list_parser", package.seeall) -- TODO: This is apparently old-lua style but for now it works better than the new style.
-
 global.command_list_parser = global.command_list_parser or {}
 
--- TODO: "throw" and "vehicle"
--- TODO: amount parameter for mining is weird and mining currently doesnt work if amount isnt set.
-
+-- TODO: all sorts of vehicle things.
 
 inherited_actions = {
 	["auto-refuel"] = "put",
@@ -39,8 +35,33 @@ function command_list_parser.init()
 	global.command_list_parser.current_command_group_tick = nil
 end
 
+script.on_event(defines.events.on_player_mined_entity, function(event)
+	local player = game.players[event.player_index]
+	for _, command in pairs(global.command_list_parser.current_command_set) do
+		if command[1] == "mine" then
+			if command_list_parser.command_sqdistance(command, {position=event.entity.position}) <= 0.3 then
+				command.data.amount = command.data.amount - 1
+				if command.data.amount == 0 then
+					command.finished = true
+				end
+			end
+		end
+	end
+end)
+
 script.on_event(defines.events.on_player_mined_item, function(event)
-	global.command_list_parser.current_mining = global.command_list_parser.current_mining + (event.item_stack.count or 1)
+	local player = game.players[event.player_index]
+	if not player.selected then return end
+	for _, command in pairs(global.command_list_parser.current_command_set) do
+		if command[1] == "mine" then
+			if command_list_parser.command_sqdistance(command, {position=player.selected.position}) <= 0.3 then
+				command.data.amount = command.data.amount - 1
+				if command.data.amount == 0 then
+					command.finished = true
+				end
+			end
+		end
+	end
 end)
 
 function command_list_parser.add_entity_to_global (entity)
@@ -363,7 +384,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		end
 
 		if pos then
-			entity = get_entity_from_pos(pos, myplayer)
+			entity = get_entity_from_pos(pos, myplayer, command.type or command.items_total.type)
 
 			if not entity then
 				errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
@@ -373,8 +394,8 @@ function command_list_parser.command_executable(command, myplayer, tick)
 			count = count + entity.get_item_count(command.items_total[1])
 		end
 
-		if not command.items_total.min and count < command.items_total[2] then
-			log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
+		if (not command.items_total.min) and count < command.items_total[2] then
+			log_to_ui(command[1] .. ": " .. "Not enough items available! " .. count .. " / " .. command.items_total[2], "command-not-executable")
 			return false
 		elseif command.items_total.min and count > command.items_total[2] then
 			log_to_ui(command[1] .. ": " .. "Too many items available!", "command-not-executable")
