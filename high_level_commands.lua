@@ -149,28 +149,32 @@ high_level_commands = {
 				if not entity.valid then
 					game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
 				else
-					if entity.type == "mining-drill" then
-						priority = 4
-					end
-
-					if distance_from_rect(myplayer.position, collision_box(entity)) <= myplayer.reach_distance then
-						if command.min then
-							if entity.burner.inventory.get_item_count("coal") < command.min then
-								if not command.data.already_refueled[i] then
-									command.data.already_refueled[i] = true
-									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
-								end
-							else
-								command.data.already_refueled[i] = false
+					if not (command.skip_coal_drills and entity.type == "mining-drill" and entity.mining_target and entity.mining_target.name == "coal") then
+						if (not command.type) or entity.type == command.type then
+							if entity.type == "mining-drill" then
+								priority = 4
 							end
-						else
-							if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
-								if not command.data.already_refueled[i] then
-									command.data.already_refueled[i] = true
-									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel, priority=priority}
+
+							if distance_from_rect(myplayer.position, collision_box(entity)) <= myplayer.reach_distance then
+								if command.min then
+									if entity.burner.inventory.get_item_count("coal") < command.min then
+										if not command.data.already_refueled[i] then
+											command.data.already_refueled[i] = true
+											new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
+										end
+									else
+										command.data.already_refueled[i] = false
+									end
+								else
+									if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
+										if not command.data.already_refueled[i] then
+											command.data.already_refueled[i] = true
+											new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel, priority=priority}
+										end
+									else
+										command.data.already_refueled[i] = false
+									end
 								end
-							else
-								command.data.already_refueled[i] = false
 							end
 						end
 					end
@@ -183,9 +187,22 @@ high_level_commands = {
 	},
 
 	build = {
-		execute = return_self_finished,
+		execute = function(command, myplayer)
+			if myplayer.get_item_count(command[2]) ~= 0 then
+				TAScommands["build"](command, myplayer)
+				command.finished = true
+				command.already_executed = true
+				return command
+			else
+				return
+			end
+		end,
 		executable = function(command, myplayer, tick)
-			if in_range(command, myplayer, tick) and (myplayer.get_item_count(command[2]) > 0) then
+			if myplayer.get_item_count(command[2]) == 0 then
+				return "Item not available"
+			end
+			
+			if in_range(command, myplayer, tick) then
 				return ""
 			else
 				return "Player not in range"
@@ -400,7 +417,8 @@ high_level_commands = {
 			if not in_range(command, myplayer) then
 				return "Out of range"
 			end
-			if command.amount and global.command_list_parser.current_mining >= command.amount then
+			
+			if global.command_list_parser.current_mining >= command.data.amount then
 				command.finished = true
 				global.command_list_parser.current_mining = 0
 				return "finished"
@@ -425,6 +443,8 @@ high_level_commands = {
 			--end
 			--position = {x, y}
 			--command[2] = position
+			
+			command.data.amount = command.amount or 1
 
 			local entity = get_entity_from_pos(position, myplayer, type)
 
@@ -435,7 +455,7 @@ high_level_commands = {
 				command[2] = {entity.position.x, entity.position.y}
 			else
 				errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
-				command.rect = {left_top=copy(position), right_bottom=copy(position)}
+				command.rect = {copy(position), copy(position)}
 			end
 		end,
 		default_action_type = action_types.selection,
@@ -638,6 +658,9 @@ high_level_commands = {
 			for _,com in pairs(global.command_list_parser.current_command_set) do
 				if com.name == cancel then
 					com.finished = true
+					if com[1] == "mine" then
+						global.command_list_parser.current_mining = 0
+					end
 				end
 			end
 			command.finished = true

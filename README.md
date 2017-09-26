@@ -166,7 +166,7 @@ Currently implemented commands:
 * `{"craft", <item>, <count>}`:
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
 * `{"tech", "<research-name>", change_research = <bool>}`: Set research. If change_research is true then this will overwrite the current research, otherwise it is only activated when the current research has been completed.
-* `{"mine", {<X>,<Y>}, amount=...}`: It is assumed that iron, coal and copper need 124 ticks, stone needs 95 ticks
+* `{"mine", {<X>,<Y>}, amount=...}`: Do not use this command multiple times at the same time, otherwise weird things will happen. This is because we use a global variable to track how much has been mined.
 * `{"take", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer item, amount and inventory from the position
 * `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
@@ -177,7 +177,7 @@ Currently implemented commands:
 * `{"tech", <research>, change_research=<bool>}`: Set research. If change_research is not set, this will only change the research when the current reseach is done. Note this currently shouldnt be used to queue multiple researches.
 * `{"speed", <speed>}`:
 * `{"stop"}`: Does nothing.
-* `{"auto-refuel", amount = ...}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. Note mining drills get refueled after 1600 ticks, furnaces after 2660 ticks, these might not be perfectly exact values (they are guaranteed to be less than 10 ticks too low).
+* `{"auto-refuel", min=..., amount=..., type=..., skip_coal_drills=<bool>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type and skip_coal_drills.
 * `{"craft-build", <entity>, {<X>, <Y>}, <facing direction>}`: Add a craft command for the entity, when that command is finished, add a build command.
 * `{"auto-build-blueprint", <name>, {<X>, <Y>}, rotation=<rotation>}`: Automates building blueprints (movement must still be entered manually though). Add build commands, recipe commands and put commands (for modules) to the current command set as we get in build range of the individual entities in the blueprint. `<name>` refers to the name of the blueprint in the `blueprint_data_raw` field, this can be set in the `blueprint_list.lua` of the run scenario - see examples. We have a mod that adds a command to conveniently export blueprints. The second argument is the offset, the third argument is the rotation and should be one of `defines.direction.north, east, south, west`. The blueprint build commands are added with the `on_leaving_range` constraint.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
