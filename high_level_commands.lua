@@ -499,6 +499,8 @@ high_level_commands = {
 						end
 					elseif command.data.entity.type == "mining-drill" then
 						command.data.inventory = defines.inventory.fuel
+					elseif command.data.entity.type == "boiler" then
+						command.data.inventory = defines.inventory.fuel
 					elseif command.data.entity.type == "assembling-machine" then
 						if item_type == "module" then
 							command.data.inventory = defines.inventory.assembling_machine_modules

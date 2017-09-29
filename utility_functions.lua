@@ -302,7 +302,7 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 		y = y + 0.5
 	end
 
-	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity", "tree"}
+	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity", "tree", "lab"}
 
 	if type then
 		types = {type}
