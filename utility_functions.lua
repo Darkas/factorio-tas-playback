@@ -172,6 +172,64 @@ function in_range(command, myplayer)
 	return distance_from_rect(myplayer.position, command.rect) <= command.distance
 end
 
+-- Say we wish to get within a certain distance of a square. This function outputs the closest point to the given position which is within range.
+-- Closest here is not quite according to euclidean distance since we can only walk axis-aligned or diagonally.
+function closest_point(square, circle_radius, position)
+	local ax, ay = get_coordinates(square[1] or square.left_top)
+	local bx, by = get_coordinates(square[2] or square.right_bottom)
+
+	local cx, cy = (ax + bx) / 2, (ay + by) / 2
+	local square_radius = cx - ax
+
+	-- Translate to origin
+	local px, py = get_coordinates(translate(position, {-cx, -cy}))
+
+	-- Rotate until coordinates are positive
+	local rotation = 0
+	while not ((px >= 0) and (py >= 0)) do
+		rotation = rotation + 2
+		px, py = get_coordinates(rotate_orthogonal({px, py}, 2))
+	end
+
+	-- Mirror until x > y
+	local mirrored = false
+	if py > px then
+		mirrored = true
+		px, py = py, px
+	end
+
+
+	-- Actual calculation of target point.
+	local rx, ry -- result.
+	if py <= square_radius then
+		rx, ry = square_radius + circle_radius, py
+		--  then
+	elseif py <= square_radius + circle_radius * math.sin(3.14159 / 8) then
+		px, py = px - square_radius, py - square_radius
+		rx, ry = math.sqrt(circle_radius^2 - py^2), py
+		rx, ry = rx + square_radius, ry + square_radius
+	elseif px - (square_radius + circle_radius * math.cos(3.14159 / 8)) >= py - (square_radius + circle_radius * math.sin(3.14159 / 8))  then
+		rx, ry = square_radius + circle_radius * math.cos(3.14159 / 8), square_radius + circle_radius * math.sin(3.14159 / 8)
+	else
+		px, py = px - square_radius, py - square_radius
+		local D = math.sqrt(2*circle_radius^2 - (px-py)^2)
+		rx, ry = (px - py + D) / 2, (py - px + D) / 2
+		rx, ry = rx + square_radius, ry + square_radius
+	end
+
+	-- Revert mirroring
+	if mirrored then
+		rx, ry = ry, rx
+	end
+	-- Revert rotation
+	rx, ry = get_coordinates(rotate_orthogonal({rx, ry}, (-rotation % 8)))
+
+	game.print("mirr" .. printable(mirrored) .. "_rot" .. printable(rotation))
+
+	local ret = translate({cx, cy}, {rx*0.99, ry*0.99})
+	return ret
+end
+
 -- Works only for axis-aligned rectangles.
 function distance_from_rect(pos, rect)
 	if not closest then closest = {} end
