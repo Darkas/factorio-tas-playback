@@ -29,6 +29,8 @@ function auto_move_to_low_level (command, myplayer, tick)
 	else
 		target_pos = command.data.target_pos
 	end
+	
+	local epsilon = 0.1 -- TODO: This should depend on the velocity.
 
 	local move_dir = ""
 
@@ -37,23 +39,48 @@ function auto_move_to_low_level (command, myplayer, tick)
 	-- if command[2][2] < myplayer.position.y - epsilon then
 	-- 	move_dir = move_dir .. "N"
 	-- end
-	local epsilon = 0.01 -- TODO: This should depend on the velocity.
 	if myplayer.position.y > target_pos[2] + epsilon then
-		move_dir = move_dir .. "N"
+		command.data.move_north = true
 	end
 	if myplayer.position.y < target_pos[2] - epsilon then
-		move_dir = move_dir .. "S"
+		command.data.move_south = true
 	end
 	if myplayer.position.x > target_pos[1] + epsilon then
-		move_dir = move_dir .. "W"
+		command.data.move_west = true
 	end
 	if myplayer.position.x < target_pos[1] - epsilon then
+		command.data.move_east = true
+	end
+	
+	if myplayer.position.y < target_pos[2] then
+		command.data.move_north = false
+	end
+	if myplayer.position.y > target_pos[2] then
+		command.data.move_south = false
+	end
+	if myplayer.position.x < target_pos[1] then
+		command.data.move_west = false
+	end
+	if myplayer.position.x > target_pos[1] then
+		command.data.move_east = false
+	end
+	
+	if command.data.move_north then
+		move_dir = move_dir .. "N"
+	end
+	if command.data.move_south then
+		move_dir = move_dir .. "S"
+	end
+	if command.data.move_west then
+		move_dir = move_dir .. "W"
+	end
+	if command.data.move_east then
 		move_dir = move_dir .. "E"
 	end
-
+	
 	if move_dir == "" then
-		move_dir = "STOP"
 		command.finished = true
+		move_dir = "STOP"
 	end
 
 	return {"move", move_dir}
@@ -82,6 +109,12 @@ high_level_commands = {
 	["auto-move-to"] = {
 		execute = auto_move_to_low_level,
 		default_priority = 7,
+		initialize = function (command, myplayer)
+			command.data.move_north = false
+			command.data.move_south = false
+			command.data.move_west = false
+			command.data.move_east = false
+		end
 	},
 
 	["auto-move-to-command"] = {
@@ -104,11 +137,13 @@ high_level_commands = {
 			end
 
 			if command.data.target_command.rect then
-				command.data.target_pos = {}
-				command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
-				game.print(serpent.block(command.data.target_pos))
+				if not command.data.target_pos then
+					command.data.target_pos = {}
+					command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
+					game.print(serpent.block(command.data.target_pos))
 
-				debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+					debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+				end
 			else
 				return "The command does currently not have a location"
 			end
@@ -122,7 +157,10 @@ high_level_commands = {
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
-
+			command.data.move_north = false
+			command.data.move_south = false
+			command.data.move_west = false
+			command.data.move_east = false
 		end,
 		init_dependencies = function (command)
 			return command[2]
@@ -438,7 +476,16 @@ high_level_commands = {
 
 			command.data.amount = command.amount or 1
 			
-			local entity = get_entity_from_pos(position, myplayer)
+			local type = nil
+			
+			if command[3] then
+				type = command[3]
+				
+				if type == "stone-rock" or type == "rock" then type = "simple-entity" end
+				if type == "res" then type = "resource" end
+			end
+			
+			local entity = get_entity_from_pos(position, myplayer, type)
 
 			command.distance = myplayer.resource_reach_distance
 
