@@ -316,7 +316,7 @@ high_level_commands = {
 						entity.position,
 						entity.direction,
 						name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-						on_leaving_range = true
+						on_leaving_range = command.set_on_leaving_range and true
 					}
 					if entity.name == "underground-belt" then
 						build_command[5] = entity.type
@@ -434,18 +434,10 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			local position = command[2]
 			if not command.amount then command.amount = 1 end
-			local type = command[3]
-			if type == "stone-rock" or type == "rock" then type = "simple-entity" end
-			if type == "res" or not type then type = "resource" end
-
-			local x, y = get_coordinates(position)
-			if x == math.floor(x) and y == math.floor(y) then
-				errprint("Mining at integer coordinates. This is probably not what you want!")
-			end
 
 			command.data.amount = command.amount or 1
 
-			local entity = get_entity_from_pos(position, myplayer, type)
+			local entity = get_entity_from_pos(position, myplayer)
 
 			command.distance = myplayer.resource_reach_distance
 
