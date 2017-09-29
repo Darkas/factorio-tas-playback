@@ -1,3 +1,7 @@
+if not settings.global["tas-playback-enabled"].value then
+	return
+end
+
 require("util")
 require("utility_functions")
 require("silo-script")
