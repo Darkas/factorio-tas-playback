@@ -327,6 +327,7 @@ end
 
 -- Note this should only be called for entities that are actually on a surface.
 function get_recipe(entity)
+	if not entity then game.print(debug.traceback()) error("Trying to access recipe of nil entity!") end
 	local x, y = get_coordinates(entity.position)
 	local recipe = nil
 	pcall(function() recipe = entity.recipe end)

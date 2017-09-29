@@ -284,11 +284,11 @@ end)
 
 
 script.on_event(defines.events.on_gui_click, function(event)
-  	silo_script.on_gui_click(event)
+	silo_script.on_gui_click(event)
 
 	if event.element.name == "next_command_group" then
 		if game.players[event.player_index].admin then
-			global.next_command_group = true
+			global.command_list_parser.next_command_group = true
 		else
 			game.players[event.player_index].print("Only admins can do that!")
 		end

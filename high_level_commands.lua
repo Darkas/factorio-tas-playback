@@ -200,7 +200,7 @@ high_level_commands = {
 			if myplayer.get_item_count(command[2]) == 0 then
 				return "Item not available"
 			end
-			
+
 			if in_range(command, myplayer, tick) then
 				return ""
 			else
@@ -419,13 +419,13 @@ high_level_commands = {
 			if not in_range(command, myplayer) then
 				return "Out of range"
 			end
-			
+
 			if global.command_list_parser.current_mining >= command.data.amount then
 				command.finished = true
 				global.command_list_parser.current_mining = 0
 				return "finished"
 			end
-			
+
 			return ""
 		end,
 
