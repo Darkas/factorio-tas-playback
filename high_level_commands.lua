@@ -27,6 +27,14 @@ function auto_move_to_low_level (command, myplayer, tick)
 	if command[1] == "auto-move-to" then
 		target_pos = command[2]
 	else
+		if not command.data.target_pos then
+			command.data.target_pos = {}
+			command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
+			game.print(serpent.block(command.data.target_pos))
+
+			debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+		end
+		
 		target_pos = command.data.target_pos
 	end
 	
@@ -136,15 +144,7 @@ high_level_commands = {
 				command.data.target_command = command.data.target_command.data.build_command
 			end
 
-			if command.data.target_command.rect then
-				if not command.data.target_pos then
-					command.data.target_pos = {}
-					command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
-					game.print(serpent.block(command.data.target_pos))
-
-					debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
-				end
-			else
+			if not command.data.target_command.rect then
 				return "The command does currently not have a location"
 			end
 
@@ -538,6 +538,8 @@ high_level_commands = {
 							command.data.inventory = defines.inventory.furnace_source
 						end
 					elseif command.data.entity.type == "mining-drill" then
+						command.data.inventory = defines.inventory.fuel
+					elseif command.data.entity.type == "boiler" then
 						command.data.inventory = defines.inventory.fuel
 					elseif command.data.entity.type == "assembling-machine" then
 						if item_type == "module" then
