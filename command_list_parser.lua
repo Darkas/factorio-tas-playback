@@ -41,7 +41,7 @@ script.on_event(defines.events.on_player_mined_entity, function(event)
 		if command[1] == "mine" then
 			if command_list_parser.command_sqdistance(command, {position=event.entity.position}) <= 0.3 then
 				command.data.amount = command.data.amount - 1
-				if command.data.amount == 0 then
+				if command.data.amount <= 0 then
 					command.finished = true
 				end
 			end
@@ -56,7 +56,7 @@ script.on_event(defines.events.on_player_mined_item, function(event)
 		if command[1] == "mine" then
 			if command_list_parser.command_sqdistance(command, {position=player.selected.position}) <= 0.3 then
 				command.data.amount = command.data.amount - 1
-				if command.data.amount == 0 then
+				if command.data.amount <= 0 then
 					command.finished = true
 				end
 			end

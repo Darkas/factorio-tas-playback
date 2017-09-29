@@ -16,7 +16,7 @@ commandqueue["command_list"] = {
             {"throw-grenade", {0, 30}},
 			{"pickup"},
 			{"auto-build-blueprint", "smelter", {1.5, 73.5}, name="build-smelter", area={{1, -400}, {10, 500}}},
-			{"mine", {2, 42}, "tree", name="mine-tree", amount=1},
+			{"mine", {2, 42.5}, "tree", name="mine-tree", amount=1},
 			{"auto-move-to-command", "mine-tree"},
 			{"mine", {3, 59}, "rock", name="mine-rock", command_finished = "mine-tree"},
 			{"build", "burner-mining-drill", {-5, 76}},

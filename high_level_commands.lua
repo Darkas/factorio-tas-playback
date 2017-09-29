@@ -37,7 +37,7 @@ function auto_move_to_low_level (command, myplayer, tick)
 	-- if command[2][2] < myplayer.position.y - epsilon then
 	-- 	move_dir = move_dir .. "N"
 	-- end
-	local epsilon = 0.1 -- TODO: This should depend on the velocity.
+	local epsilon = 0.01 -- TODO: This should depend on the velocity.
 	if myplayer.position.y > target_pos[2] + epsilon then
 		move_dir = move_dir .. "N"
 	end
@@ -105,7 +105,8 @@ high_level_commands = {
 
 			if command.data.target_command.rect then
 				command.data.target_pos = {}
-				_, command.data.target_pos = distance_from_rect(myplayer.position, command.data.target_command.rect)
+				command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
+				game.print(serpent.block(command.data.target_pos))
 
 				debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 			else
@@ -445,7 +446,10 @@ high_level_commands = {
 
 			command.data.amount = command.amount or 1
 
-			local entity = get_entity_from_pos(position, myplayer, type)
+			local epsilon
+			if type == "tree" then epsilon = 0.3 end
+
+			local entity = get_entity_from_pos(position, myplayer, type, epsilon)
 
 			command.distance = myplayer.resource_reach_distance
 
@@ -498,8 +502,6 @@ high_level_commands = {
 							command.data.inventory = defines.inventory.furnace_source
 						end
 					elseif command.data.entity.type == "mining-drill" then
-						command.data.inventory = defines.inventory.fuel
-					elseif command.data.entity.type == "boiler" then
 						command.data.inventory = defines.inventory.fuel
 					elseif command.data.entity.type == "assembling-machine" then
 						if item_type == "module" then
