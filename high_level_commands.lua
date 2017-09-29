@@ -661,7 +661,7 @@ high_level_commands = {
 			end
 
 			command.data.amount = command[4]
-			if not command.data.amount then
+			if (not command.data.amount) or (command.data.amount == command.data.entity.get_item_count(command.data.item)) then
 				command.data.amount = command.data.entity.get_item_count(command.data.item)
 				command.action_type = action_types.selection
 			else
