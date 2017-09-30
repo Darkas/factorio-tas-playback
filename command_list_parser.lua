@@ -214,6 +214,18 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	for _, command in pairs(global.command_list_parser.current_command_set) do
 		command.tested = false
 	end
+	
+	local auto_move_commands = 0
+	
+	for _, cmd in pairs(executable_commands) do
+		if (not cmd.finished) and (cmd[1] == "auto-move-to" or cmd[1] == "auto-move-to-command") then
+			auto_move_commands = auto_move_commands + 1
+		end
+	end
+	
+	if auto_move_commands > 1 then
+		errprint("You are using more than one auto-move command at once! Don't do this!")
+	end
 
 	-- Determine first out of range command
 	local leaving_range_command = nil
@@ -252,8 +264,6 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	end
 
 	if commandqueue[tick - 1] then
-		--local craft = false
-		--local ui = false
 		local craft_action
 		local ui_action
 
@@ -271,6 +281,21 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 
 		if craft_action and ui_action then
 			errprint("You are executing a craft and a ui action in adjacent frames! This is impossible! The craft action is " .. serpent.block(craft_action) .. " and the ui action is " .. serpent.block(ui_action))
+		end
+	end
+	
+	local move_found = false
+	local moves = ""
+	
+	for _,command in pairs(commandqueue[tick]) do
+		if command[1] == "move" then
+			moves = moves .. command[2] .. ", "
+			if move_found then
+				errprint("You are executing more than one move action in the same frame! Moves: " .. moves)
+				break
+			else
+				move_found = true
+			end
 		end
 	end
 
@@ -311,7 +336,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	if command.finished then
 		return false
 	end
-
+	
 	local fail_reason = high_level_commands[command[1]].executable(command, myplayer, tick)
 
 	if fail_reason ~= "" then
@@ -369,6 +394,8 @@ function command_list_parser.command_executable(command, myplayer, tick)
 			log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
 			return false
 		end
+		
+		command.items_available = false
 	end
 
 	if command.items_total then

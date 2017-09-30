@@ -9,118 +9,106 @@ global.command_list_parser.throw_cooldown = nil
 -- TODO: Extend auto-take s.t. it can take coal if we run out?
 
 function auto_move_to_low_level (command, myplayer, tick)
-	local auto_move_commands = 0
-
-	for _, cmd in pairs(global.command_list_parser.current_command_set) do
-		if (not cmd.finished) and (cmd[1] == "auto-move-to" or cmd[1] == "auto-move-to-command") then
-			auto_move_commands = auto_move_commands + 1
-		end
-	end
-
-	if auto_move_commands > 1 and not command.data.err_message then
-		errprint("You are using more than one auto-move command at once! Do this only if you know what you are doing!")
-		command.data.err_message = true
-	end
-
-	local target_pos
-
-	if command[1] == "auto-move-to" then
-		target_pos = command[2]
-	else
-		if not command.data.target_pos then
+	if not (command.data.target_pos and command.data.move_started) then
+		if command[1] == "auto-move-to" then
+			command.data.target_pos = command[2]
+		else
 			command.data.target_pos = {}
 			command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
-			game.print(serpent.block(command.data.target_pos))
-
-			debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 		end
-		
-		target_pos = command.data.target_pos
 	end
 	
 	if not command.data.last_dir then
 		command.data.last_dir = ""
 		
-		if myplayer.position.y > target_pos[2] then
+		if myplayer.position.y > command.data.target_pos[2] then
 			command.data.last_dir = command.data.last_dir .. "N"
 		end
-		if myplayer.position.y < target_pos[2] then
+		if myplayer.position.y < command.data.target_pos[2] then
 			command.data.last_dir = command.data.last_dir .. "S"
 		end
-		if myplayer.position.x > target_pos[1] then
+		if myplayer.position.x > command.data.target_pos[1] then
 			command.data.last_dir = command.data.last_dir .. "W"
 		end
-		if myplayer.position.x < target_pos[1] then
+		if myplayer.position.x < command.data.target_pos[1] then
 			command.data.last_dir = command.data.last_dir .. "E"
 		end
 	end
 	
 	local epsilon = 0.15 -- TODO: This should depend on the velocity.
 
-	local move_dir = ""
-
 	-- TODO: Test if this works when we walk on transport belts
 	-- Could replace this by
 	-- if command[2][2] < myplayer.position.y - epsilon then
-	-- 	move_dir = move_dir .. "N"
+	-- 	command.data.move_dir = command.data.move_dir .. "N"
 	-- end
-	if myplayer.position.y > target_pos[2] + epsilon then
+	if myplayer.position.y > command.data.target_pos[2] + epsilon then
 		command.data.move_north = true
 	end
-	if myplayer.position.y < target_pos[2] - epsilon then
+	if myplayer.position.y < command.data.target_pos[2] - epsilon then
 		command.data.move_south = true
 	end
-	if myplayer.position.x > target_pos[1] + epsilon then
+	if myplayer.position.x > command.data.target_pos[1] + epsilon then
 		command.data.move_west = true
 	end
-	if myplayer.position.x < target_pos[1] - epsilon then
+	if myplayer.position.x < command.data.target_pos[1] - epsilon then
 		command.data.move_east = true
 	end
 	
-	if myplayer.position.y < target_pos[2] then
+	if myplayer.position.y < command.data.target_pos[2] then
 		command.data.move_north = false
 	end
-	if myplayer.position.y > target_pos[2] then
+	if myplayer.position.y > command.data.target_pos[2] then
 		command.data.move_south = false
 	end
-	if myplayer.position.x < target_pos[1] then
+	if myplayer.position.x < command.data.target_pos[1] then
 		command.data.move_west = false
 	end
-	if myplayer.position.x > target_pos[1] then
+	if myplayer.position.x > command.data.target_pos[1] then
 		command.data.move_east = false
 	end
 	
+	command.data.move_dir = ""
+	
 	if command.data.move_north then
-		move_dir = move_dir .. "N"
+		command.data.move_dir = command.data.move_dir .. "N"
 	end
 	if command.data.move_south then
-		move_dir = move_dir .. "S"
+		command.data.move_dir = command.data.move_dir .. "S"
 	end
 	if command.data.move_west then
-		move_dir = move_dir .. "W"
+		command.data.move_dir = command.data.move_dir .. "W"
 	end
 	if command.data.move_east then
-		move_dir = move_dir .. "E"
+		command.data.move_dir = command.data.move_dir .. "E"
 	end
 	
+	return ""
+end
+
+function auto_move_execute(command, myplayer, tick)
 	if command[1] == "auto-move-to-command" and in_range(command.data.target_command, myplayer, tick) then
 		command.finished = true
-		move_dir = "STOP"
+		return {"phantom"}
 	end
 	
-	if move_dir == "" then
+	if command.data.move_dir == "" then
 		if command[1] == "auto-move-to" then
 			command.finished = true
-			move_dir = "STOP"
+			return {"phantom"}
 		else
-			move_dir = command.data.last_dir
+			command.data.move_dir = command.data.last_dir
 		end
-		
 	end
 	
-	command.data.last_dir = move_dir
-
-	return {"move", move_dir}
+	if not command.data.move_started then
+		debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+		command.data.move_started = true
+	end
+	
+	command.data.last_dir = command.data.move_dir
+	
+	return {"move", command.data.move_dir}
 end
 
 function empty()
@@ -160,12 +148,7 @@ high_level_commands = {
 			local added_commands = {}
 
 			for _, entity in pairs(entities) do
-				local test_entity = get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type)
-				
-				if test_entity and test_entity.position and test_entity.position.x == entity.position[1] and test_entity.position.y == entity.position[2] then
-					entity.built = true
-				end
-				if get_entity_from_pos({entity.position[1] + 0.5, entity.position[2] + 0.5}, myplayer, game.entity_prototypes[entity.name].type) then
+				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
 					entity.built = true
 				end
 				
@@ -176,7 +159,7 @@ high_level_commands = {
 						entity.name,
 						entity.position,
 						entity.direction,
-						name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+						name=command.data.namespace_prefix .. "bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
 						on_leaving_range = command.set_on_leaving_range and true
 					}
 					if entity.name == "underground-belt" then
@@ -195,7 +178,7 @@ high_level_commands = {
 						"recipe",
 						entity.position,
 						entity.recipe,
-						name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+						name=command.data.namespace_prefix .. "bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
 					}
 					table.insert(added_commands, recipe_command)
 					table.insert(command.data.all_commands, recipe_command)
@@ -207,7 +190,7 @@ high_level_commands = {
 								entity.position,
 								name,
 								count,
-								name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+								name=command.data.namespace_prefix .. "bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
 							}
 							table.insert(command.data.all_commands, module_command)
 							table.insert(added_commands, module_command)
@@ -238,11 +221,14 @@ high_level_commands = {
 			local rotation = command.rotation or defines.direction.north
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
 			command.data.area = area
+			
+			command.data.namespace_prefix = command.data.parent_command_group.name .. "."
 		end
 	},
 
 	["auto-move-to"] = {
-		execute = auto_move_to_low_level,
+		execute = auto_move_execute,
+		executable = auto_move_to_low_level,
 		default_priority = 7,
 		initialize = function (command, myplayer)
 			command.data.move_north = false
@@ -253,7 +239,7 @@ high_level_commands = {
 	},
 
 	["auto-move-to-command"] = {
-		execute = auto_move_to_low_level,
+		execute = auto_move_execute,
 		executable = function(command, myplayer, tick)
 			if not command.data.target_command then
 				for _, com in pairs(global.command_list_parser.current_command_set) do
@@ -275,12 +261,7 @@ high_level_commands = {
 				return "The command does currently not have a location"
 			end
 
-			if in_range(command.data.target_command, myplayer, tick) then
-				command.finished = true
-				return "finished"
-			end
-
-			return ""
+			return auto_move_to_low_level(command, myplayer, tick)
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
