@@ -22,7 +22,7 @@ for k,_ in pairs(remote.interfaces) do
 	global.system.run_file = global.system.run_file or string.match(k,"^TASFile_(.+)$")
 end
 
-blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list")
+pcall( function() blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list") end )
 if global.blueprint_error then error("Failed to load blueprints: " .. serpent.block(global.blueprint_error)) end
 
 -- Get the run instructions every time the game is loaded
