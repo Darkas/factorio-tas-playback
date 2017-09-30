@@ -252,6 +252,15 @@ high_level_commands = {
 			command.rect = collision_box{name=command[2], position=copy(command[3])}
 		end,
 	},
+	
+	["display-warning"] = {
+		execute = return_phantom,
+		default_priority = 100,
+		initialize = function (command, myplayer)
+			errprint(command[2])
+			command.finished = true
+		end,
+	},
 
 	recipe = {
 		executable = function(command, myplayer, tick)
@@ -280,19 +289,27 @@ high_level_commands = {
 
 	craft = {
 		execute = function(command, myplayer)
-			if myplayer.get_craftable_count(command[2]) >= command[3] then
-				TAScommands["craft"](command, myplayer)
-				command.finished = true
-				command.already_executed = true
-				return command
-			else
-				return
+			local craft = command.data.crafts[command.data.craft_index]
+			local return_crafts = {}
+			
+			while myplayer.get_craftable_count(craft[1]) >= craft[2] do
+				TAScommands["craft"]({"craft", craft[1], craft[2]}, myplayer)
+				table.insert(return_crafts, craft)
+				
+				command.data.craft_index = command.data.craft_index + 1
+				craft = command.data.crafts[command.data.craft_index]
+				
+				if not craft then
+					command.finished = true
+					break
+				end
 			end
+			
+			return {"craft", return_crafts, already_executed=true}
 		end,
 		executable = function(command, myplayer, tick)
-		--	-- Check for missing materials
-			local item = command[2]
-			local count = command[3]
+			local item = command.data.crafts[1][1]
+			local count = command.data.crafts[1][2]
 			if myplayer.get_craftable_count(item) >= count then
 				return ""
 			else
@@ -302,6 +319,16 @@ high_level_commands = {
 		default_priority = 5,
 		initialize = function(command)
 			command[3] = command[3] or 1
+			
+			if type(command[2]) == type("") then
+				command.data.crafts = {{command[2], command[3]}}
+			elseif type(command[2]) == type({}) then
+				command.data.crafts = command[2]
+			else
+				errprint("Craft: Wrong parameter type")
+			end
+			
+			command.data.craft_index = 1
 		end
 	},
 
@@ -414,7 +441,6 @@ high_level_commands = {
 			local offset = command[3]
 			local area = command.area
 			local rotation = command.rotation or defines.direction.north
-			command.data = command.data or {}
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
 			command.data.area = area
 		end

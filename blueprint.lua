@@ -21,7 +21,7 @@ function Blueprint.load(name, offset, rotation, chunk_size, area)
 
   for _, ent in pairs(entities) do
     local entity = copy(ent)
-    entity.position = translate(rotate_orthogonal(entity.position, rotation), offset)
+    entity.position = translate(rotate_orthogonal(entity.position, rotation), {offset[1] - blueprint_raw.anchor.x, offset[2] - blueprint_raw.anchor.y})
     if not area or inside_rect(entity.position, area) then
       if blueprint.counts[entity.name] then
         blueprint.counts[entity.name] = blueprint.counts[entity.name] + 1
