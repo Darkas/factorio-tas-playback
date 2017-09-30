@@ -222,6 +222,8 @@ script.on_event(defines.events.on_tick, function()
 			end
 		end
 		myplayer.walking_state = global.walkstate
+		myplayer.picking_state = myplayer.picking_state or global.pickstate
+		
 		if not global.minestate then
 			myplayer.mining_state = {mining = false}
 		else

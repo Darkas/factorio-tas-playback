@@ -271,23 +271,10 @@ end
 
 
 TAScommands["pickup"] = function (tokens, myplayer)
-  local pos = myplayer.position
-  local r = myplayer.item_pickup_distance
-  local area = {{pos.x - r, pos.y - r}, {pos.x + r, pos.y + r}}
-  local items = myplayer.surface.find_entities_filtered{area=area, type="item-entity"}
-
-  if #items > 0 then
-	debugprint("Picking up items (at position {" .. myplayer.position.x .. ", " .. myplayer.position.y .. "}).")
-  end
-
-  for _, item in pairs(items) do
-    local stack = item.stack
-    local totake = stack.count
-    local taken = myplayer.insert{name=stack.name, count=totake}
-
-    if taken < totake then errprint("Pickup failed, inventory full!") end
-
-    item.destroy()
+  if tokens[2] == true or tokens[2] == false then
+	  global.pickstate = tokens[2]
+  else
+	  myplayer.picking_state = true
   end
 end
 
