@@ -68,7 +68,7 @@ TAScommands["build"] = function (tokens, myplayer)
   -- Check if we are in range to build this
   local target_collision_box = collision_box{name=item, position=position, direction=direction}
   local distance = distance_from_rect(myplayer.position, target_collision_box)
-  if not (distance <= myplayer.build_distance) then
+  if not (distance < myplayer.build_distance) then
     errprint("Build failed: You are trying to place beyond realistic reach")
     return
   end
