@@ -113,6 +113,97 @@ end
 action_types = {always_possible = 1, selection = 2, ui = 3, throw = 4}
 
 high_level_commands = {
+	
+	["auto-build-blueprint"] = {
+		default_priority = 100,
+
+		execute = return_phantom,
+
+		executable = function (command)
+			return ""
+		end,
+
+		spawn_commands = function (command, myplayer, tick)
+			local blueprint = command.data.blueprint_data
+			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
+			command.data.all_commands = command.data.all_commands or {}
+			local added_commands = {}
+
+			for _, entity in pairs(entities) do
+				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
+					entity.built = true
+				end
+				if not entity.built then
+					entity.built = true
+					local build_command = {
+						"build",
+						entity.name,
+						entity.position,
+						entity.direction,
+						name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+						on_leaving_range = command.set_on_leaving_range and true
+					}
+					if entity.name == "underground-belt" then
+						build_command[5] = entity.type
+					end
+					table.insert(command.data.all_commands, build_command)
+					table.insert(added_commands, build_command)
+					if not entity.recipe then
+						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+					end
+				end
+
+				if entity.recipe and entity.built and not entity.set_recipe then
+					entity.set_recipe = true
+					local recipe_command = {
+						"recipe",
+						entity.position,
+						entity.recipe,
+						name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+					}
+					table.insert(added_commands, recipe_command)
+					table.insert(command.data.all_commands, recipe_command)
+
+					if entity.items then
+						for name, count in pairs(entity.items) do
+							local module_command = {
+								"put",
+								entity.position,
+								name,
+								count,
+								name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+							}
+							table.insert(command.data.all_commands, module_command)
+							table.insert(added_commands, module_command)
+						end
+					end
+					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+				end
+			end
+
+			if command.data.all_commands then
+				local finished = true
+				for index, cmd in pairs(command.data.all_commands) do
+					finished = cmd.finished and finished
+					if cmd.finished then table.remove(command.data.all_commands, index) end
+				end
+				if command.data.added_all_entities and finished then
+					command.finished = true
+				end
+			end
+
+			return added_commands
+		end,
+
+		initialize = function (command, myplayer, tick)
+			local name = command[2]
+			local offset = command[3]
+			local area = command.area
+			local rotation = command.rotation or defines.direction.north
+			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
+			command.data.area = area
+		end
+	},
 
 	["auto-move-to"] = {
 		execute = auto_move_to_low_level,
@@ -223,6 +314,65 @@ high_level_commands = {
 		end,
 		default_priority = 100,
 	},
+	
+	["auto-take"] = {
+		spawn_commands = function(command, myplayer, tick)
+			if command.data.next_tick and command.data.next_tick >= tick then return end
+
+			local item = command[2]
+			local count = command[3]
+			if not count then return end
+
+			if not command.exact then
+				count = count - myplayer.get_item_count(item)
+			end
+
+			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
+			local entities = {}
+			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
+				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
+					table.insert(entities, entity)
+				end
+			end
+			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
+				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
+					table.insert(entities, entity)
+				end
+			end
+
+			local count_to_craft = count
+			for _, entity in pairs(entities) do
+				count_to_craft = count_to_craft - entity.get_item_count(item)
+			end
+
+			local count_crafts_all = math.floor(count_to_craft / #entities)
+			local remaining = count_to_craft % #entities
+
+			local ret = {}
+			if count_crafts_all <= 0 then
+				if count_crafts_all < 0 then
+					errprint("Auto-take was not optimal: there were more resources in the entities than needed.")
+				end
+
+				table.sort(entities, function(a, b) return a.crafting_progress > b.crafting_progress end)
+				for index, entity in pairs(entities) do
+					local amount = entity.get_item_count(item) + count_crafts_all + (index <= remaining and 1 or 0)
+					if amount > 0 then
+						local position = {entity.position.x, entity.position.y}
+						local cmd = {"take", position, item, amount}
+						ret[#ret + 1] = cmd
+					end
+				end
+				command.finished = true
+			end
+
+			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[get_recipe(entities[1])].energy * 60
+			command.data.next_tick = tick + math.max(math.min(ticks / 3, 40), 1)
+			return ret
+		end,
+		default_priority = 100,
+		execute = empty,
+	},
 
 	build = {
 		execute = function(command, myplayer)
@@ -253,40 +403,6 @@ high_level_commands = {
 		end,
 	},
 	
-	["display-warning"] = {
-		execute = return_phantom,
-		default_priority = 100,
-		initialize = function (command, myplayer)
-			errprint(command[2])
-			command.finished = true
-		end,
-	},
-
-	recipe = {
-		executable = function(command, myplayer, tick)
-			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
-			if entity then
-				command.rect = collision_box(entity)
-			else
-				return "Entity not built"
-			end
-
-			if in_range(command, myplayer, tick) then
-				return ""
-			else
-				return "Player not in range"
-			end
-		end,
-
-		default_priority = 5,
-		default_action_type = action_types.ui,
-		initialize = function (command, myplayer)
-			command.data.ui = command[2]
-			command.distance = myplayer.build_distance
-			--command.rect = collision_box{name=command[2], position=copy(command[3])}
-		end,
-	},
-
 	craft = {
 		execute = function(command, myplayer)
 			local craft = command.data.crafts[command.data.craft_index]
@@ -354,96 +470,14 @@ high_level_commands = {
 			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
 	},
-
-	["auto-build-blueprint"] = {
-		default_priority = 100,
-
+	
+	["display-warning"] = {
 		execute = return_phantom,
-
-		executable = function (command)
-			return ""
+		default_priority = 100,
+		initialize = function (command, myplayer)
+			errprint(command[2])
+			command.finished = true
 		end,
-
-		spawn_commands = function (command, myplayer, tick)
-			local blueprint = command.data.blueprint_data
-			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
-			command.data.all_commands = command.data.all_commands or {}
-			local added_commands = {}
-
-			for _, entity in pairs(entities) do
-				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
-					entity.built = true
-				end
-				if not entity.built then
-					entity.built = true
-					local build_command = {
-						"build",
-						entity.name,
-						entity.position,
-						entity.direction,
-						name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-						on_leaving_range = command.set_on_leaving_range and true
-					}
-					if entity.name == "underground-belt" then
-						build_command[5] = entity.type
-					end
-					table.insert(command.data.all_commands, build_command)
-					table.insert(added_commands, build_command)
-					if not entity.recipe then
-						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
-					end
-				end
-
-				if entity.recipe and entity.built and not entity.set_recipe then
-					entity.set_recipe = true
-					local recipe_command = {
-						"recipe",
-						entity.position,
-						entity.recipe,
-						name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-					}
-					table.insert(added_commands, recipe_command)
-					table.insert(command.data.all_commands, recipe_command)
-
-					if entity.items then
-						for name, count in pairs(entity.items) do
-							local module_command = {
-								"put",
-								entity.position,
-								name,
-								count,
-								name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-							}
-							table.insert(command.data.all_commands, module_command)
-							table.insert(added_commands, module_command)
-						end
-					end
-					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
-				end
-			end
-
-			if command.data.all_commands then
-				local finished = true
-				for index, cmd in pairs(command.data.all_commands) do
-					finished = cmd.finished and finished
-					if cmd.finished then table.remove(command.data.all_commands, index) end
-				end
-				if command.data.added_all_entities and finished then
-					command.finished = true
-				end
-			end
-
-			return added_commands
-		end,
-
-		initialize = function (command, myplayer, tick)
-			local name = command[2]
-			local offset = command[3]
-			local area = command.area
-			local rotation = command.rotation or defines.direction.north
-			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
-			command.data.area = area
-		end
 	},
 
 	["entity-interaction"] = {
@@ -525,7 +559,15 @@ high_level_commands = {
 		end,
 		default_action_type = action_types.selection,
 	},
-
+	
+	pickup = {
+		execute = function (command, myplayer, tick)
+			if command.oneshot then command.finished = true end
+			return command
+		end,
+		default_priority = 100,
+	},
+	
 	put = {
 		execute = function(command, myplayer, tick)
 			command.finished = true
@@ -611,6 +653,31 @@ high_level_commands = {
 			command.data.inventory = command[5]
 		end
 	},
+	
+	recipe = {
+		executable = function(command, myplayer, tick)
+			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
+			if entity then
+				command.rect = collision_box(entity)
+			else
+				return "Entity not built"
+			end
+
+			if in_range(command, myplayer, tick) then
+				return ""
+			else
+				return "Player not in range"
+			end
+		end,
+
+		default_priority = 5,
+		default_action_type = action_types.ui,
+		initialize = function (command, myplayer)
+			command.data.ui = command[2]
+			command.distance = myplayer.build_distance
+			--command.rect = collision_box{name=command[2], position=copy(command[3])}
+		end,
+	},
 
 	rotate = {
 		execute = return_self_finished,
@@ -622,9 +689,28 @@ high_level_commands = {
 		execute = return_self_finished,
 		default_priority = 100,
 	},
+	
 	stop = {
 		execute = return_phantom,
 		default_priority = 100,
+	},
+	
+	["stop-command"] = {
+		execute = return_phantom,
+		default_priority = 100,
+		initialize = function (command, myplayer)
+			local cancel = namespace_prefix(command[2], command.command_group)
+
+			for _,com in pairs(global.command_list_parser.current_command_set) do
+				if com.name == cancel then
+					com.finished = true
+					if com[1] == "mine" then
+						global.command_list_parser.current_mining = 0
+					end
+				end
+			end
+			command.finished = true
+		end,
 	},
 
 	take = {
@@ -709,32 +795,6 @@ high_level_commands = {
 		default_priority = 5,
 	},
 
-	pickup = {
-		execute = function (command, myplayer, tick)
-			if command.oneshot then command.finished = true end
-			return command
-		end,
-		default_priority = 100,
-	},
-
-	["stop-command"] = {
-		execute = return_phantom,
-		default_priority = 100,
-		initialize = function (command, myplayer)
-			local cancel = namespace_prefix(command[2], command.command_group)
-
-			for _,com in pairs(global.command_list_parser.current_command_set) do
-				if com.name == cancel then
-					com.finished = true
-					if com[1] == "mine" then
-						global.command_list_parser.current_mining = 0
-					end
-				end
-			end
-			command.finished = true
-		end,
-	},
-
 	tech = {
 		default_priority = 5,
 		execute = return_self_finished,
@@ -746,65 +806,7 @@ high_level_commands = {
 			end
 		end,
 	},
-
-	["auto-take"] = {
-		spawn_commands = function(command, myplayer, tick)
-			if command.data.next_tick and command.data.next_tick >= tick then return end
-
-			local item = command[2]
-			local count = command[3]
-			if not count then return end
-
-			if not command.exact then
-				count = count - myplayer.get_item_count(item)
-			end
-
-			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
-			local entities = {}
-			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
-				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
-					table.insert(entities, entity)
-				end
-			end
-			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
-				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
-					table.insert(entities, entity)
-				end
-			end
-
-			local count_to_craft = count
-			for _, entity in pairs(entities) do
-				count_to_craft = count_to_craft - entity.get_item_count(item)
-			end
-
-			local count_crafts_all = math.floor(count_to_craft / #entities)
-			local remaining = count_to_craft % #entities
-
-			local ret = {}
-			if count_crafts_all <= 0 then
-				if count_crafts_all < 0 then
-					errprint("Auto-take was not optimal: there were more resources in the entities than needed.")
-				end
-
-				table.sort(entities, function(a, b) return a.crafting_progress > b.crafting_progress end)
-				for index, entity in pairs(entities) do
-					local amount = entity.get_item_count(item) + count_crafts_all + (index <= remaining and 1 or 0)
-					if amount > 0 then
-						local position = {entity.position.x, entity.position.y}
-						local cmd = {"take", position, item, amount}
-						ret[#ret + 1] = cmd
-					end
-				end
-				command.finished = true
-			end
-
-			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[get_recipe(entities[1])].energy * 60
-			command.data.next_tick = tick + math.max(math.min(ticks / 3, 40), 1)
-			return ret
-		end,
-		default_priority = 100,
-		execute = empty,
-	},
+	
 	["throw-grenade"] =
 	{
 		execute = function(command)
