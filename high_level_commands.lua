@@ -292,7 +292,7 @@ high_level_commands = {
 			local craft = command.data.crafts[command.data.craft_index]
 			local return_crafts = {}
 			
-			while myplayer.get_craftable_count(craft[1]) >= craft[2] do
+			while myplayer.get_craftable_count(craft[1]) >= craft[2] and myplayer.force.recipes[craft[1]].enabled do
 				TAScommands["craft"]({"craft", craft[1], craft[2]}, myplayer)
 				table.insert(return_crafts, craft)
 				
