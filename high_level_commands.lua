@@ -160,9 +160,15 @@ high_level_commands = {
 			local added_commands = {}
 
 			for _, entity in pairs(entities) do
-				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
+				local test_entity = get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type)
+				
+				if test_entity and test_entity.position and test_entity.position.x == entity.position[1] and test_entity.position.y == entity.position[2] then
 					entity.built = true
 				end
+				if get_entity_from_pos({entity.position[1] + 0.5, entity.position[2] + 0.5}, myplayer, game.entity_prototypes[entity.name].type) then
+					entity.built = true
+				end
+				
 				if not entity.built then
 					entity.built = true
 					local build_command = {
@@ -417,13 +423,13 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			if myplayer.get_item_count(command[2]) == 0 then
-				return "Item not available"
+				return "Item not available (" .. command[2] .. ")"
 			end
 
 			if in_range(command, myplayer, tick) then
 				return ""
 			else
-				return "Player not in range"
+				return "Player not in range (" .. command[2] .. ")"
 			end
 		end,
 		default_priority = 5,
