@@ -1,10 +1,11 @@
 require("blueprint")
 local TAScommands = require("commands")
 
-global.command_list_parser = global.command_list_parser or {}
+global.high_level_language = global.high_level_language or {
+	throw_cooldown = nil,
+	simple_sequence_index = 1
+}
 
-
-global.command_list_parser.throw_cooldown = nil
 
 -- TODO: Extend auto-take s.t. it can take coal if we run out?
 
@@ -17,10 +18,10 @@ function auto_move_to_low_level (command, myplayer, tick)
 			command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
 		end
 	end
-	
+
 	if not command.data.last_dir then
 		command.data.last_dir = ""
-		
+
 		if myplayer.position.y > command.data.target_pos[2] then
 			command.data.last_dir = command.data.last_dir .. "N"
 		end
@@ -34,7 +35,7 @@ function auto_move_to_low_level (command, myplayer, tick)
 			command.data.last_dir = command.data.last_dir .. "E"
 		end
 	end
-	
+
 	local epsilon = 0.15 -- TODO: This should depend on the velocity.
 
 	-- TODO: Test if this works when we walk on transport belts
@@ -54,7 +55,7 @@ function auto_move_to_low_level (command, myplayer, tick)
 	if myplayer.position.x < command.data.target_pos[1] - epsilon then
 		command.data.move_east = true
 	end
-	
+
 	if myplayer.position.y < command.data.target_pos[2] then
 		command.data.move_north = false
 	end
@@ -67,9 +68,9 @@ function auto_move_to_low_level (command, myplayer, tick)
 	if myplayer.position.x > command.data.target_pos[1] then
 		command.data.move_east = false
 	end
-	
+
 	command.data.move_dir = ""
-	
+
 	if command.data.move_north then
 		command.data.move_dir = command.data.move_dir .. "N"
 	end
@@ -82,7 +83,7 @@ function auto_move_to_low_level (command, myplayer, tick)
 	if command.data.move_east then
 		command.data.move_dir = command.data.move_dir .. "E"
 	end
-	
+
 	return ""
 end
 
@@ -91,7 +92,7 @@ function auto_move_execute(command, myplayer, tick)
 		command.finished = true
 		return {"phantom"}
 	end
-	
+
 	if command.data.move_dir == "" then
 		if command[1] == "auto-move-to" then
 			command.finished = true
@@ -100,14 +101,14 @@ function auto_move_execute(command, myplayer, tick)
 			command.data.move_dir = command.data.last_dir
 		end
 	end
-	
+
 	if not command.data.move_started then
 		debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 		command.data.move_started = true
 	end
-	
+
 	command.data.last_dir = command.data.move_dir
-	
+
 	return {"move", command.data.move_dir}
 end
 
@@ -131,7 +132,7 @@ action_types = {always_possible = 1, selection = 2, ui = 3, throw = 4}
 entities_with_inventory = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"}
 
 high_level_commands = {
-	
+
 	["auto-build-blueprint"] = {
 		default_priority = 100,
 
@@ -151,7 +152,7 @@ high_level_commands = {
 				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
 					entity.built = true
 				end
-				
+
 				if not entity.built then
 					entity.built = true
 					local build_command = {
@@ -221,7 +222,7 @@ high_level_commands = {
 			local rotation = command.rotation or defines.direction.north
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
 			command.data.area = area
-			
+
 			command.data.namespace_prefix = command.data.parent_command_group.name .. "."
 		end
 	},
@@ -331,7 +332,7 @@ high_level_commands = {
 		end,
 		default_priority = 100,
 	},
-	
+
 	["auto-take"] = {
 		spawn_commands = function(command, myplayer, tick)
 			if command.data.next_tick and command.data.next_tick >= tick then return end
@@ -419,25 +420,25 @@ high_level_commands = {
 			command.rect = collision_box{name=command[2], position=copy(command[3])}
 		end,
 	},
-	
+
 	craft = {
 		execute = function(command, myplayer)
 			local craft = command.data.crafts[command.data.craft_index]
 			local return_crafts = {}
-			
+
 			while myplayer.get_craftable_count(craft[1]) >= craft[2] and myplayer.force.recipes[craft[1]].enabled do
 				TAScommands["craft"]({"craft", craft[1], craft[2]}, myplayer)
 				table.insert(return_crafts, craft)
-				
+
 				command.data.craft_index = command.data.craft_index + 1
 				craft = command.data.crafts[command.data.craft_index]
-				
+
 				if not craft then
 					command.finished = true
 					break
 				end
 			end
-			
+
 			return {"craft", return_crafts, already_executed=true}
 		end,
 		executable = function(command, myplayer, tick)
@@ -452,7 +453,7 @@ high_level_commands = {
 		default_priority = 5,
 		initialize = function(command)
 			command[3] = command[3] or 1
-			
+
 			if type(command[2]) == type("") then
 				command.data.crafts = {{command[2], command[3]}}
 			elseif type(command[2]) == type({}) then
@@ -460,7 +461,7 @@ high_level_commands = {
 			else
 				errprint("Craft: Wrong parameter type")
 			end
-			
+
 			command.data.craft_index = 1
 		end
 	},
@@ -487,7 +488,7 @@ high_level_commands = {
 			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
 	},
-	
+
 	["display-warning"] = {
 		execute = return_phantom,
 		default_priority = 100,
@@ -552,16 +553,16 @@ high_level_commands = {
 			if not command.amount then command.amount = 1 end
 
 			command.data.amount = command.amount or 1
-			
+
 			local type = nil
-			
+
 			if command[3] then
 				type = command[3]
-				
+
 				if type == "stone-rock" or type == "rock" then type = "simple-entity" end
 				if type == "res" then type = "resource" end
 			end
-			
+
 			local entity = get_entity_from_pos(position, myplayer, type)
 
 			command.distance = myplayer.resource_reach_distance
@@ -576,7 +577,7 @@ high_level_commands = {
 		end,
 		default_action_type = action_types.selection,
 	},
-	
+
 	pickup = {
 		execute = function (command, myplayer, tick)
 			if command.oneshot then command.finished = true end
@@ -584,7 +585,7 @@ high_level_commands = {
 		end,
 		default_priority = 100,
 	},
-	
+
 	put = {
 		execute = function(command, myplayer, tick)
 			command.finished = true
@@ -655,7 +656,7 @@ high_level_commands = {
 					end
 				end
 			end
-			
+
 			if command.data.entity.type == "assembling-machine" and (not command.data.entity.recipe) then
 				return "Recipe is not set for assembling-machine"
 			end
@@ -673,7 +674,7 @@ high_level_commands = {
 			command.data.inventory = command[5]
 		end
 	},
-	
+
 	recipe = {
 		executable = function(command, myplayer, tick)
 			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
@@ -709,12 +710,12 @@ high_level_commands = {
 		execute = return_self_finished,
 		default_priority = 100,
 	},
-	
+
 	stop = {
 		execute = return_phantom,
 		default_priority = 100,
 	},
-	
+
 	["stop-command"] = {
 		execute = return_phantom,
 		default_priority = 100,
@@ -746,7 +747,7 @@ high_level_commands = {
 				else
 					command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
 				end
-				
+
 				if not command.data.entity then
 					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 				end
@@ -831,12 +832,12 @@ high_level_commands = {
 			end
 		end,
 	},
-	
+
 	["throw-grenade"] =
 	{
 		execute = function(command)
 			command.finished = true
-			global.command_list_parser.throw_cooldown = game.tick
+			global.high_level_language.throw_cooldown = game.tick
 			return command
 		end,
 		default_action_type = action_types.throw,
@@ -847,14 +848,52 @@ high_level_commands = {
 			if sqdistance(myplayer.position, command[2]) > 15^2 then
 				return "Not in range!"
 			end
-			if global.command_list_parser.throw_cooldown and game.tick - global.command_list_parser.throw_cooldown < 30 then
+			if global.high_level_language.throw_cooldown and game.tick - global.high_level_language.throw_cooldown < 30 then
 				return "Cooldown not expired yet!"
 			end
 
 			return ""
 		end
-		-- TODO: type?
-	}
+	},
+	["simple-sequence"] = {
+		initialize = function(command, myplayer, tick)
+			command.data.index = 0
+			command.data.name = command[2] .. "-sequence-" .. global.high_level_language.simple_sequence_index
+			global.high_level_language.simple_sequence_index = global.high_level_language.simple_sequence_index + 1
+		end,
+		execute = return_phantom,
+		spawn_commands = function(command, myplayer, tick)
+			command.data.index = command.data.index + 1
+			if command.data.index + 2 > #command then
+				command.finished = true
+			else
+				local cmd = {
+					command[2],
+					command[command.data.index + 2],
+					name=command.data.name .. "." .. command.data.index,
+				}
+				for k, v in pairs(command.pass_arguments) do
+					cmd[k] = v
+				end
+
+				return {
+					cmd,
+					{
+						"auto-move-to-command",
+						command.data.name .. "." .. command.data.index,
+					}
+				}
+			end
+		end,
+		executable = function(command, myplayer, tick)
+			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.name .. "." .. command.data.index] then
+				return ""
+			else
+				return "Waiting for command: " .. command.data.name .. "_" .. command.data.index
+			end
+		end,
+		default_priority = 100,
+	},
 }
 
 

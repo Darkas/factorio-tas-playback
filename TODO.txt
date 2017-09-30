@@ -1,7 +1,9 @@
 - Implement type checking for parameters of commands
 - Implement a flag for command groups that executes commands sequentially
 - Automatically activate or deactivate TAS-playback depending on active map.
+- Set type of throw-grenade cmd.
 
 Low Priority:
+- Simple-Sequence doesnt work with build-command
 - Mining burners causes errors for the auto-refuel system
 - Mining and deconstructing buildings is not compatible with blueprints

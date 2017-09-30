@@ -166,7 +166,7 @@ Currently implemented commands:
 * `{"craft", <item>, <count>}`:
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
 * `{"tech", "<research-name>", change_research = <bool>}`: Set research. If change_research is true then this will overwrite the current research, otherwise it is only activated when the current research has been completed.
-* `{"mine", {<X>,<Y>}, amount=...}`: Do not use this command multiple times at the same time, otherwise weird things will happen. This is because we use a global variable to track how much has been mined.
+* `{"mine", {<X>,<Y>}, amount=<int>, type=<string>}`: The `type` param is the entity type of the mined entity - typically "resource", "tree"; instead of "simple-entity" the string "rock" can also be used here.
 * `{"take", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer item, amount and inventory from the position
 * `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
@@ -182,10 +182,10 @@ Currently implemented commands:
 * `{"auto-build-blueprint", <name>, {<X>, <Y>}, rotation=<rotation>}`: Automates building blueprints (movement must still be entered manually though). Add build commands, recipe commands and put commands (for modules) to the current command set as we get in build range of the individual entities in the blueprint. `<name>` refers to the name of the blueprint in the `blueprint_data_raw` field, this can be set in the `blueprint_list.lua` of the run scenario - see examples. We have a mod that adds a command to conveniently export blueprints. The second argument is the offset, the third argument is the rotation and should be one of `defines.direction.north, east, south, west`. The blueprint build commands are added with the `on_leaving_range` constraint.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
 * `{"throw-grenade", {<x>, <y>}}`.
+* `{"simple-sequence", "<command>", {<x1>, <y1>}, ... , pass_arguments={k1=v1, k2=v2 ...}`: Execute the given command at the locations in the order as given and walk to those locations in between executions. All arguments in the pass_arguments table will be added to each command. Example: `{"simple-sequence", "mine", {0, 1}, {5, -4}, pass_arguments={[3]="tree"}}` mines two trees. Does currently not work with "build".
 
 To be implemented:
 
-"throw"
 "vehicle"
 
 Further ideas:
