@@ -534,7 +534,8 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
-				command.data.entity = get_entity_from_pos(command[2], myplayer)
+				command.data.entity = get_entity_from_pos(command[2], myplayer,
+					{"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"})
 				if not command.data.entity then
 					return "No entity found"
 				else
@@ -553,7 +554,7 @@ high_level_commands = {
 				return "Not enough of " .. item .. " in inventory"
 			end
 
-			if not command.data.inventory then
+			if not command.data.inventory then -- TODO: cargo wagon is missing here
 				command.data.inventory = command.inventory
 				if not command.data.inventory then
 					local item_type = game.item_prototypes[item].type

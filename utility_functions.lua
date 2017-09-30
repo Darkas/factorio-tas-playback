@@ -347,7 +347,7 @@ end
 -- Surface related
 -------------------
 
-function get_entity_from_pos(pos, myplayer, type, epsilon)
+function get_entity_from_pos(pos, myplayer, types, epsilon)
 	if not pos then game.print(debug.traceback()) end
 	local x, y = get_coordinates(pos)
 
@@ -360,17 +360,21 @@ function get_entity_from_pos(pos, myplayer, type, epsilon)
 		y = y + 0.5
 	end
 
-	local types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity", "tree", "lab"}
+	local accepted_types
 
-	if type then
-		types = {type}
+	if type(types) == type("") then
+		accepted_types = {types}
+	elseif type(types) == type({}) then
+		accepted_types = types
+	else
+		accepted_types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity", "tree", "lab", "rocket-silo"}
 	end
 
 	local x, y = get_coordinates(pos)
 	local entity = nil
 
 	for _,ent in pairs(myplayer.surface.find_entities_filtered({area = {{-epsilon + x, -epsilon + y}, {epsilon + x, epsilon + y}}})) do
-		if has_value(types, ent.type) then
+		if has_value(accepted_types, ent.type) then
 			entity = ent
 		end
 	end
