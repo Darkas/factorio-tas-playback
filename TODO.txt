@@ -1,2 +1,7 @@
 - Implement type checking for parameters of commands
 - Implement a flag for command groups that executes commands sequentially
+
+
+Low Priority:
+- Mining burners causes errors for the auto-refuel system
+- Mining and deconstructing buildings is not compatible with blueprints

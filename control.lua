@@ -22,9 +22,8 @@ for k,_ in pairs(remote.interfaces) do
 	global.system.run_file = global.system.run_file or string.match(k,"^TASFile_(.+)$")
 end
 
-pcall(function()
-	blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list")
-end)
+blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list")
+if global.blueprint_error then error("Failed to load blueprints: " .. serpent.block(global.blueprint_error)) end
 
 -- Get the run instructions every time the game is loaded
 if global.system.tas_name and global.system.run_file then
@@ -223,7 +222,6 @@ script.on_event(defines.events.on_tick, function()
 		end
 		myplayer.walking_state = global.walkstate
 		myplayer.picking_state = myplayer.picking_state or global.pickstate
-		
 		if not global.minestate then
 			myplayer.mining_state = {mining = false}
 		else
