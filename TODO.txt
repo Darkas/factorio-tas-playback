@@ -1,6 +1,6 @@
 - Implement type checking for parameters of commands
 - Implement a flag for command groups that executes commands sequentially
-
+- Automatically activate or deactivate TAS-playback depending on active map.
 
 Low Priority:
 - Mining burners causes errors for the auto-refuel system
