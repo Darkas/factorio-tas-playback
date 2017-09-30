@@ -38,7 +38,24 @@ function auto_move_to_low_level (command, myplayer, tick)
 		target_pos = command.data.target_pos
 	end
 	
-	local epsilon = 0.1 -- TODO: This should depend on the velocity.
+	if not command.data.last_dir then
+		command.data.last_dir = ""
+		
+		if myplayer.position.y > target_pos[2] then
+			command.data.last_dir = command.data.last_dir .. "N"
+		end
+		if myplayer.position.y < target_pos[2] then
+			command.data.last_dir = command.data.last_dir .. "S"
+		end
+		if myplayer.position.x > target_pos[1] then
+			command.data.last_dir = command.data.last_dir .. "W"
+		end
+		if myplayer.position.x < target_pos[1] then
+			command.data.last_dir = command.data.last_dir .. "E"
+		end
+	end
+	
+	local epsilon = 0.15 -- TODO: This should depend on the velocity.
 
 	local move_dir = ""
 
@@ -86,10 +103,22 @@ function auto_move_to_low_level (command, myplayer, tick)
 		move_dir = move_dir .. "E"
 	end
 	
-	if move_dir == "" then
+	if command[1] == "auto-move-to-command" and in_range(command.data.target_command, myplayer, tick) then
 		command.finished = true
 		move_dir = "STOP"
 	end
+	
+	if move_dir == "" then
+		if command[1] == "auto-move-to" then
+			command.finished = true
+			move_dir = "STOP"
+		else
+			move_dir = command.data.last_dir
+		end
+		
+	end
+	
+	command.data.last_dir = move_dir
 
 	return {"move", move_dir}
 end
@@ -111,6 +140,7 @@ function return_phantom ()
 end
 
 action_types = {always_possible = 1, selection = 2, ui = 3, throw = 4}
+entities_with_inventory = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"}
 
 high_level_commands = {
 	
@@ -239,7 +269,7 @@ high_level_commands = {
 				return "The command does currently not have a location"
 			end
 
-			if high_level_commands[command.data.target_command[1]].executable(command.data.target_command, myplayer, tick) == "" then
+			if in_range(command.data.target_command, myplayer, tick) then
 				command.finished = true
 				return "finished"
 			end
@@ -576,8 +606,7 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
-				command.data.entity = get_entity_from_pos(command[2], myplayer,
-					{"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"})
+				command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
 				if not command.data.entity then
 					return "No entity found"
 				else
@@ -638,6 +667,10 @@ high_level_commands = {
 						return "Inventory could not be determined"
 					end
 				end
+			end
+			
+			if command.data.entity.type == "assembling-machine" and (not command.data.entity.recipe) then
+				return "Recipe is not set for assembling-machine"
 			end
 
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
@@ -721,7 +754,12 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
-				command.data.entity = get_entity_from_pos(command[2], myplayer, command.type)
+				if command.type then
+					command.data.entity = get_entity_from_pos(command[2], myplayer, command.type)
+				else
+					command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
+				end
+				
 				if not command.data.entity then
 					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
 				end

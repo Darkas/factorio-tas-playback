@@ -224,8 +224,6 @@ function closest_point(square, circle_radius, position)
 	-- Revert rotation
 	rx, ry = get_coordinates(rotate_orthogonal({rx, ry}, (-rotation % 8)))
 
-	game.print("mirr" .. printable(mirrored) .. "_rot" .. printable(rotation))
-
 	local ret = translate({cx, cy}, {rx*0.99, ry*0.99})
 	return ret
 end
