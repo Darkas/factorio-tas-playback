@@ -2,14 +2,6 @@ if not settings.global["tas-playback-enabled"].value then
 	return
 end
 
-require("util")
-require("utility_functions")
-require("silo-script")
-require("command_list_parser")
-
-require("log_ui")
-require("command_list_ui")
-
 -- Global variables initialization
 global.system = global.system or {}
 global.system.save = false -- if true, save at the end of this tick.
@@ -22,9 +14,6 @@ for k,_ in pairs(remote.interfaces) do
 	global.system.run_file = global.system.run_file or string.match(k,"^TASFile_(.+)$")
 end
 
-pcall( function() blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list") end )
-if global.blueprint_error then error("Failed to load blueprints: " .. serpent.block(global.blueprint_error)) end
-
 -- Get the run instructions every time the game is loaded
 if global.system.tas_name and global.system.run_file then
 	commandqueue = require("scenarios." .. global.system.tas_name .. "." .. global.system.run_file)
@@ -35,9 +24,24 @@ if global.system.tas_name and global.system.run_file then
 		end
 	end
 else
-	-- Currently throw a standard lua error since the custom error management system we use cannot be used.
-	error("The run's scenario doesn't seem to be running. Please make sure you launched the scenario. ")
+	script.on_event(defines.events.on_tick, function()
+		game.print("TAS-playback: Not in run scenario. ")
+		script.on_event(defines.events.on_tick, nil)
+	end)
+	return
 end
+
+require("util")
+require("utility_functions")
+require("silo-script")
+require("command_list_parser")
+
+require("log_ui")
+require("command_list_ui")
+
+
+pcall( function() blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list") end )
+if global.blueprint_error then error("Failed to load blueprints: " .. serpent.block(global.blueprint_error)) end
 
 
 -- Get the commands that the speedrun can use
