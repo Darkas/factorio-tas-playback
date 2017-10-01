@@ -1,9 +1,10 @@
 require("blueprint")
 local TAScommands = require("commands")
 
-global.high_level_language = global.high_level_language or {
+global.high_level_commands = global.high_level_commands or {
 	throw_cooldown = nil,
-	simple_sequence_index = 1
+	simple_sequence_index = 1,
+	move_sequence_index = 1
 }
 
 
@@ -837,7 +838,7 @@ high_level_commands = {
 	{
 		execute = function(command)
 			command.finished = true
-			global.high_level_language.throw_cooldown = game.tick
+			global.high_level_commands.throw_cooldown = game.tick
 			return command
 		end,
 		default_action_type = action_types.throw,
@@ -848,7 +849,7 @@ high_level_commands = {
 			if sqdistance(myplayer.position, command[2]) > 15^2 then
 				return "Not in range!"
 			end
-			if global.high_level_language.throw_cooldown and game.tick - global.high_level_language.throw_cooldown < 30 then
+			if global.high_level_commands.throw_cooldown and game.tick - global.high_level_commands.throw_cooldown < 30 then
 				return "Cooldown not expired yet!"
 			end
 
@@ -857,9 +858,19 @@ high_level_commands = {
 	},
 	["simple-sequence"] = {
 		initialize = function(command, myplayer, tick)
+			if global.high_level_commands.simple_sequence_name == command.data.parent_command_group.name then
+				global.high_level_commands.simple_sequence_index = global.high_level_commands.simple_sequence_index + 1
+			else
+				global.high_level_commands.simple_sequence_index = 1
+				global.high_level_commands.simple_sequence_name = command.data.parent_command_group.name
+			end
+
 			command.data.index = 0
-			command.data.name = command[2] .. "-sequence-" .. global.high_level_language.simple_sequence_index
-			global.high_level_language.simple_sequence_index = global.high_level_language.simple_sequence_index + 1
+			if command.name then
+				command.data.name = command.name .. "-" .. global.high_level_commands.simple_sequence_index
+			else
+				command.data.name = command.data.parent_command_group.name .. "." .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index
+			end
 		end,
 		execute = return_phantom,
 		spawn_commands = function(command, myplayer, tick)
@@ -870,9 +881,9 @@ high_level_commands = {
 				local cmd = {
 					command[2],
 					command[command.data.index + 2],
-					name=command.data.name .. "." .. command.data.index,
+					name=command.data.name .. "_" .. command.data.index,
 				}
-				for k, v in pairs(command.pass_arguments) do
+				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
 				end
 
@@ -880,13 +891,13 @@ high_level_commands = {
 					cmd,
 					{
 						"auto-move-to-command",
-						command.data.name .. "." .. command.data.index,
+						command.data.name .. "_" .. command.data.index,
 					}
 				}
 			end
 		end,
 		executable = function(command, myplayer, tick)
-			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.name .. "." .. command.data.index] then
+			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.name .. "_" .. command.data.index] then
 				return ""
 			else
 				return "Waiting for command: " .. command.data.name .. "_" .. command.data.index
@@ -894,6 +905,88 @@ high_level_commands = {
 		end,
 		default_priority = 100,
 	},
+
+	["move-sequence"] = {
+		initialize = function(command, myplayer, tick)
+			if global.high_level_commands.move_sequence_name == command.data.parent_command_group.name then
+				global.high_level_commands.move_sequence_index = global.high_level_commands.move_sequence_index + 1
+			else
+				global.high_level_commands.move_sequence_index = 1
+				global.high_level_commands.move_sequence_name = command.data.parent_command_group.name
+			end
+
+			command.data.index = 0
+			if command.name then
+				command.data.name = command.data.parent_command_group.name .. "." .. command.name .. "-" .. global.high_level_commands.simple_sequence_index
+			else
+				command.data.name = command.data.parent_command_group.name .. "." .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index
+			end
+		end,
+		execute = return_phantom,
+		spawn_commands = function(command, myplayer, tick)
+			command.data.index = command.data.index + 1
+			if command[command.data.index + 1] == nil then
+				command.finished = true
+			else
+				local cmd = {
+					"auto-move-to",
+					command[command.data.index + 1],
+					name=command.data.name .. "_" .. command.data.index,
+				}
+				for k, v in pairs(command.pass_arguments or {}) do
+					cmd[k] = v
+				end
+
+				return { cmd }
+			end
+		end,
+		executable = function(command, myplayer, tick)
+			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.name .. "_" .. command.data.index] then
+				return ""
+			else
+				return "Waiting for command: " .. command.data.name .. "_" .. command.data.index
+			end
+		end,
+		default_priority = 100,
+	},
+
+	parallel = {
+		initialize = empty,
+		spawn_commands = function(command, myplayer, tick)
+			local commands = {}
+			local i = 1
+			if global.high_level_commands.parallel_name == command.data.parent_command_group.name then
+				global.high_level_commands.parallel_index = global.high_level_commands.parallel_index + 1
+			else
+				global.high_level_commands.parallel_index = 1
+				global.high_level_commands.parallel_name = command.data.parent_command_group.name
+			end
+			for index, cmd in ipairs(command[2]) do
+				if not cmd.name then i = i + 1 end
+				commands[#commands + 1] = copy(cmd)
+				if command.name then
+					commands[#commands].name = command.data.parent_command_group.name .. "." .. command.name .. "_" .. (cmd.name or i)
+				else
+					commands[#commands].name = command.data.parent_command_group.name .. ".parallel-" .. global.high_level_commands.parallel_index .. "_" .. (cmd.name or i)
+				end
+			end
+			command.finished = true
+			return commands
+		end,
+		execute = return_phantom,
+		default_priority = 100,
+	},
+
+	-- sequence = {
+	-- 	initialize = function(command, myplayer, tick)
+	-- 		command.data.cmd_index = 0
+	-- 	end,
+	-- 	spawn_commands = function(command, myplayer, tick)
+	-- 		if command.data.cmd_index == 0 or global.command_list_parser.finished_command_names[command.ncommand.data.cmd_index]
+	-- 	end,
+	-- 	execute = return_phantom,
+	-- 	default_priority = 100,
+	-- }
 }
 
 
