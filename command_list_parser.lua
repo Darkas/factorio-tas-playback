@@ -8,8 +8,8 @@ global.command_list_parser = global.command_list_parser or {}
 
 inherited_actions = {
 	["auto-refuel"] = "put",
-	["auto-move-to"] = "move",
-	["auto-move-to-command"] = "move",
+	["move-to"] = "move",
+	["move-to-command"] = "move",
 	["auto-take"] = "take",
 	["auto-build-blueprint"] = "build",
 }
@@ -74,6 +74,10 @@ end
 
 -- Add command to current command set and initialize the command.
 function command_list_parser.add_command_to_current_set(command, myplayer, command_group)
+	if not high_level_commands[command[1]] then
+		error("The command with the name '" .. command[1] .. "' does not exist!")
+	end
+	
 	-- Reset on_relative_tick time.
 	if command.name then global.command_list_parser.command_finished_times[command.name] = nil end
 
@@ -165,11 +169,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		if global.command_list_parser.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
 		global.command_list_parser.loaded_command_groups[command_group.name] = true
 
-		for i, command in ipairs(command_group.commands) do
-			if not high_level_commands[command[1]] then
-				error("The command with the name '" .. command[1] .. "' does not exist!")
-			end
-				
+		for i, command in ipairs(command_group.commands) do	
 			command_list_parser.add_command_to_current_set(command, myplayer, command_group)
 		end
 
@@ -430,7 +430,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		end
 
 		if not com_finished then
-			log_to_ui(command[1] .. ": " .. "The prerequisite command has not finished", "command-not-executable")
+			log_to_ui(command[1] .. ": " .. "The prerequisite (" .. command.command_finished  .. ") command has not finished", "command-not-executable")
 			return false
 		end
 	end

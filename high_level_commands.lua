@@ -12,7 +12,7 @@ global.high_level_commands = global.high_level_commands or {
 
 function auto_move_to_low_level (command, myplayer, tick)
 	if not (command.data.target_pos and command.data.move_started) then
-		if command[1] == "auto-move-to" then
+		if command[1] == "move-to" then
 			command.data.target_pos = command[2]
 		else
 			command.data.target_pos = {}
@@ -89,13 +89,13 @@ function auto_move_to_low_level (command, myplayer, tick)
 end
 
 function auto_move_execute(command, myplayer, tick)
-	if command[1] == "auto-move-to-command" and in_range(command.data.target_command, myplayer, tick) then
+	if command[1] == "move-to-command" and in_range(command.data.target_command, myplayer, tick) then
 		command.finished = true
 		return {"phantom"}
 	end
 
 	if command.data.move_dir == "" then
-		if command[1] == "auto-move-to" then
+		if command[1] == "move-to" then
 			command.finished = true
 			return {"phantom"}
 		else
@@ -228,52 +228,6 @@ high_level_commands = {
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
 			command.data.area = area
 		end
-	},
-
-	["auto-move-to"] = {
-		execute = auto_move_execute,
-		executable = auto_move_to_low_level,
-		default_priority = 7,
-		initialize = function (command, myplayer)
-			command.data.move_north = false
-			command.data.move_south = false
-			command.data.move_west = false
-			command.data.move_east = false
-		end
-	},
-
-	["auto-move-to-command"] = {
-		execute = auto_move_execute,
-		executable = function(command, myplayer, tick)
-			if not command.data.target_command then
-				for _, com in pairs(global.command_list_parser.current_command_set) do
-					if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
-						command.data.target_command = com
-					end
-				end
-			end
-
-			if not command.data.target_command then
-				return "There is no command named: " .. command[2]
-			end
-
-			if command.data.target_command[1] == "craft-build" and command.data.target_command.data.build_command then
-				command.data.target_command = command.data.target_command.data.build_command
-			end
-
-			if not command.data.target_command.rect then
-				return "The command does currently not have a location"
-			end
-
-			return auto_move_to_low_level(command, myplayer, tick)
-		end,
-		default_priority = 7,
-		initialize = function (command, myplayer)
-			command.data.move_north = false
-			command.data.move_south = false
-			command.data.move_west = false
-			command.data.move_east = false
-		end,
 	},
 
 	["auto-refuel"] = {
@@ -576,6 +530,52 @@ high_level_commands = {
 			end
 		end,
 		default_action_type = action_types.selection,
+	},
+	
+	["move-to"] = {
+		execute = auto_move_execute,
+		executable = auto_move_to_low_level,
+		default_priority = 7,
+		initialize = function (command, myplayer)
+			command.data.move_north = false
+			command.data.move_south = false
+			command.data.move_west = false
+			command.data.move_east = false
+		end
+	},
+
+	["move-to-command"] = {
+		execute = auto_move_execute,
+		executable = function(command, myplayer, tick)
+			if not command.data.target_command then
+				for _, com in pairs(global.command_list_parser.current_command_set) do
+					if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
+						command.data.target_command = com
+					end
+				end
+			end
+
+			if not command.data.target_command then
+				return "There is no command named: " .. command[2]
+			end
+
+			if command.data.target_command[1] == "craft-build" and command.data.target_command.data.build_command then
+				command.data.target_command = command.data.target_command.data.build_command
+			end
+
+			if not command.data.target_command.rect then
+				return "The command does currently not have a location"
+			end
+
+			return auto_move_to_low_level(command, myplayer, tick)
+		end,
+		default_priority = 7,
+		initialize = function (command, myplayer)
+			command.data.move_north = false
+			command.data.move_south = false
+			command.data.move_west = false
+			command.data.move_east = false
+		end,
 	},
 
 	pickup = {
@@ -894,7 +894,7 @@ high_level_commands = {
 				return {
 					cmd,
 					{
-						"auto-move-to-command",
+						"move-to-command",
 						"command-" .. command.data.index,
 						namespace = command.data.namespace,
 					}
@@ -924,7 +924,7 @@ high_level_commands = {
 			if command.name then
 				command.data.namespace = command.namespace  .. command.name .. "-" .. global.high_level_commands.simple_sequence_index .. "."
 			else
-				command.data.namespace = command.namespace ..  command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
+				command.data.namespace = command.namespace .. "move-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
 			end
 		end,
 		execute = return_phantom,
@@ -934,7 +934,7 @@ high_level_commands = {
 				command.finished = true
 			else
 				local cmd = {
-					"auto-move-to",
+					"move-to",
 					command[command.data.index + 1],
 					name= "command-" .. command.data.index,
 					namespace=command.data.namespace,
