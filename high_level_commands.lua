@@ -152,6 +152,7 @@ high_level_commands = {
 			for _, entity in pairs(entities) do
 				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
 					entity.built = true
+					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 				end
 
 				if not entity.built then
@@ -161,8 +162,9 @@ high_level_commands = {
 						entity.name,
 						entity.position,
 						entity.direction,
-						name=command.data.namespace_prefix .. "bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-						on_leaving_range = command.set_on_leaving_range and true
+						name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+						on_leaving_range = command.set_on_leaving_range and true,
+						namespace = command.namespace,
 					}
 					if entity.name == "underground-belt" then
 						build_command[5] = entity.type
@@ -180,7 +182,8 @@ high_level_commands = {
 						"recipe",
 						entity.position,
 						entity.recipe,
-						name=command.data.namespace_prefix .. "bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+						name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+						namespace = command.namespace,
 					}
 					table.insert(added_commands, recipe_command)
 					table.insert(command.data.all_commands, recipe_command)
@@ -192,7 +195,8 @@ high_level_commands = {
 								entity.position,
 								name,
 								count,
-								name=command.data.namespace_prefix .. "bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+								name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+								namespace = command.namespace,
 							}
 							table.insert(command.data.all_commands, module_command)
 							table.insert(added_commands, module_command)
@@ -223,8 +227,6 @@ high_level_commands = {
 			local rotation = command.rotation or defines.direction.north
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
 			command.data.area = area
-
-			command.data.namespace_prefix = command.data.parent_command_group.name .. "."
 		end
 	},
 
@@ -245,7 +247,7 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			if not command.data.target_command then
 				for _, com in pairs(global.command_list_parser.current_command_set) do
-					if com.name == namespace_prefix(command[2], command.data.parent_command_group.name) then
+					if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 						command.data.target_command = com
 					end
 				end
@@ -272,9 +274,6 @@ high_level_commands = {
 			command.data.move_west = false
 			command.data.move_east = false
 		end,
-		init_dependencies = function (command)
-			return command[2]
-		end
 	},
 
 	["auto-refuel"] = {
@@ -721,17 +720,21 @@ high_level_commands = {
 		execute = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
-			local cancel = namespace_prefix(command[2], command.command_group)
-
 			for _,com in pairs(global.command_list_parser.current_command_set) do
-				if com.name == cancel then
+				if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 					com.finished = true
+					command.finished = true
 					if com[1] == "mine" then
 						global.command_list_parser.current_mining = 0
 					end
+					
+					break
 				end
 			end
-			command.finished = true
+			
+			if not command.finished then
+				errprint("No command with the name " .. command[2] .. " found!")
+			end
 		end,
 	},
 
@@ -867,9 +870,9 @@ high_level_commands = {
 
 			command.data.index = 0
 			if command.name then
-				command.data.name = command.name .. "-" .. global.high_level_commands.simple_sequence_index
+				command.data.namespace = command.namespace .. "simple-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
 			else
-				command.data.name = command.data.parent_command_group.name .. "." .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index
+				command.data.namespace = command.namespace .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
 			end
 		end,
 		execute = return_phantom,
@@ -881,7 +884,8 @@ high_level_commands = {
 				local cmd = {
 					command[2],
 					command[command.data.index + 2],
-					name=command.data.name .. "_" .. command.data.index,
+					name= "command-" .. command.data.index,
+					namespace=command.data.namespace,
 				}
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
@@ -891,16 +895,17 @@ high_level_commands = {
 					cmd,
 					{
 						"auto-move-to-command",
-						command.data.name .. "_" .. command.data.index,
+						"command-" .. command.data.index,
+						namespace = command.data.namespace,
 					}
 				}
 			end
 		end,
 		executable = function(command, myplayer, tick)
-			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.name .. "_" .. command.data.index] then
+			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.namespace .. "command-" .. command.data.index] then
 				return ""
 			else
-				return "Waiting for command: " .. command.data.name .. "_" .. command.data.index
+				return "Waiting for command: command-" .. command.data.index
 			end
 		end,
 		default_priority = 100,
@@ -917,9 +922,9 @@ high_level_commands = {
 
 			command.data.index = 0
 			if command.name then
-				command.data.name = command.data.parent_command_group.name .. "." .. command.name .. "-" .. global.high_level_commands.simple_sequence_index
+				command.data.namespace = command.namespace  .. command.name .. "-" .. global.high_level_commands.simple_sequence_index .. "."
 			else
-				command.data.name = command.data.parent_command_group.name .. "." .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index
+				command.data.namespace = command.namespace ..  command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
 			end
 		end,
 		execute = return_phantom,
@@ -931,7 +936,8 @@ high_level_commands = {
 				local cmd = {
 					"auto-move-to",
 					command[command.data.index + 1],
-					name=command.data.name .. "_" .. command.data.index,
+					name= "command-" .. command.data.index,
+					namespace=command.data.namespace,
 				}
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
@@ -941,16 +947,17 @@ high_level_commands = {
 			end
 		end,
 		executable = function(command, myplayer, tick)
-			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.name .. "_" .. command.data.index] then
+			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.namespace .. "command-" .. command.data.index] then
 				return ""
 			else
-				return "Waiting for command: " .. command.data.name .. "_" .. command.data.index
+				return "Waiting for command: command-" .. command.data.index
 			end
 		end,
 		default_priority = 100,
 	},
 
 	parallel = {
+		execute = return_phantom,
 		initialize = empty,
 		spawn_commands = function(command, myplayer, tick)
 			local commands = {}
@@ -962,18 +969,21 @@ high_level_commands = {
 				global.high_level_commands.parallel_name = command.data.parent_command_group.name
 			end
 			for index, cmd in ipairs(command[2]) do
-				if not cmd.name then i = i + 1 end
+				if not cmd.name then
+					i = i + 1
+					cmd.name = i
+				end
 				commands[#commands + 1] = copy(cmd)
 				if command.name then
-					commands[#commands].name = command.data.parent_command_group.name .. "." .. command.name .. "_" .. (cmd.name or i)
+					commands[#commands].namespace = command.namespace .. command.name .. "."
 				else
-					commands[#commands].name = command.data.parent_command_group.name .. ".parallel-" .. global.high_level_commands.parallel_index .. "_" .. (cmd.name or i)
+					commands[#commands].namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
 				end
 			end
+			
 			command.finished = true
 			return commands
 		end,
-		execute = return_phantom,
 		default_priority = 100,
 	},
 
@@ -994,7 +1004,6 @@ defaults = {
 	execute = return_self_finished,
 	executable = function () return "" end,
 	initialize = empty,
-	init_dependencies = empty,
 	default_action_type = action_types.always_possible,
 	default_priority = 5,
 	spawn_commands = function () return {} end,

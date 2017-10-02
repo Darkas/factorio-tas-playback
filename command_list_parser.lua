@@ -80,18 +80,15 @@ function command_list_parser.add_command_to_current_set(command, myplayer, comma
 	command.data = {}
 
 	command.data.parent_command_group = command_group
-
-	if command.name then
-		command.name = namespace_prefix(command.name, command_group.name)
-		-- Filter duplicate named commands. This is used e.g. for building blueprints with the same raw data but different areas.
-		if global.command_list_parser.initialized_names[command.name] then return end
-		if command.name then
-			global.command_list_parser.initialized_names[#global.command_list_parser.initialized_names + 1] = command.name
-		end
+	
+	if not command.namespace then
+		command.namespace = command_group.name .. "."
 	end
 
-	if command.command_finished then
-		command.command_finished = namespace_prefix(command.command_finished, command_group.name)
+	if command.name then
+		-- Filter duplicate named commands. This is used e.g. for building blueprints with the same raw data but different areas.
+		if global.command_list_parser.initialized_names[command.namespace .. command.name] then return end
+		global.command_list_parser.initialized_names[#global.command_list_parser.initialized_names + 1] = command.name
 	end
 
 	-- Set default priority
@@ -126,7 +123,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 
 	for _, command in pairs(global.command_list_parser.current_command_set) do
 		if command.finished and command.name then
-			global.command_list_parser.finished_command_names[command.name] = true
+			global.command_list_parser.finished_command_names[command.namespace .. command.name] = true
 			--table.remove(global.command_list_parser.current_command_set, k)
 		end
 
@@ -144,7 +141,8 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 				= {command_list[global.command_list_parser.current_command_group_index + 1].required}
 		end
 		for _,name in pairs(command_list[global.command_list_parser.current_command_group_index + 1].required) do
-			if not global.command_list_parser.finished_command_names[namespace_prefix(name, command_list[global.command_list_parser.current_command_group_index].name)] then
+			if not (global.command_list_parser.finished_command_names[command_list[global.command_list_parser.current_command_group_index].name .. "." .. name]
+					or global.command_list_parser.finished_command_names[name]) then
 				finished = false
 			end
 		end
@@ -167,20 +165,12 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		if global.command_list_parser.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
 		global.command_list_parser.loaded_command_groups[command_group.name] = true
 
-		local iterations = command_group.iterations or 5
-
-		for _=0, iterations do
-			for i, command in ipairs(command_group.commands) do
-				if not high_level_commands[command[1]] then
-					error("The command with the name '" .. command[1] .. "' does not exist!")
-				end
-
-				if (not high_level_commands[command[1]].init_dependencies(command)) or has_value(global.command_list_parser.initialized_names, namespace_prefix(high_level_commands[command[1]].init_dependencies(command), command_group.name)) then
-					command_list_parser.add_command_to_current_set(command, myplayer, command_group)
-
-					table.remove(command_group.commands, i)
-				end
+		for i, command in ipairs(command_group.commands) do
+			if not high_level_commands[command[1]] then
+				error("The command with the name '" .. command[1] .. "' does not exist!")
 			end
+				
+			command_list_parser.add_command_to_current_set(command, myplayer, command_group)
 		end
 
 		global.command_list_parser.current_command_group_tick = tick
@@ -434,7 +424,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		local com_finished = false
 
 		for _, com in pairs(global.command_list_parser.current_command_set) do
-			if com.finished and com.name and com.name == command.command_finished then
+			if com.finished and com.name and has_value({command.command_finished, command.namespace .. command.command_finished}, com.namespace .. com.name) then
 				com_finished = true
 			end
 		end
