@@ -15,7 +15,7 @@ function auto_move_to_low_level (command, myplayer, tick)
 	if not (command.data.target_pos and command.data.move_started) then
 		if command[1] == "move-to" then
 			command.data.target_pos = command[2]
-		else
+		elseif command[1] == "move-to-command" then
 			command.data.target_pos = {}
 			command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
 		end
@@ -90,7 +90,7 @@ function auto_move_to_low_level (command, myplayer, tick)
 end
 
 function auto_move_execute(command, myplayer, tick)
-	if command[1] == "move-to-command" and in_range(command.data.target_command, myplayer, tick) then
+	if (command[1] == "move-to-command" and in_range(command.data.target_command, myplayer)) or (command[1] == "move-to-entity" and in_range(command, myplayer)) then
 		command.finished = true
 		return {"phantom"}
 	end
@@ -431,7 +431,7 @@ high_level_commands = {
 				if need_intermediates then
 					local recipe = game.recipe_prototypes[craft.name]
 					for _, ingr in pairs(recipe.ingredients) do
-						if myplayer.get_item_count(ingr.name) < ingr.amount * craft[2] then
+						if myplayer.get_item_count(ingr.name) < ingr.amount * craft.count then
 							return false
 						end
 					end
@@ -465,7 +465,7 @@ high_level_commands = {
 			if not myplayer.force.recipes[item].enabled then
 				return "Recipe " .. craft.name .. " is not available."
 			end
-			if command.need_intermediates then
+			if command.data.crafts[1].need_intermediates then
 				local recipe = game.recipe_prototypes[item]
 				for _, ingr in pairs(recipe.ingredients) do
 					if myplayer.get_item_count(ingr.name) < ingr.amount then
@@ -487,7 +487,13 @@ high_level_commands = {
 			elseif type(command[2]) == "table" then
 				command.data.crafts = {}
 				for _, craft in pairs(command[2]) do
-					command.data.crafts[#command.data.crafts + 1] = {name = craft[1] or craft.name, count = craft[2] or craft.count, need_intermediates = craft.need_intermediates}
+					local need_intermediates = craft.need_intermediates
+					if need_intermediates == nil then
+						need_intermediates = command.need_intermediates
+					end
+					local name = craft[1] or craft.name
+					local count = craft[2] or craft.count
+					command.data.crafts[#command.data.crafts + 1] = {name = name, count = count, need_intermediates = need_intermediates}
 				end
 			else
 				errprint("Craft: Wrong parameter type")
@@ -702,22 +708,34 @@ high_level_commands = {
 		end
 	},
 
-	-- ["move-to-entity"] = {
-	-- 	type_signature = {
-	-- 		[2] = "position",
-	-- 	},
-	-- 	execute = auto_move_execute,
-	-- 	executable = function(command, myplayer, tick)
-	-- 		if not command.data.target_entity then
-	-- 	end,
-	-- 	default_priority = 7,
-	-- 	initialize = function (command, myplayer)
-	-- 		command.data.move_north = false
-	-- 		command.data.move_south = false
-	-- 		command.data.move_west = false
-	-- 		command.data.move_east = false
-	-- 	end
-	-- },
+	["move-to-entity"] = {
+		type_signature = {
+			[2] = "position",
+		},
+		execute = auto_move_execute,
+		executable = function(command, myplayer, tick)
+			if not command.data.target_entity then
+				command.data.target_entity = get_entity_from_pos(command[2], myplayer)
+				if not command.data.target_entity then
+					return "No entity at " .. serpent.block(command.position) .. "."
+				else
+					command.rect = collision_box(command.data.target_entity)
+					command.data.target_pos = closest_point(command.rect, command.distance, myplayer.position)
+				end
+
+			end
+			return auto_move_to_low_level(command, myplayer, tick)
+		end,
+		default_priority = 7,
+		initialize = function (command, myplayer)
+			command.data.move_north = false
+			command.data.move_south = false
+			command.data.move_west = false
+			command.data.move_east = false
+
+			command.distance = myplayer.reach_distance
+		end
+	},
 
 	["move-to-command"] = {
 		type_signature = {

@@ -256,6 +256,7 @@ end
 
 -- Works only for axis-aligned rectangles.
 function distance_from_rect(pos, rect)
+	if not rect then game.print(debug.traceback()) error("Called distance_from_rect with invalid rect param.") end
 	if not closest then closest = {} end
 	local posx, posy = get_coordinates(pos)
 	local rect1x, rect1y = get_coordinates(rect[1])
