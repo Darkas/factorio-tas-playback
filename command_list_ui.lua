@@ -11,13 +11,6 @@ local passive_commands = {
 	"pickup",
 }
 
-function printable(v)
-	if v == nil then return "nil"
-	elseif v == true then return "true"
-	elseif v == false then return "false"
-	elseif type(v) == type({}) then return "<table>"
-	else return v end
-end
 
 function init_command_list_ui()
 	if global.command_list_ui then return end
@@ -132,7 +125,9 @@ function update_command_list_ui(player, command_list)
 			if command and not command.finished then
 				s = "[" .. index .. "] | "
 				for key, value in pairs(command) do
-					s = s .. key .. "= " .. printable(value) .. " | "
+					if not in_list(key, {"data", "action_type", "tested", "rect", "distance"}) then
+						s = s .. key .. "= " .. printable(value) .. " | "
+					end
 				end
 				frame.scroll_pane.table["text_" .. index].caption = s
 			else
