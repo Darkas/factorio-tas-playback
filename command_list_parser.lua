@@ -30,6 +30,7 @@ function command_list_parser.init()
 	global.command_list_parser.stopped = true
 	global.command_list_parser.current_ui = nil
 	global.command_list_parser.entities_with_burner = {}
+	global.command_list_parser.entities_by_type = {}
 
 	global.command_list_parser.current_command_group_index = 0
 	global.command_list_parser.current_command_group_tick = nil
@@ -68,6 +69,12 @@ function command_list_parser.add_entity_to_global (entity)
 	if entity.burner then
 		global.command_list_parser.entities_with_burner[#global.command_list_parser.entities_with_burner + 1] = entity
 	end
+	
+	if not global.command_list_parser.entities_by_type[entity.type] then
+		global.command_list_parser.entities_by_type[entity.type] = {}
+	end
+	
+	global.command_list_parser.entities_by_type[entity.type][#global.command_list_parser.entities_by_type[entity.type] + 1] = entity
 end
 
 

@@ -472,6 +472,8 @@ high_level_commands = {
 		execute = return_phantom,
 		executable = function (command, myplayer)
 			if in_range(command, myplayer) then
+				command.finished = true
+
 				return ""
 			else
 				return "Out of range"
@@ -484,8 +486,6 @@ high_level_commands = {
 			local entity = get_entity_from_pos(command[2], myplayer)
 
 			command.rect = collision_box(entity)
-
-			command.finished = true
 		end,
 	},
 
@@ -572,6 +572,7 @@ high_level_commands = {
 			end
 
 			if not command.data.target_command then
+				errprint("move-to-command: There is no command named: " .. command[2])
 				return "There is no command named: " .. command[2]
 			end
 
@@ -603,6 +604,71 @@ high_level_commands = {
 			command.data.move_south = false
 			command.data.move_west = false
 			command.data.move_east = false
+		end,
+	},
+
+	parallel = {
+		execute = return_phantom,
+		initialize = empty,
+		spawn_commands = function(command, myplayer, tick)
+			local commands = {}
+			local i = 1
+			if global.high_level_commands.parallel_name == command.data.parent_command_group.name then
+				global.high_level_commands.parallel_index = global.high_level_commands.parallel_index + 1
+			else
+				global.high_level_commands.parallel_index = 1
+				global.high_level_commands.parallel_name = command.data.parent_command_group.name
+			end
+			for index, cmd in ipairs(command[2]) do
+				if not cmd.name then
+					i = i + 1
+					cmd.name = i
+				end
+				commands[#commands + 1] = copy(cmd)
+				if command.name then
+					commands[#commands].namespace = command.namespace .. command.name .. "."
+				else
+					commands[#commands].namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
+				end
+			end
+
+			command.finished = true
+			return commands
+		end,
+		default_priority = 100,
+	},
+
+	["passive-take"] = {
+		execute = return_phantom,
+		executable = function (command, myplayer, tick)
+			command.data.spawn_queue = {}
+
+			for i,entity in pairs(global.command_list_parser.entities_by_type[command[3]]) do
+				if (not command.data.take_spawned[i]) and entity.get_item_count(command[2]) > 0 then
+					local cmd = {"take", {entity.position.x, entity.position.y}, data={}, namespace=command.namespace}
+
+					if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
+						command.data.take_spawned[i] = true
+						table.insert(command.data.spawn_queue, cmd)
+					end
+				else
+					if entity.get_item_count(command[2]) == 0 then
+						command.data.take_spawned[i] = false
+					end
+				end
+			end
+
+			if #command.data.spawn_queue == 0 then
+				return "No new commands available"
+			end
+
+			return ""
+		end,
+		spawn_commands = function(command, myplayer, tick)
+			return command.data.spawn_queue
+		end,
+		initialize = function(command, myplayer, tick)
+			command.data.take_spawned = {}
 		end,
 	},
 
@@ -980,37 +1046,6 @@ high_level_commands = {
 			else
 				return "Waiting for command: command-" .. command.data.index
 			end
-		end,
-		default_priority = 100,
-	},
-
-	parallel = {
-		execute = return_phantom,
-		initialize = empty,
-		spawn_commands = function(command, myplayer, tick)
-			local commands = {}
-			local i = 1
-			if global.high_level_commands.parallel_name == command.data.parent_command_group.name then
-				global.high_level_commands.parallel_index = global.high_level_commands.parallel_index + 1
-			else
-				global.high_level_commands.parallel_index = 1
-				global.high_level_commands.parallel_name = command.data.parent_command_group.name
-			end
-			for index, cmd in ipairs(command[2]) do
-				if not cmd.name then
-					i = i + 1
-					cmd.name = i
-				end
-				commands[#commands + 1] = copy(cmd)
-				if command.name then
-					commands[#commands].namespace = command.namespace .. command.name .. "."
-				else
-					commands[#commands].namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
-				end
-			end
-
-			command.finished = true
-			return commands
 		end,
 		default_priority = 100,
 	},
