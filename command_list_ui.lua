@@ -1,13 +1,19 @@
 require("mod-gui")
 
-NUM_LINES = 20
---[[ 
-	
+NUM_LINES = 40
+--[[
+
 --]]
+
+local passive_commands = {
+	"passive-take",
+	"auto-refuel",
+	"pickup",
+}
 
 function printable(v)
 	if v == nil then return "nil"
-	elseif v == true then return "true" 
+	elseif v == true then return "true"
 	elseif v == false then return "false"
 	elseif type(v) == type({}) then return "<table>"
 	else return v end
@@ -17,7 +23,7 @@ function init_command_list_ui()
 	if global.command_list_ui then return end
 	global.command_list_ui = {}
 	global.command_list_ui.ui_hidden = {}
-	
+
 end
 
 function create_command_list_ui(player)
@@ -33,16 +39,18 @@ function create_command_list_ui(player)
 
 	local label = top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
 	top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
+	local label = top_flow.add{type="label", style="label_style", name = "title_show_passive", caption="[Show Passive]"}
+	top_flow.add{type="checkbox", name="show_passive_button", state=true}
 
 	local group_flow = frame.add{type="flow", name="group_flow", style="flow_style", direction="horizontal"}
-	local label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
+	label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
 	label.style.font = "default-semibold"
 	local button = group_flow.add{type="button", style="button_style", name="next_command_group", caption="Next Command Group"}
 	button.style.top_padding = 0
 	button.style.bottom_padding = 0
 	button.style.font = "default-semibold"
 
-	local label = frame.add{type="label", style="label_style", name="required_for_next", caption = "Required for next"}
+	label = frame.add{type="label", style="label_style", name="required_for_next", caption = "Required for next"}
 	label.style.font = "default-semibold"
 
 	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
@@ -55,7 +63,7 @@ function create_command_list_ui(player)
 	scroll_pane.style.minimal_width = 50
 
 	for index=1, NUM_LINES do
-		local label = table.add{type="label", style="label_style", name = "text_" .. index, caption="_", single_line=true, want_ellipsis=true}
+		label = table.add{type="label", style="label_style", name = "text_" .. index, caption="_", single_line=true, want_ellipsis=true}
 		label.style.top_padding = 0
 		label.style.bottom_padding = 0
 		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
@@ -72,8 +80,8 @@ function update_command_list_ui(player, command_list)
 
 	if not global.command_list_ui then init_command_list_ui() end
 
-	if not frame then 
-		create_command_list_ui(player) 
+	if not frame then
+		create_command_list_ui(player)
 		frame = flow.command_list_frame
 	end
 
@@ -92,7 +100,7 @@ function update_command_list_ui(player, command_list)
 
 	-- Update
 	if show then
-
+		local show_passive_commands = frame.top_flow.show_passive_button.state
 		local current_command_group = command_list[global.command_list_parser.current_command_group_index]
 		frame.group_flow.current_command_group.caption = "Active Command Group: " .. current_command_group.name
 
@@ -115,13 +123,13 @@ function update_command_list_ui(player, command_list)
 
 		local command_set_index = 1
 		for index = 1, NUM_LINES do
-			local command = nil
+			local command
 			repeat
 				command = global.command_list_parser.current_command_set[command_set_index]
 				command_set_index = command_set_index + 1
-			until (command and not command.finished) or command_set_index > #global.command_list_parser.current_command_set
+			until (command and not command.finished and (show_passive_commands or not in_list(command[1], passive_commands))) or command_set_index > #global.command_list_parser.current_command_set
 
-			if command and not command.finished then 
+			if command and not command.finished then
 				s = "[" .. index .. "] | "
 				for key, value in pairs(command) do
 					s = s .. key .. "= " .. printable(value) .. " | "
@@ -138,4 +146,3 @@ function destroy_command_list_ui(player)
 	local fr = mod_gui.get_frame_flow(player).command_list_frame
 	if fr and fr.valid then fr.destroy() end
 end
-
