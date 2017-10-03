@@ -83,9 +83,13 @@ end
 -- Maths and Geometry
 ----------------------
 
-function roundn(x)
-  if not x then game.print(debug.traceback()); error("roundn called without valid parameter.") end
-  return math.floor(x + 0.5)
+function roundn(x, prec)
+	if not x then game.print(debug.traceback()); error("roundn called without valid parameter.") end
+	if not prec then
+		return math.floor(x + 0.5)
+	else
+		return math.floor(x*10^prec + 0.5) / 10^prec
+	end
 end
 
 -- don't use this function, use in_range instead
@@ -358,7 +362,20 @@ function rotation_stringtoint(rot)
 	end
 end
 
-
+function printable(v)
+	if v == nil then return "nil"
+	elseif v == true then return "true"
+	elseif v == false then return "false"
+	elseif type(v) == "table" then
+		if type(v[1] or v.x) == "number" and type(v[2] or v.y) == "number" and not v[3] then
+			return "{" .. roundn(v[1] or v.x, 1) .. ", " .. roundn(v[2] or v.y, 1) .. "}"
+		else
+			return "{…}"
+		end
+	else
+		return v
+	end
+end
 
 -- Surface related
 -------------------
