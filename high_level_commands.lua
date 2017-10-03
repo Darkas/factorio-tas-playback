@@ -4,7 +4,8 @@ local TAScommands = require("commands")
 global.high_level_commands = global.high_level_commands or {
 	throw_cooldown = nil,
 	simple_sequence_index = 1,
-	move_sequence_index = 1
+	move_sequence_index = 1,
+	command_requests = {},
 }
 
 
@@ -146,6 +147,21 @@ high_level_commands = {
 		spawn_commands = function (command, myplayer, tick)
 			local blueprint = command.data.blueprint_data
 			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
+
+			-- This is for compatibility between move-to-command and build-blueprint.
+			for index, name in pairs(global.high_level_commands.command_requests) do
+				if string.sub(name, 1, 3) == "bp_" then
+					local data = string.sub(name, 4)
+					local position = {}
+					for i, v in string.gmatch(data, "{(.*),(.*)}") do
+						position[i] = v
+					end
+					local entity = Blueprint.get_entity_at(blueprint, position)
+					entities[#entities + 1] = entity
+					table.remove(global.high_level_commands.command_requests, index)
+				end
+			end
+
 			command.data.all_commands = command.data.all_commands or {}
 			local added_commands = {}
 
@@ -531,7 +547,7 @@ high_level_commands = {
 		end,
 		default_action_type = action_types.selection,
 	},
-	
+
 	["move-to"] = {
 		execute = auto_move_execute,
 		executable = auto_move_to_low_level,
@@ -571,6 +587,18 @@ high_level_commands = {
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
+			if not command.data.target_command then
+				for _, com in pairs(global.command_list_parser.current_command_set) do
+					if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
+						command.data.target_command = com
+					end
+				end
+			end
+
+			if not command.data.target_command then
+				global.high_level_commands.command_requests[#global.high_level_commands.command_requests + 1] = command[2]
+			end
+
 			command.data.move_north = false
 			command.data.move_south = false
 			command.data.move_west = false
@@ -727,11 +755,11 @@ high_level_commands = {
 					if com[1] == "mine" then
 						global.command_list_parser.current_mining = 0
 					end
-					
+
 					break
 				end
 			end
-			
+
 			if not command.finished then
 				errprint("No command with the name " .. command[2] .. " found!")
 			end
@@ -980,7 +1008,7 @@ high_level_commands = {
 					commands[#commands].namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
 				end
 			end
-			
+
 			command.finished = true
 			return commands
 		end,

@@ -14,6 +14,10 @@ function tables_equal(t1, t2)
 	return serpent.block(t1) == serpent.block(t2)
 end
 
+function is_position(table)
+	return type(v) == "table" and type(v[1] or v.x) == "number" and type(v[2] or v.y) == "number" and not v[3]
+end
+
 -- Taken from https://stackoverflow.com/questions/640642/how-do-you-copy-a-lua-table-by-value
 function copy(obj, seen)
   if type(obj) ~= 'table' then return obj end

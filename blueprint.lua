@@ -107,6 +107,19 @@ function Blueprint.get_entities_close(blueprint_data, position)
   return res
 end
 
+function Blueprint.get_entity_at(blueprint_data, position)
+    local res = {}
+    local entities = blueprint_data.chunked_entities
+    local X, Y = position.x or position[1], position.y or position[2]
+    local x = math.floor(X / blueprint_data.chunk_size)
+    local y = math.floor(Y / blueprint_data.chunk_size)
+    for _, entity in pairs(entities[x .. "_" .. y]) do
+        if entity.x == X and entity.y == Y then
+            return entity
+        end
+    end
+end
+
 function Blueprint.key_from_position(position, chunk_size)
   return math.floor((position.x or position[1]) / chunk_size) .. "_" .. math.floor((position.y or position[2]) / chunk_size)
 end
