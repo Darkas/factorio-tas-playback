@@ -364,7 +364,7 @@ end
 -------------------
 
 function get_entity_from_pos(pos, myplayer, types, epsilon)
-	if not pos then game.print(debug.traceback()) end
+	if (not pos) or (type(pos) ~= type({})) then game.print(debug.traceback()) end
 	local x, y = get_coordinates(pos)
 
 	if not epsilon then
