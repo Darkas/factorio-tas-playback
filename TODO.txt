@@ -1,4 +1,3 @@
-- Implement type checking for parameters of commands
 - Implement a flag for command groups that executes commands sequentially
 - Set type of throw-grenade cmd.
 

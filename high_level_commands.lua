@@ -425,11 +425,11 @@ high_level_commands = {
 			local return_crafts = {}
 
 			local function can_craft(craft, myplayer, need_intermediates)
-				if not myplayer.force.recipes[craft[1]].enabled then
+				if not myplayer.force.recipes[craft.name].enabled then
 					return false
 				end
 				if need_intermediates then
-					local recipe = game.recipe_prototypes[craft[1]]
+					local recipe = game.recipe_prototypes[craft.name]
 					for _, ingr in pairs(recipe.ingredients) do
 						if myplayer.get_item_count(ingr.name) < ingr.amount then
 							return false
@@ -437,35 +437,44 @@ high_level_commands = {
 					end
 					return true
 				else
-					return myplayer.get_craftable_count(craft[1]) >= craft[2]
+					return myplayer.get_craftable_count(craft.name) >= craft.count
 				end
 			end
-			while can_craft(craft, myplayer, command.need_intermediates) do
-				TAScommands["craft"]({"craft", craft[1], craft[2]}, myplayer)
+
+			while can_craft(craft, myplayer, craft.need_intermediates) do
+				TAScommands["craft"]({"craft", craft.name, 1}, myplayer)
 				table.insert(return_crafts, craft)
 
-				command.data.craft_index = command.data.craft_index + 1
-				craft = command.data.crafts[command.data.craft_index]
+				craft.count = craft.count - 1
+				if craft.count == 0 then
+					game.print("Craft changed! " .. serpent.block(craft) .. " to " .. serpent.block(command.data.crafts[command.data.craft_index + 1] or {}))
+					command.data.craft_index = command.data.craft_index + 1
+					craft = command.data.crafts[command.data.craft_index]
+				end
 
 				if not craft then
+					game.print("finished!")
 					command.finished = true
 					break
 				end
+			end
+			if craft and not can_craft(craft, myplayer, craft.need_intermediates) then
+				game.print("Cannot craft! " .. craft.name)
 			end
 
 			return {"craft", return_crafts, already_executed=true}
 		end,
 		executable = function(command, myplayer, tick)
-			local item = command.data.crafts[1][1]
-			local count = command.data.crafts[1][2]
+			local item = command.data.crafts[1].name
+			local count = command.data.crafts[1].count
 			if not myplayer.force.recipes[item].enabled then
-				return "Recipe " .. craft[1] .. " is not available."
+				return "Recipe " .. craft.name .. " is not available."
 			end
 			if command.need_intermediates then
 				local recipe = game.recipe_prototypes[item]
 				for _, ingr in pairs(recipe.ingredients) do
 					if myplayer.get_item_count(ingr.name) < ingr.amount then
-						return "Player is missind " .. ingr.name .. " to craft " .. item .. "."
+						return "Player is missing " .. ingr.name .. " to craft " .. item .. "."
 					end
 				end
 				return ""
@@ -477,12 +486,14 @@ high_level_commands = {
 		end,
 		default_priority = 5,
 		initialize = function(command)
-			command[3] = command[3] or 1
-
 			if type(command[2]) == "string" then
-				command.data.crafts = {{command[2], command[3]}}
+				command[3] = command[3] or 1
+				command.data.crafts = {{name=command[2], count=command[3], need_intermediates=command.need_intermediates}}
 			elseif type(command[2]) == "table" then
-				command.data.crafts = command[2]
+				command.data.crafts = {}
+				for _, craft in pairs(command[2]) do
+					command.data.crafts[#command.data.crafts + 1] = {name = craft[1] or craft.name, count = craft[2] or craft.count, need_intermediates = craft.need_intermediates}
+				end
 			else
 				errprint("Craft: Wrong parameter type")
 			end
@@ -620,6 +631,56 @@ high_level_commands = {
 		default_action_type = action_types.selection,
 	},
 
+	["move-sequence"] = {
+		type_signature = {
+			[2] = "position",
+			[3] = "position",
+			passed_arguments = {"nil", "table"},
+		},
+		initialize = function(command, myplayer, tick)
+			if global.high_level_commands.move_sequence_name == command.data.parent_command_group.name then
+				global.high_level_commands.move_sequence_index = global.high_level_commands.move_sequence_index + 1
+			else
+				global.high_level_commands.move_sequence_index = 1
+				global.high_level_commands.move_sequence_name = command.data.parent_command_group.name
+			end
+
+			command.data.index = 0
+			if command.name then
+				command.data.namespace = command.namespace  .. command.name .. "-" .. global.high_level_commands.move_sequence_index .. "."
+			else
+				command.data.namespace = command.namespace .. "move-sequence-" .. global.high_level_commands.move_sequence_index .. "."
+			end
+		end,
+		execute = return_phantom,
+		spawn_commands = function(command, myplayer, tick)
+			command.data.index = command.data.index + 1
+			if command[command.data.index + 1] == nil then
+				command.finished = true
+			else
+				local cmd = {
+					"move-to",
+					command[command.data.index + 1],
+					name= "command-" .. command.data.index,
+					namespace=command.data.namespace,
+				}
+				for k, v in pairs(command.pass_arguments or {}) do
+					cmd[k] = v
+				end
+
+				return { cmd }
+			end
+		end,
+		executable = function(command, myplayer, tick)
+			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.namespace .. "command-" .. command.data.index] then
+				return ""
+			else
+				return "Waiting for command: command-" .. command.data.index
+			end
+		end,
+		default_priority = 100,
+	},
+
 	["move-to"] = {
 		type_signature = {
 			[2] = "position",
@@ -634,6 +695,23 @@ high_level_commands = {
 			command.data.move_east = false
 		end
 	},
+
+	-- ["move-to-entity"] = {
+	-- 	type_signature = {
+	-- 		[2] = "position",
+	-- 	},
+	-- 	execute = auto_move_execute,
+	-- 	executable = function(command, myplayer, tick)
+	-- 		if not command.data.target_entity then
+	-- 	end,
+	-- 	default_priority = 7,
+	-- 	initialize = function (command, myplayer)
+	-- 		command.data.move_north = false
+	-- 		command.data.move_south = false
+	-- 		command.data.move_west = false
+	-- 		command.data.move_east = false
+	-- 	end
+	-- },
 
 	["move-to-command"] = {
 		type_signature = {
@@ -1131,24 +1209,24 @@ high_level_commands = {
 		default_priority = 100,
 	},
 
-	["move-sequence"] = {
+	sequence = {
 		type_signature = {
 			[2] = "table",
-			passed_arguments = {"nil", "table"},
+			pass_arguments = {"table", "nil"},
 		},
 		initialize = function(command, myplayer, tick)
-			if global.high_level_commands.move_sequence_name == command.data.parent_command_group.name then
-				global.high_level_commands.move_sequence_index = global.high_level_commands.move_sequence_index + 1
+			if global.high_level_commands.sequence_name == command.data.parent_command_group.name then
+				global.high_level_commands.sequence_index = global.high_level_commands.sequence_index + 1
 			else
-				global.high_level_commands.move_sequence_index = 1
-				global.high_level_commands.move_sequence_name = command.data.parent_command_group.name
+				global.high_level_commands.sequence_index = 1
+				global.high_level_commands.sequence_name = command.data.parent_command_group.name
 			end
 
 			command.data.index = 0
 			if command.name then
-				command.data.namespace = command.namespace  .. command.name .. "-" .. global.high_level_commands.simple_sequence_index .. "."
+				command.data.namespace = command.namespace  .. command.name .. "-" .. global.high_level_commands.sequence_index .. "."
 			else
-				command.data.namespace = command.namespace .. "move-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
+				command.data.namespace = command.namespace .. "sequence-" .. global.high_level_commands.sequence_index .. "."
 			end
 		end,
 		execute = return_phantom,
@@ -1157,12 +1235,7 @@ high_level_commands = {
 			if command[command.data.index + 1] == nil then
 				command.finished = true
 			else
-				local cmd = {
-					"move-to",
-					command[command.data.index + 1],
-					name= "command-" .. command.data.index,
-					namespace=command.data.namespace,
-				}
+				local cmd = copy(command[2][command.data.index + 1])
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
 				end
@@ -1178,18 +1251,7 @@ high_level_commands = {
 			end
 		end,
 		default_priority = 100,
-	},
-
-	-- sequence = {
-	-- 	initialize = function(command, myplayer, tick)
-	-- 		command.data.cmd_index = 0
-	-- 	end,
-	-- 	spawn_commands = function(command, myplayer, tick)
-	-- 		if command.data.cmd_index == 0 or global.command_list_parser.finished_command_names[command.ncommand.data.cmd_index]
-	-- 	end,
-	-- 	execute = return_phantom,
-	-- 	default_priority = 100,
-	-- }
+	}
 }
 
 

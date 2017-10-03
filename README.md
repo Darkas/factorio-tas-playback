@@ -173,12 +173,14 @@ Currently implemented commands:
 * `{"mine", {<X>,<Y>}, amount=<int>, type=<string>}`: The `type` param is the entity type of the mined entity - typically "resource", "tree"; instead of "simple-entity" the string "rock" can also be used here.
 * `{"move-to", {<X>,<Y>}}`: move to a position, walking diagonal first, without smart path-finding around entities.
 * `{"move-to-command", "<command name>"}`: move to the closest point from the player that allows the command with the given name to be executed.
+* `{"move-sequence", {x1, y1}, ..., pass_arguments}`: Move to the positions in order.
 * `{"parallel", {<command-list>}}`: Add the commands in the list to the current command set.
 * `{"passive-take", <item>, <type>}`: Spawns `take` commands whenever there is an `<item>` in range available from an entity of the given type. `<type>` is not optional.
 * `{"pickup", oneshot=<bool>}`: Pick up items from ground. If `oneshot` is not set, we pick up until this command is stopped.
 * `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"recipe", {<X>,<Y>}, <recipe>}`
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
+* `{"sequence", {cmd1, cmd2}, pass_arguments={...}}`: Add the commands to the current command set, in order, only adding one after the previous is completed.
 * `{"simple-sequence", "<command>", {<x1>, <y1>}, ... , pass_arguments={k1=v1, k2=v2 ...}`: Execute the given command at the locations in the order as given and walk to those locations in between executions. All arguments in the pass_arguments table will be added to each command. Example: `{"simple-sequence", "mine", {0, 1}, {5, -4}, pass_arguments={[3]="tree"}}` mines two trees. Does currently not work with "build".
 * `{"speed", <speed>}`: Sets the game speed.
 * `{"stop"}`: Does nothing.
