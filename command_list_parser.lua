@@ -376,6 +376,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	local fail_reason = high_level_commands[command[1]].executable(command, myplayer, tick)
 
 	if fail_reason ~= "" then
+		if fail_reason == nil then game.print(serpent.block(command)) end
 		log_to_ui(command[1] .. ": " .. fail_reason, "command-not-executable")
 		return false
 	end
