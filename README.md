@@ -164,8 +164,8 @@ Currently implemented commands:
 * `{"auto-refuel", min=..., amount=..., type=..., skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type and skip_coal_drills.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
 * `{"build", <entity>, {<X>,<Y>}, <facing direction>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
-* `{"craft", <item>, <count>}`
-* `{"craft", {{<item>, <count>}, {<item>, <count>}, ...}}`: Executes craft commands in order
+* `{"craft", <item>, <count>, need_intermediates}`
+* `{"craft", {{<item>, <count>}, {<item>, <count>}, ...}, need_intermediates = <bool>}`: Executes craft commands in order. If `need_intermediates` is set, the craft will only be started if all necessary intermediate products in the recipe are already available.
 * `{"craft-build", <entity>, {<X>, <Y>}, <facing direction>}`: Add a craft command for the entity, when that command is finished, add a build command.
 * `{"display-warning" "<string>"}`: Display a warning string.
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"

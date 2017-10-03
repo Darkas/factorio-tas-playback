@@ -418,12 +418,29 @@ high_level_commands = {
 		type_signature = {
 			[2] = {"table", "string"},
 			[3] = {"number", "nil"},
+			need_intermediates = "boolean",
 		},
 		execute = function(command, myplayer)
 			local craft = command.data.crafts[command.data.craft_index]
 			local return_crafts = {}
 
-			while myplayer.get_craftable_count(craft[1]) >= craft[2] and myplayer.force.recipes[craft[1]].enabled do
+			local function can_craft(craft, myplayer, need_intermediates)
+				if not myplayer.force.recipes[craft[1]].enabled then
+					return false
+				end
+				if need_intermediates then
+					local recipe = game.recipe_prototypes[craft[1]]
+					for _, ingr in pairs(recipe.ingredients) do
+						if myplayer.get_item_count(ingr.name) < ingr.amount then
+							return false
+						end
+					end
+					return true
+				else
+					return myplayer.get_craftable_count(craft[1]) >= craft[2]
+				end
+			end
+			while can_craft(craft, myplayer, command.need_intermediates) do
 				TAScommands["craft"]({"craft", craft[1], craft[2]}, myplayer)
 				table.insert(return_crafts, craft)
 
@@ -441,7 +458,18 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			local item = command.data.crafts[1][1]
 			local count = command.data.crafts[1][2]
-			if myplayer.get_craftable_count(item) >= count then
+			if not myplayer.force.recipes[item].enabled then
+				return "Recipe " .. craft[1] .. " is not available."
+			end
+			if command.need_intermediates then
+				local recipe = game.recipe_prototypes[item]
+				for _, ingr in pairs(recipe.ingredients) do
+					if myplayer.get_item_count(ingr.name) < ingr.amount then
+						return "Player is missind " .. ingr.name .. " to craft " .. item .. "."
+					end
+				end
+				return ""
+			elseif myplayer.get_craftable_count(item) >= count then
 				return ""
 			else
 				return "Player does not have enough items to craft " .. item
