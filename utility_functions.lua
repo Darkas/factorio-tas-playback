@@ -14,7 +14,7 @@ function tables_equal(t1, t2)
 	return serpent.block(t1) == serpent.block(t2)
 end
 
-function is_position(table)
+function is_position(v)
 	return type(v) == "table" and type(v[1] or v.x) == "number" and type(v[2] or v.y) == "number" and not v[3]
 end
 

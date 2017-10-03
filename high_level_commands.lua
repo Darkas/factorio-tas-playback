@@ -133,9 +133,20 @@ end
 action_types = {always_possible = 1, selection = 2, ui = 3, throw = 4}
 entities_with_inventory = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"}
 
-high_level_commands = {
 
+
+
+
+
+high_level_commands = {
 	["auto-build-blueprint"] = {
+		type_signature =
+		{
+			[2] = "string",
+			[3] = {"nil", "position"},
+			area = {"nil", "table"},
+			rotation = {"nil", "number"},
+		},
 		default_priority = 100,
 
 		execute = return_phantom,
@@ -247,17 +258,19 @@ high_level_commands = {
 	},
 
 	["auto-refuel"] = {
+		type_signature = {
+			target = {"nil", "number"},
+			min = {"nil", "number"},
+			skip_coal_drills = "boolean",
+			type = {"nil", "string"}
+		},
 		execute = return_phantom,
 		spawn_commands = function(command, myplayer, tick)
 			if not command.data.already_refueled then
 				command.data.already_refueled = {}
 			end
 
-			local target_fuel = command.target
-
-			if not target_fuel then
-				target_fuel = command.min or 1
-			end
+			local target_fuel = command.target or command.min or 1
 
 			local new_commands = {}
 			local priority = 5
@@ -304,6 +317,11 @@ high_level_commands = {
 	},
 
 	["auto-take"] = {
+		type_signature = {
+			[2] = "string",
+			[3] = "number",
+			exact = "boolean",
+		},
 		spawn_commands = function(command, myplayer, tick)
 			if command.data.next_tick and command.data.next_tick >= tick then return end
 
@@ -363,6 +381,11 @@ high_level_commands = {
 	},
 
 	build = {
+		type_signature = {
+			[2] = "string",
+			[3] = "position",
+			[4] = {"nil", "number"},
+		},
 		execute = function(command, myplayer)
 			if myplayer.get_item_count(command[2]) ~= 0 then
 				TAScommands["build"](command, myplayer)
@@ -392,6 +415,10 @@ high_level_commands = {
 	},
 
 	craft = {
+		type_signature = {
+			[2] = {"table", "string"},
+			[3] = {"number", "nil"},
+		},
 		execute = function(command, myplayer)
 			local craft = command.data.crafts[command.data.craft_index]
 			local return_crafts = {}
@@ -424,9 +451,9 @@ high_level_commands = {
 		initialize = function(command)
 			command[3] = command[3] or 1
 
-			if type(command[2]) == type("") then
+			if type(command[2]) == "string" then
 				command.data.crafts = {{command[2], command[3]}}
-			elseif type(command[2]) == type({}) then
+			elseif type(command[2]) == "table" then
 				command.data.crafts = command[2]
 			else
 				errprint("Craft: Wrong parameter type")
@@ -437,6 +464,11 @@ high_level_commands = {
 	},
 
 	["craft-build"] = {
+		type_signature = {
+			[2] = "string",
+			[3] = "position",
+			[4] = {"nil", "number"},
+		},
 		default_priority = 5,
 		execute = return_phantom,
 		executable = function (command)
@@ -460,6 +492,9 @@ high_level_commands = {
 	},
 
 	["display-warning"] = {
+		type_signature = {
+			[2] = "string",
+		},
 		execute = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
@@ -469,6 +504,9 @@ high_level_commands = {
 	},
 
 	["entity-interaction"] = {
+		type_signature = {
+			[2] = "position",
+		},
 		execute = return_phantom,
 		executable = function (command, myplayer)
 			if in_range(command, myplayer) then
@@ -490,6 +528,7 @@ high_level_commands = {
 	},
 
 	["freeze-daytime"] = {
+		type_signature = { },
 		execute = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
@@ -498,6 +537,11 @@ high_level_commands = {
 	},
 
 	mine = {
+		type_signature = {
+			[2] = "position",
+			amount = {"nil", "number"},
+			type  = {"nil", "string"},
+		},
 		execute = function (command, myplayer, tick)
 			return command
 		end,
@@ -549,6 +593,9 @@ high_level_commands = {
 	},
 
 	["move-to"] = {
+		type_signature = {
+			[2] = "position",
+		},
 		execute = auto_move_execute,
 		executable = auto_move_to_low_level,
 		default_priority = 7,
@@ -561,6 +608,9 @@ high_level_commands = {
 	},
 
 	["move-to-command"] = {
+		type_signature = {
+			[2] = "string",
+		},
 		execute = auto_move_execute,
 		executable = function(command, myplayer, tick)
 			if not command.data.target_command then
@@ -608,6 +658,9 @@ high_level_commands = {
 	},
 
 	parallel = {
+		type_signature = {
+			[2] = "table",
+		},
 		execute = return_phantom,
 		initialize = empty,
 		spawn_commands = function(command, myplayer, tick)
@@ -639,6 +692,10 @@ high_level_commands = {
 	},
 
 	["passive-take"] = {
+		type_signature = {
+			[2] = "string",
+			[3] = {"nil", "string"},
+		},
 		execute = return_phantom,
 		executable = function (command, myplayer, tick)
 			command.data.spawn_queue = {}
@@ -673,6 +730,9 @@ high_level_commands = {
 	},
 
 	pickup = {
+		type_signature = {
+			oneshot = "boolean",
+		},
 		execute = function (command, myplayer, tick)
 			if command.oneshot then command.finished = true end
 			return command
@@ -681,6 +741,12 @@ high_level_commands = {
 	},
 
 	put = {
+		type_signature = {
+			[2] = "position",
+			[3] = "string",
+			[4] = {"nil", "number"},
+			[5] = {"nil", "number"},
+		},
 		execute = function(command, myplayer, tick)
 			command.finished = true
 
@@ -770,6 +836,10 @@ high_level_commands = {
 	},
 
 	recipe = {
+		type_signature = {
+			[2] = "position",
+			[3] = "string",
+		},
 		executable = function(command, myplayer, tick)
 			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
 			if entity then
@@ -795,22 +865,33 @@ high_level_commands = {
 	},
 
 	rotate = {
+		type_signature = {
+			[2] = "position",
+			[3] = {"nil", "string"},
+		},
 		execute = return_self_finished,
 		default_priority = 5,
 		default_action_type = action_types.selection,
 	},
 
 	speed = {
+		type_signature = {
+			[2] = "number",
+		},
 		execute = return_self_finished,
 		default_priority = 100,
 	},
 
 	stop = {
+		type_signature = { },
 		execute = return_phantom,
 		default_priority = 100,
 	},
 
 	["stop-command"] = {
+		type_signature = {
+			[2] = "string",
+		},
 		execute = return_phantom,
 		default_priority = 100,
 		initialize = function (command, myplayer)
@@ -833,6 +914,12 @@ high_level_commands = {
 	},
 
 	take = {
+		type_signature = {
+			[2] = "position",
+			[3] = {"nil", "string"},
+			[4] = {"nil", "number"},
+			[5] = {"nil", "number"},
+		},
 		execute = function(command, myplayer, tick)
 			command.finished = true
 
@@ -907,7 +994,7 @@ high_level_commands = {
 			end
 
 			if command.data.entity.get_item_count(command.data.item) < command.data.amount then
-   				return "Not enough items available!"
+				return "Not enough items available!"
 			end
 
 			if distance_from_rect(myplayer.position, command.rect) > command.distance then
@@ -920,6 +1007,9 @@ high_level_commands = {
 	},
 
 	tech = {
+		type_signature = {
+			[2] = "string"
+		},
 		default_priority = 5,
 		execute = return_self_finished,
 		executable = function (command, myplayer, tick)
@@ -933,6 +1023,9 @@ high_level_commands = {
 
 	["throw-grenade"] =
 	{
+		type_signature = {
+			[2] = "position",
+		},
 		execute = function(command)
 			command.finished = true
 			global.high_level_commands.throw_cooldown = game.tick
@@ -954,6 +1047,11 @@ high_level_commands = {
 		end
 	},
 	["simple-sequence"] = {
+		type_signature = {
+			[2] = "string",
+			[3] = "table",
+			passed_arguments = {"nil", "table"},
+		},
 		initialize = function(command, myplayer, tick)
 			if global.high_level_commands.simple_sequence_name == command.data.parent_command_group.name then
 				global.high_level_commands.simple_sequence_index = global.high_level_commands.simple_sequence_index + 1
@@ -1006,6 +1104,10 @@ high_level_commands = {
 	},
 
 	["move-sequence"] = {
+		type_sequence = {
+			[2] = "table",
+			passed_arguments = {"nil", "table"},
+		},
 		initialize = function(command, myplayer, tick)
 			if global.high_level_commands.move_sequence_name == command.data.parent_command_group.name then
 				global.high_level_commands.move_sequence_index = global.high_level_commands.move_sequence_index + 1
@@ -1064,6 +1166,7 @@ high_level_commands = {
 
 
 defaults = {
+	type_sequence = nil,
 	execute = return_self_finished,
 	executable = function () return "" end,
 	initialize = empty,

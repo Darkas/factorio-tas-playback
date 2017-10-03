@@ -26,6 +26,8 @@ function command_list_parser.init()
 	global.command_list_parser.initialized_names = {}
 	global.command_list_parser.finished_command_names = {}
 
+	global.command_list_parser.typecheck_errors = {}
+
 	global.command_list_parser.current_mining = 0
 	global.command_list_parser.stopped = true
 	global.command_list_parser.current_ui = nil
@@ -65,15 +67,49 @@ script.on_event(defines.events.on_player_mined_item, function(event)
 	end
 end)
 
+
+function command_list_parser.check_type(command)
+	local type_signature = high_level_commands[command[1]].type_signature
+	if not type_signature then
+		if not global.command_list_parser.typecheck_errors[command[1]] then
+			game.print("Type check not yet implemented for command " .. command[1])
+			global.command_list_parser.typecheck_errors[command[1]] = true
+		end
+		return
+	end
+	local function check_argument(value, types)
+		if type(types) ~= "table" then
+			types = {types}
+		end
+
+		for _, t in pairs(types) do
+			if t == "position" and is_position(value) then
+				return true
+			elseif t == "boolean" then
+				return value == true or value == false or value == nil
+			elseif type(value) == t then
+				return true
+			end
+		end
+		return false
+	end
+
+	for k, t in pairs(type_signature) do
+		if not check_argument(command[k], t) then
+			error("Command has wrong type. \nGroup: " .. command.data.parent_command_group.name .. "\nCommand: " .. command[1] .. "\nArgument: " .. k .. "\nValue: " .. printable(command[k]))
+		end
+	end
+end
+
 function command_list_parser.add_entity_to_global (entity)
 	if entity.burner then
 		global.command_list_parser.entities_with_burner[#global.command_list_parser.entities_with_burner + 1] = entity
 	end
-	
+
 	if not global.command_list_parser.entities_by_type[entity.type] then
 		global.command_list_parser.entities_by_type[entity.type] = {}
 	end
-	
+
 	global.command_list_parser.entities_by_type[entity.type][#global.command_list_parser.entities_by_type[entity.type] + 1] = entity
 end
 
@@ -84,14 +120,17 @@ function command_list_parser.add_command_to_current_set(command, myplayer, comma
 	if not high_level_commands[command[1]] then
 		error("The command with the name '" .. command[1] .. "' does not exist!")
 	end
-	
+
+
 	-- Reset on_relative_tick time.
 	if command.name then global.command_list_parser.command_finished_times[command.name] = nil end
 
-	command.data = {}
+	command.data = {
+		parent_command_group = command_group
+	}
 
-	command.data.parent_command_group = command_group
-	
+	command_list_parser.check_type(command)
+
 	if not command.namespace then
 		command.namespace = command_group.name .. "."
 	end
@@ -176,7 +215,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		if global.command_list_parser.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end
 		global.command_list_parser.loaded_command_groups[command_group.name] = true
 
-		for i, command in ipairs(command_group.commands) do	
+		for i, command in ipairs(command_group.commands) do
 			command_list_parser.add_command_to_current_set(command, myplayer, command_group)
 		end
 
@@ -211,15 +250,15 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	for _, command in pairs(global.command_list_parser.current_command_set) do
 		command.tested = false
 	end
-	
+
 	local auto_move_commands = 0
-	
+
 	for _, cmd in pairs(executable_commands) do
 		if (not cmd.finished) and (cmd[1] == "auto-move-to" or cmd[1] == "auto-move-to-command") then
 			auto_move_commands = auto_move_commands + 1
 		end
 	end
-	
+
 	if auto_move_commands > 1 then
 		errprint("You are using more than one auto-move command at once! Don't do this!")
 	end
@@ -280,10 +319,10 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 			errprint("You are executing a craft and a ui action in adjacent frames! This is impossible! The craft action is " .. serpent.block(craft_action) .. " and the ui action is " .. serpent.block(ui_action))
 		end
 	end
-	
+
 	local move_found = false
 	local moves = ""
-	
+
 	for _,command in pairs(commandqueue[tick]) do
 		if command[1] == "move" then
 			moves = moves .. command[2] .. ", "
@@ -333,7 +372,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	if command.finished then
 		return false
 	end
-	
+
 	local fail_reason = high_level_commands[command[1]].executable(command, myplayer, tick)
 
 	if fail_reason ~= "" then
@@ -391,7 +430,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 			log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
 			return false
 		end
-		
+
 		command.items_available = false
 	end
 
