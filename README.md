@@ -161,25 +161,29 @@ commandqueue.command_list = {
 
 Currently implemented commands:
 * `{"auto-build-blueprint", <name>, {<X>, <Y>}, rotation=<rotation>}`: Automates building blueprints (movement must still be entered manually though). Add build commands, recipe commands and put commands (for modules) to the current command set as we get in build range of the individual entities in the blueprint. `<name>` refers to the name of the blueprint in the `blueprint_data_raw` field, this can be set in the `blueprint_list.lua` of the run scenario - see examples. We have a mod that adds a command to conveniently export blueprints. The second argument is the offset, the third argument is the rotation and should be one of `defines.direction.north, east, south, west`. The blueprint build commands are added with the `on_leaving_range` constraint.
+* `{"auto-refuel", min=..., amount=..., type=..., skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type and skip_coal_drills.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
-* `{"auto-refuel", min=..., amount=..., type=..., skip_coal_drills=<bool>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type and skip_coal_drills.
 * `{"build", <entity>, {<X>,<Y>}, <facing direction>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
-* `{"craft", <item>, <count>}`
-* `{"craft", {{<item>, <count>}, {<item>, <count>}, ...}}`: Executes craft commands in order
+* `{"craft", <item>, <count>, need_intermediates}`
+* `{"craft", {{<item>, <count>}, {<item>, <count>}, ...}, need_intermediates = <bool>}`: Executes craft commands in order. If `need_intermediates` is set, the craft will only be started if all necessary intermediate products in the recipe are already available.
 * `{"craft-build", <entity>, {<X>, <Y>}, <facing direction>}`: Add a craft command for the entity, when that command is finished, add a build command.
+* `{"display-warning" "<string>"}`: Display a warning string.
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
+* `{"freeze-daytime"}`
 * `{"mine", {<X>,<Y>}, amount=<int>, type=<string>}`: The `type` param is the entity type of the mined entity - typically "resource", "tree"; instead of "simple-entity" the string "rock" can also be used here.
 * `{"move-to", {<X>,<Y>}}`: move to a position, walking diagonal first, without smart path-finding around entities.
 * `{"move-to-command", "<command name>"}`: move to the closest point from the player that allows the command with the given name to be executed.
+* `{"parallel", {<command-list>}}`: Add the commands in the list to the current command set.
 * `{"passive-take", <item>, <type>}`: Spawns `take` commands whenever there is an `<item>` in range available from an entity of the given type. `<type>` is not optional.
-* `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"pickup", oneshot=<bool>}`: Pick up items from ground. If `oneshot` is not set, we pick up until this command is stopped.
+* `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"recipe", {<X>,<Y>}, <recipe>}`
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
 * `{"simple-sequence", "<command>", {<x1>, <y1>}, ... , pass_arguments={k1=v1, k2=v2 ...}`: Execute the given command at the locations in the order as given and walk to those locations in between executions. All arguments in the pass_arguments table will be added to each command. Example: `{"simple-sequence", "mine", {0, 1}, {5, -4}, pass_arguments={[3]="tree"}}` mines two trees. Does currently not work with "build".
 * `{"speed", <speed>}`: Sets the game speed.
 * `{"stop"}`: Does nothing.
 * `{"stop-command", "<name>"}`: Remove the named command from the working set. Name can be of the form "name" or "group_name.name", if no group name is specified it refers only to the current group.
+* `{"simple-sequence", "<cmd-type>", {<position-list>}, passed_arguments = {...}}` Spawn commands to execute the given command at the specified locations, with 'move-to-command's automatically generated. The positions will be passed in the order they are given. Example: `{"simple-sequence", "mine", {{5, 4}, {-4, 1}, passed_arguments = {type="tree"}}` sends the player to mine two trees.
 * `{"take", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer item, amount and inventory from the position
 * `{"tech", "<research-name>", change_research = <bool>}`: Set research. If change_research is true then this will overwrite the current research, otherwise it is only activated when the current research has been completed.
 * `{"tech", <research>, change_research=<bool>}`: Set research. If change_research is not set, this will only change the research when the current reseach is done. Note this currently shouldnt be used to queue multiple researches.
