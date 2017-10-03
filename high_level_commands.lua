@@ -1104,7 +1104,7 @@ high_level_commands = {
 	},
 
 	["move-sequence"] = {
-		type_sequence = {
+		type_signature = {
 			[2] = "table",
 			passed_arguments = {"nil", "table"},
 		},
