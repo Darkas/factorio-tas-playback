@@ -471,6 +471,24 @@ high_level_commands = {
 	["entity-interaction"] = {
 		execute = return_phantom,
 		executable = function (command, myplayer)
+			if not command.data.entity then
+				command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
+
+				if not command.data.entity then
+					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
+				end
+			end
+
+			if not command.data.entity.valid then
+				command.data.entity = nil
+				return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
+			end
+
+			if not command.rect then
+				command.rect = collision_box(command.data.entity)
+				command.distance = myplayer.reach_distance
+			end
+			
 			if in_range(command, myplayer) then
 				command.finished = true
 
@@ -480,13 +498,6 @@ high_level_commands = {
 			end
 		end,
 		default_priority = 100,
-		initialize = function (command, myplayer)
-			command.distance = command[3] or myplayer.build_distance
-
-			local entity = get_entity_from_pos(command[2], myplayer)
-
-			command.rect = collision_box(entity)
-		end,
 	},
 
 	["freeze-daytime"] = {
@@ -657,7 +668,7 @@ high_level_commands = {
 					end
 				end
 			end
-
+			
 			if #command.data.spawn_queue == 0 then
 				return "No new commands available"
 			end
@@ -670,6 +681,7 @@ high_level_commands = {
 		initialize = function(command, myplayer, tick)
 			command.data.take_spawned = {}
 		end,
+		default_priority = 100,
 	},
 
 	pickup = {
@@ -755,8 +767,8 @@ high_level_commands = {
 				return "Recipe is not set for assembling-machine"
 			end
 
-			if distance_from_rect(myplayer.position, command.rect) > command.distance then
-				return "Out of range"
+			if not in_range(command, myplayer, tick) then
+				return "Out of range (" .. item .. ")"
 			end
 
 			return ""
@@ -910,7 +922,7 @@ high_level_commands = {
    				return "Not enough items available!"
 			end
 
-			if distance_from_rect(myplayer.position, command.rect) > command.distance then
+			if not in_range(command, myplayer) then
 				return "Player too far away"
 			end
 
