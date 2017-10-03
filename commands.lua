@@ -68,7 +68,7 @@ TAScommands["build"] = function (tokens, myplayer)
   -- Check if we are in range to build this
   local target_collision_box = collision_box{name=item, position=position, direction=direction}
   local distance = distance_from_rect(myplayer.position, target_collision_box)
-  if not (distance < myplayer.build_distance) then
+  if not (distance <= myplayer.build_distance) then
     errprint("Build failed: You are trying to place beyond realistic reach")
     return
   end
@@ -248,14 +248,7 @@ TAScommands["recipe"] = function (tokens, myplayer)
 	errprint("Setting recipe: Entity at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "} could not be selected.")
 	return
   end
-  local ent = myplayer.surface.create_entity{name = myplayer.selected.name, position = {100000,100000}, force="player", recipe=tokens[3]}
-  local items = myplayer.selected.copy_settings(ent)
-  ent.destroy()
-  if items then
-    for name, count in pairs(items) do
-      myplayer.insert{name=name, count=count}
-    end
-  end
+  myplayer.selected.recipe = tokens[3]
   debugprint("Setting recipe: " .. tokens[3] .. " at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "}.")
 end
 
