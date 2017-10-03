@@ -164,8 +164,8 @@ high_level_commands = {
 				if string.sub(name, 1, 3) == "bp_" then
 					local data = string.sub(name, 4)
 					local position = {}
-					for i, v in string.gmatch(data, "{(.*),(.*)}") do
-						position[i] = v
+					for x, y in string.gmatch(data, "{(.*),(.*)}") do
+						position = {tonumber(x), tonumber(y)}
 					end
 					local entity = Blueprint.get_entity_at(blueprint, position)
 					entities[#entities + 1] = entity
@@ -447,19 +447,14 @@ high_level_commands = {
 
 				craft.count = craft.count - 1
 				if craft.count == 0 then
-					game.print("Craft changed! " .. serpent.block(craft) .. " to " .. serpent.block(command.data.crafts[command.data.craft_index + 1] or {}))
 					command.data.craft_index = command.data.craft_index + 1
 					craft = command.data.crafts[command.data.craft_index]
 				end
 
 				if not craft then
-					game.print("finished!")
 					command.finished = true
 					break
 				end
-			end
-			if craft and not can_craft(craft, myplayer, craft.need_intermediates) then
-				game.print("Cannot craft! " .. craft.name)
 			end
 
 			return {"craft", return_crafts, already_executed=true}
@@ -565,7 +560,7 @@ high_level_commands = {
 				command.rect = collision_box(command.data.entity)
 				command.distance = myplayer.reach_distance
 			end
-			
+
 			if in_range(command, myplayer) then
 				command.finished = true
 
@@ -831,7 +826,7 @@ high_level_commands = {
 					end
 				end
 			end
-			
+
 			if #command.data.spawn_queue == 0 then
 				return "No new commands available"
 			end
@@ -1110,7 +1105,7 @@ high_level_commands = {
 				command.action_type = action_types.ui
 				command.data.ui = command[2]
 			end
-			
+
 			if command.data.amount == 0 then
 				return "You cannot take 0 items!"
 			end
