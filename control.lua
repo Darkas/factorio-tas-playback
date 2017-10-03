@@ -4,7 +4,7 @@ end
 
 -- Global variables initialization
 global.system = global.system or {}
-global.system.save = false -- if true, save at the end of this tick.
+global.system.save = false -- if this is a string, save at the end of this tick.
 
 local max_tick = 0
 

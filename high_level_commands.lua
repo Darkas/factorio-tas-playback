@@ -831,16 +831,15 @@ high_level_commands = {
 			command.data.spawn_queue = {}
 
 			for i,entity in pairs(global.command_list_parser.entities_by_type[command[3]]) do
+				if command.data.take_spawned[i] and command.data.take_spawned[i].finished then
+					command.data.take_spawned[i] = nil
+				end
 				if (not command.data.take_spawned[i]) and entity.get_item_count(command[2]) > 0 then
 					local cmd = {"take", {entity.position.x, entity.position.y}, command[2], data={}, namespace=command.namespace}
 
 					if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
 						command.data.take_spawned[i] = cmd
 						table.insert(command.data.spawn_queue, cmd)
-					end
-				else
-					if command.data.take_spawned[i] and command.data.take_spawned[i].finished then
-						command.data.take_spawned[i] = nil
 					end
 				end
 			end

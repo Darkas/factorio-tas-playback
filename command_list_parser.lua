@@ -208,8 +208,10 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		end
 
 		local command_group = command_list[global.command_list_parser.current_command_group_index]
-		if command_group.force_save then
+		if command_group.force_save == true then
 			global.system.save = command_group.name
+		elseif command_group.force_save then
+			global.system.save = command_group.force_save
 		end
 
 		if global.command_list_parser.loaded_command_groups[command_group.name] then error("Duplicate command group name!") end

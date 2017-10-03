@@ -50,7 +50,7 @@ function create_command_list_ui(player)
 	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
 	table.style.vertical_spacing = -1
 	scroll_pane.style.top_padding = 10
-	scroll_pane.style.maximal_height = 200
+	scroll_pane.style.maximal_height = 350
 	scroll_pane.style.maximal_width = 500
 	scroll_pane.style.minimal_height = 100
 	scroll_pane.style.minimal_width = 50
