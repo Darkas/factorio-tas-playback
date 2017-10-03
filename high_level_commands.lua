@@ -431,7 +431,7 @@ high_level_commands = {
 				if need_intermediates then
 					local recipe = game.recipe_prototypes[craft[1]]
 					for _, ingr in pairs(recipe.ingredients) do
-						if myplayer.get_item_count(ingr.name) < ingr.amount then
+						if myplayer.get_item_count(ingr.name) < ingr.amount * craft[2] then
 							return false
 						end
 					end
@@ -465,7 +465,7 @@ high_level_commands = {
 				local recipe = game.recipe_prototypes[item]
 				for _, ingr in pairs(recipe.ingredients) do
 					if myplayer.get_item_count(ingr.name) < ingr.amount then
-						return "Player is missind " .. ingr.name .. " to craft " .. item .. "."
+						return "Player is missing " .. ingr.name .. " to craft " .. item .. "."
 					end
 				end
 				return ""
@@ -741,15 +741,15 @@ high_level_commands = {
 
 			for i,entity in pairs(global.command_list_parser.entities_by_type[command[3]]) do
 				if (not command.data.take_spawned[i]) and entity.get_item_count(command[2]) > 0 then
-					local cmd = {"take", {entity.position.x, entity.position.y}, data={}, namespace=command.namespace}
+					local cmd = {"take", {entity.position.x, entity.position.y}, command[2], data={}, namespace=command.namespace}
 
 					if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
-						command.data.take_spawned[i] = true
+						command.data.take_spawned[i] = cmd
 						table.insert(command.data.spawn_queue, cmd)
 					end
 				else
-					if entity.get_item_count(command[2]) == 0 then
-						command.data.take_spawned[i] = false
+					if command.data.take_spawned[i] and command.data.take_spawned[i].finished then
+						command.data.take_spawned[i] = nil
 					end
 				end
 			end
@@ -1025,12 +1025,16 @@ high_level_commands = {
 			end
 
 			command.data.amount = command[4]
-			if (not command.data.amount) or (command.data.amount == command.data.entity.get_item_count(command.data.item)) then
-				command.data.amount = command.data.entity.get_item_count(command.data.item)
+			if (not command.data.amount) or (command.data.amount == command.data.entity.get_inventory(command.data.inventory).get_item_count(command.data.item)) then
+				command.data.amount = command.data.entity.get_inventory(command.data.inventory).get_item_count(command.data.item)
 				command.action_type = action_types.selection
 			else
 				command.action_type = action_types.ui
 				command.data.ui = command[2]
+			end
+			
+			if command.data.amount == 0 then
+				return "You cannot take 0 items!"
 			end
 
 			if command.data.entity.get_item_count(command.data.item) < command.data.amount then
