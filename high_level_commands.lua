@@ -660,7 +660,7 @@ high_level_commands = {
 
 			command.data.index = 0
 			if command.name then
-				command.data.namespace = command.namespace  .. command.name .. "-" .. global.high_level_commands.move_sequence_index .. "."
+				command.data.namespace = command.namespace .. command.name  .. "."
 			else
 				command.data.namespace = command.namespace .. "move-sequence-" .. global.high_level_commands.move_sequence_index .. "."
 			end
@@ -1197,7 +1197,7 @@ high_level_commands = {
 
 			command.data.index = 0
 			if command.name then
-				command.data.namespace = command.namespace .. "simple-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
+				command.data.namespace = command.namespace .. command[2] .. "-sequence-" .. command.data.namespace .. "."
 			else
 				command.data.namespace = command.namespace .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
 			end
@@ -1253,7 +1253,7 @@ high_level_commands = {
 
 			command.data.index = 0
 			if command.name then
-				command.data.namespace = command.namespace  .. command.name .. "-" .. global.high_level_commands.sequence_index .. "."
+				command.data.namespace = command.namespace  .. command.name .. "."
 			else
 				command.data.namespace = command.namespace .. "sequence-" .. global.high_level_commands.sequence_index .. "."
 			end
