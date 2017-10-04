@@ -460,13 +460,14 @@ high_level_commands = {
 			return {"craft", return_crafts, already_executed=true}
 		end,
 		executable = function(command, myplayer, tick)
-			local item = command.data.crafts[1].name
-			local count = command.data.crafts[1].count
-			if not myplayer.force.recipes[item].enabled then
+			local item = command.data.crafts[command.data.craft_index].name
+			local count = command.data.crafts[command.data.craft_index].count
+			local recipe = myplayer.force.recipes[item]
+			
+			if not recipe.enabled then
 				return "Recipe " .. craft.name .. " is not available."
 			end
-			if command.data.crafts[1].need_intermediates then
-				local recipe = game.recipe_prototypes[item]
+			if command.data.crafts[command.data.craft_index].need_intermediates then
 				for _, ingr in pairs(recipe.ingredients) do
 					if myplayer.get_item_count(ingr.name) < ingr.amount then
 						return "Player is missing " .. ingr.name .. " to craft " .. item .. "."
@@ -824,7 +825,7 @@ high_level_commands = {
 	["passive-take"] = {
 		type_signature = {
 			[2] = "string",
-			[3] = {"nil", "string"},
+			[3] = "string",
 		},
 		execute = return_phantom,
 		executable = function (command, myplayer, tick)
@@ -1097,7 +1098,7 @@ high_level_commands = {
 					end
 				end
 			end
-
+			
 			-- TODO: if no item and amount are given, take the entire inventory as a selection action. Otherwise, it is a ui action
 
 			if not command.data.item then

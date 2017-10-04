@@ -256,13 +256,13 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	local auto_move_commands = 0
 
 	for _, cmd in pairs(executable_commands) do
-		if (not cmd.finished) and (cmd[1] == "auto-move-to" or cmd[1] == "auto-move-to-command") then
+		if (not cmd.finished) and (cmd[1] == "move-to" or cmd[1] == "move-to-command") then
 			auto_move_commands = auto_move_commands + 1
 		end
 	end
 
 	if auto_move_commands > 1 then
-		errprint("You are using more than one auto-move command at once! Don't do this!")
+		errprint("You are using more than one move command at once! Don't do this!")
 	end
 
 	-- Determine first out of range command
@@ -510,7 +510,7 @@ end
 function command_list_parser.command_sqdistance(command, player)
 	local position = nil
 	if in_list(command[1], {"rotate", "recipe", "take", "put", "mine", "throw-grenade"}) then position = command[2]
-	elseif command[1] == "auto-move-to" or command[1] == "build" then position = command[3]
+	elseif command[1] == "move-to" or command[1] == "build" then position = command[3]
 	end
 
 	--game.print(serpent.block(position))
