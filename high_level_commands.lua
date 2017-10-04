@@ -11,7 +11,7 @@ global.high_level_commands = global.high_level_commands or {
 
 
 function auto_move_to_low_level (command, myplayer, tick)
-	if command[1] == "move-to" and (not command.data.target_pos or not command.data.move_started) then
+	if command[1] == "move" and (not command.data.target_pos or not command.data.move_started) then
 		if not command.data.move_to_command then
 			command.data.target_pos = command[2]
 		else
@@ -90,7 +90,7 @@ function auto_move_execute(command, myplayer, tick)
 	end
 
 	if command.data.move_dir == "" then
-		if (command[1] == "move-to" and not command.data.move_to_command) or command[1] == "move-to-entity" then
+		if (command[1] == "move" and not command.data.move_to_command) or command[1] == "move-to-entity" then
 			command.finished = true
 			return {"phantom"}
 		else
@@ -668,7 +668,7 @@ high_level_commands = {
 		end
 	},
 
-	["move-to"] = {
+	["move"] = {
 		type_signature = {
 			[2] = {"string", "position"},
 		},
@@ -1147,7 +1147,7 @@ high_level_commands = {
 			if command.data.index + 2 > #command then
 				command.finished = true
 			else
-				if command[2] == "move-to" then
+				if command[2] == "move" then
 					local cmd = {
 						command[2],
 						command[command.data.index + 2],
@@ -1172,7 +1172,7 @@ high_level_commands = {
 					return {
 						cmd,
 						{
-							"move-to",
+							"move",
 							"command-" .. command.data.index,
 							namespace = command.data.namespace,
 						}
