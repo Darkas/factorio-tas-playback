@@ -9,13 +9,12 @@ global.high_level_commands = global.high_level_commands or {
 }
 
 
--- TODO: Extend auto-take s.t. it can take coal if we run out?
 
 function auto_move_to_low_level (command, myplayer, tick)
-	if not (command.data.target_pos and command.data.move_started) then
-		if command[1] == "move-to" then
+	if command[1] == "move-to" and (not command.data.target_pos or not command.data.move_started) then
+		if not command.data.move_to_command then
 			command.data.target_pos = command[2]
-		elseif command[1] == "move-to-command" then
+		else
 			command.data.target_pos = {}
 			command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
 		end
@@ -40,11 +39,6 @@ function auto_move_to_low_level (command, myplayer, tick)
 
 	local epsilon = 0.15 -- TODO: This should depend on the velocity.
 
-	-- TODO: Test if this works when we walk on transport belts
-	-- Could replace this by
-	-- if command[2][2] < myplayer.position.y - epsilon then
-	-- 	command.data.move_dir = command.data.move_dir .. "N"
-	-- end
 	if myplayer.position.y > command.data.target_pos[2] + epsilon then
 		command.data.move_north = true
 	end
@@ -90,13 +84,13 @@ function auto_move_to_low_level (command, myplayer, tick)
 end
 
 function auto_move_execute(command, myplayer, tick)
-	if (command[1] == "move-to-command" and in_range(command.data.target_command, myplayer)) or (command[1] == "move-to-entity" and in_range(command, myplayer)) then
+	if (command.data.move_to_command and in_range(command.data.target_command, myplayer)) or (command[1] == "move-to-entity" and in_range(command, myplayer)) then
 		command.finished = true
 		return {"phantom"}
 	end
 
 	if command.data.move_dir == "" then
-		if command[1] == "move-to" then
+		if (command[1] == "move-to" and not command.data.move_to_command) or command[1] == "move-to-entity" then
 			command.finished = true
 			return {"phantom"}
 		else
@@ -160,13 +154,14 @@ high_level_commands = {
 			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
 
 			-- This is for compatibility between move-to-command and build-blueprint.
-			for index, name in pairs(global.high_level_commands.command_requests) do
-				if string.sub(name, 1, 3) == "bp_" then
-					local data = string.sub(name, 4)
-					local position = {}
-					for x, y in string.gmatch(data, "{(.*),(.*)}") do
-						position = {tonumber(x), tonumber(y)}
-					end
+			for index, request in pairs(global.high_level_commands.command_requests) do
+				local name = request[1]
+				local move_to_namespace = request[2]
+				local _, _, namespace, cmd_name = string.find(name, "(.*%.)bp_(.*)")
+				if namespace and cmd_name and (namespace == command.namespace or namespace == move_to_namespace) then
+					local data = string.sub(cmd_name, 4)
+					local _, _, x, y = string.find(data, "{(.*),(.*)})")
+					local position = {tonumber(x), tonumber(y)}
 					local entity = Blueprint.get_entity_at(blueprint, position)
 					entities[#entities + 1] = entity
 					table.remove(global.high_level_commands.command_requests, index)
@@ -463,9 +458,9 @@ high_level_commands = {
 			local item = command.data.crafts[command.data.craft_index].name
 			local count = command.data.crafts[command.data.craft_index].count
 			local recipe = myplayer.force.recipes[item]
-			
+
 			if not recipe.enabled then
-				return "Recipe " .. craft.name .. " is not available."
+				return "Recipe " .. item .. " is not available."
 			end
 			if command.data.crafts[command.data.craft_index].need_intermediates then
 				for _, ingr in pairs(recipe.ingredients) do
@@ -644,71 +639,6 @@ high_level_commands = {
 		default_action_type = action_types.selection,
 	},
 
-	["move-sequence"] = {
-		type_signature = {
-			[2] = "position",
-			[3] = "position",
-			passed_arguments = {"nil", "table"},
-		},
-		initialize = function(command, myplayer, tick)
-			if global.high_level_commands.move_sequence_name == command.data.parent_command_group.name then
-				global.high_level_commands.move_sequence_index = global.high_level_commands.move_sequence_index + 1
-			else
-				global.high_level_commands.move_sequence_index = 1
-				global.high_level_commands.move_sequence_name = command.data.parent_command_group.name
-			end
-
-			command.data.index = 0
-			if command.name then
-				command.data.namespace = command.namespace .. command.name  .. "."
-			else
-				command.data.namespace = command.namespace .. "move-sequence-" .. global.high_level_commands.move_sequence_index .. "."
-			end
-		end,
-		execute = return_phantom,
-		spawn_commands = function(command, myplayer, tick)
-			command.data.index = command.data.index + 1
-			if command[command.data.index + 1] == nil then
-				command.finished = true
-			else
-				local cmd = {
-					"move-to",
-					command[command.data.index + 1],
-					name= "command-" .. command.data.index,
-					namespace=command.data.namespace,
-				}
-				for k, v in pairs(command.pass_arguments or {}) do
-					cmd[k] = v
-				end
-
-				return { cmd }
-			end
-		end,
-		executable = function(command, myplayer, tick)
-			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.namespace .. "command-" .. command.data.index] then
-				return ""
-			else
-				return "Waiting for command: command-" .. command.data.index
-			end
-		end,
-		default_priority = 100,
-	},
-
-	["move-to"] = {
-		type_signature = {
-			[2] = "position",
-		},
-		execute = auto_move_execute,
-		executable = auto_move_to_low_level,
-		default_priority = 7,
-		initialize = function (command, myplayer)
-			command.data.move_north = false
-			command.data.move_south = false
-			command.data.move_west = false
-			command.data.move_east = false
-		end
-	},
-
 	["move-to-entity"] = {
 		type_signature = {
 			[2] = "position",
@@ -738,12 +668,14 @@ high_level_commands = {
 		end
 	},
 
-	["move-to-command"] = {
+	["move-to"] = {
 		type_signature = {
-			[2] = "string",
+			[2] = {"string", "position"},
 		},
 		execute = auto_move_execute,
 		executable = function(command, myplayer, tick)
+			if not command.data.move_to_command then return auto_move_to_low_level(command, myplayer, tick) end
+
 			if not command.data.target_command then
 				for _, com in pairs(global.command_list_parser.current_command_set) do
 					if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
@@ -769,6 +701,17 @@ high_level_commands = {
 		end,
 		default_priority = 7,
 		initialize = function (command, myplayer)
+			command.data.move_north = false
+			command.data.move_south = false
+			command.data.move_west = false
+			command.data.move_east = false
+
+			if type(command[2]) == "string" then
+				command.data.move_to_command = true
+			else
+				return
+			end
+
 			if not command.data.target_command then
 				for _, com in pairs(global.command_list_parser.current_command_set) do
 					if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
@@ -778,13 +721,8 @@ high_level_commands = {
 			end
 
 			if not command.data.target_command then
-				global.high_level_commands.command_requests[#global.high_level_commands.command_requests + 1] = command[2]
+				global.high_level_commands.command_requests[#global.high_level_commands.command_requests + 1] = {command[2], command.namespace}
 			end
-
-			command.data.move_north = false
-			command.data.move_south = false
-			command.data.move_west = false
-			command.data.move_east = false
 		end,
 	},
 
@@ -1098,7 +1036,7 @@ high_level_commands = {
 					end
 				end
 			end
-			
+
 			-- TODO: if no item and amount are given, take the entire inventory as a selection action. Otherwise, it is a ui action
 
 			if not command.data.item then
@@ -1196,10 +1134,11 @@ high_level_commands = {
 			end
 
 			command.data.index = 0
+			command.data.namespace = command.namespace .. command[2] .. "-sequence-"
 			if command.name then
-				command.data.namespace = command.namespace .. command[2] .. "-sequence-" .. command.data.namespace .. "."
+				command.data.namespace = command.data.namespace .. command.name .. "."
 			else
-				command.data.namespace = command.namespace .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
+				command.data.namespace = command.data.namespace .. global.high_level_commands.simple_sequence_index .. "."
 			end
 		end,
 		execute = return_phantom,
@@ -1208,24 +1147,37 @@ high_level_commands = {
 			if command.data.index + 2 > #command then
 				command.finished = true
 			else
-				local cmd = {
-					command[2],
-					command[command.data.index + 2],
-					name= "command-" .. command.data.index,
-					namespace=command.data.namespace,
-				}
-				for k, v in pairs(command.pass_arguments or {}) do
-					cmd[k] = v
-				end
-
-				return {
-					cmd,
-					{
-						"move-to-command",
-						"command-" .. command.data.index,
-						namespace = command.data.namespace,
+				if command[2] == "move-to" then
+					local cmd = {
+						command[2],
+						command[command.data.index + 2],
+						name = "command-" .. command.data.index,
+						namespace = command.data.namespace
 					}
-				}
+					for k, v in pairs(command.pass_arguments or {}) do
+						cmd[k] = v
+					end
+					return {cmd}
+				else
+					local cmd = {
+						command[2],
+						command[command.data.index + 2],
+						name= "command-" .. command.data.index,
+						namespace=command.data.namespace,
+					}
+					for k, v in pairs(command.pass_arguments or {}) do
+						cmd[k] = v
+					end
+
+					return {
+						cmd,
+						{
+							"move-to",
+							"command-" .. command.data.index,
+							namespace = command.data.namespace,
+						}
+					}
+				end
 			end
 		end,
 		executable = function(command, myplayer, tick)

@@ -33,7 +33,7 @@ function create_command_list_ui(player)
 	local label = top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
 	top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
 	local label = top_flow.add{type="label", style="label_style", name = "title_show_passive", caption="[Show Passive]"}
-	top_flow.add{type="checkbox", name="show_passive_button", state=true}
+	top_flow.add{type="checkbox", name="show_passive_button", state=false}
 
 	local group_flow = frame.add{type="flow", name="group_flow", style="flow_style", direction="horizontal"}
 	label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
