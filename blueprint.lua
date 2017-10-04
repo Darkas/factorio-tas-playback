@@ -109,10 +109,7 @@ end
 
 function Blueprint.get_entity_at(blueprint_data, position)
     local entities = blueprint_data.chunked_entities
-    local X, Y = position.x or position[1], position.y or position[2]
-    local x = math.floor(X / blueprint_data.chunk_size)
-    local y = math.floor(Y / blueprint_data.chunk_size)
-    for _, entity in pairs(entities[x .. "_" .. y] or {}) do
+    for _, entity in pairs(entities[Blueprint.key_from_position(position, blueprint_data.chunk_size)] or {}) do
         if sqdistance(entity.position, position) < 0.01 then
             return entity
         end

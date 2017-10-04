@@ -158,14 +158,16 @@ high_level_commands = {
 				local name = request[1]
 				local move_to_namespace = request[2]
 				local _, _, namespace, cmd_name = string.find(name, "(.*%.)bp_(.*)")
-				if cmd_name and (namespace == command.namespace or namespace == move_to_namespace) then
-					local data = string.sub(cmd_name, 4)
-					local _, _, x, y = string.find(data, "{(.*),(.*)})")
+				if not cmd_name then _, _, cmd_name = string.find(name, "bp_(.*)") end
+				if cmd_name and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
+					local data = string.sub(cmd_name, 1, 4)
+					local _, _, x, y = string.find(data, "{(.*),(.*)}")
 					local position = {tonumber(x), tonumber(y)}
 					local entity = Blueprint.get_entity_at(blueprint, position)
-					if not entity then error("Blueprint entity not found at " .. data .. " in blueprint " .. blueprint.name) end
-					entities[#entities + 1] = entity
-					table.remove(global.high_level_commands.command_requests, index)
+					if entity then
+						entities[#entities + 1] = entity
+						table.remove(global.high_level_commands.command_requests, index)
+					end
 				end
 			end
 
