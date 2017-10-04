@@ -98,7 +98,7 @@ function Blueprint.get_entities_close(blueprint_data, position)
 
   for X = x-1, x+1 do
     for Y = y-1, y+1 do
-      for _, entity in ipairs(entities[X .. "_" .. Y]) do
+      for _, entity in ipairs(entities[X .. "_" .. Y] or {}) do
         table.insert(res, entity)
       end
     end
@@ -112,7 +112,7 @@ function Blueprint.get_entity_at(blueprint_data, position)
     local X, Y = position.x or position[1], position.y or position[2]
     local x = math.floor(X / blueprint_data.chunk_size)
     local y = math.floor(Y / blueprint_data.chunk_size)
-    for _, entity in pairs(entities[x .. "_" .. y]) do
+    for _, entity in pairs(entities[x .. "_" .. y] or {}) do
         if sqdistance(entity.position, position) < 0.01 then
             return entity
         end
