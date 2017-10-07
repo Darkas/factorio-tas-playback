@@ -11,12 +11,16 @@ global.high_level_commands = global.high_level_commands or {
 
 
 function auto_move_to_low_level (command, myplayer, tick)
-	if command[1] == "move" and (not command.data.target_pos or not command.data.move_started) then
-		if not command.data.move_to_command then
-			command.data.target_pos = command[2]
+	if (not command.data.target_pos or not command.data.move_started) then
+		if command[1] == "move"  then
+			if not command.data.move_to_command then
+				command.data.target_pos = command[2]
+			else
+				command.data.target_pos = {}
+				command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
+			end
 		else
-			command.data.target_pos = {}
-			command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
+			command.data.target_pos = closest_point(command.rect, command.distance, myplayer.position)
 		end
 	end
 
@@ -662,9 +666,7 @@ high_level_commands = {
 					return "No entity at " .. serpent.block(command.position) .. "."
 				else
 					command.rect = collision_box(command.data.target_entity)
-					command.data.target_pos = closest_point(command.rect, command.distance, myplayer.position)
 				end
-
 			end
 			return auto_move_to_low_level(command, myplayer, tick)
 		end,
