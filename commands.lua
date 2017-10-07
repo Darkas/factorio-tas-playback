@@ -91,7 +91,7 @@ TAScommands["build"] = function (tokens, myplayer)
     force = "player"
   }
   if not canplace then
-    errprint("Build failed: Something is in the way")
+    errprint("Building " .. item .. " failed: Something is in the way at {" .. position[1] .. ", " .. position[2] .. "}.")
     for _, _item in pairs(items_saved) do
       myplayer.surface.create_entity{name=item, position=_item.position, stack={name=_item.name, count=_item.count}}
     end

@@ -157,10 +157,9 @@ high_level_commands = {
 			for index, request in pairs(global.high_level_commands.command_requests) do
 				local name = request[1]
 				local move_to_namespace = request[2]
-				local _, _, namespace, cmd_name = string.find(name, "(.*%.)bp_(.*)")
-				if not cmd_name then _, _, cmd_name = string.find(name, "bp_(.*)") end
-				if cmd_name and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
-					local data = string.sub(cmd_name, 1, 4)
+				local _, _, namespace, data = string.find(name, "(.*%.)bp_(.*)")
+				if not data then _, _, data = string.find(name, "bp_(.*)") end
+				if data and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
 					local _, _, x, y = string.find(data, "{(.*),(.*)}")
 					local position = {tonumber(x), tonumber(y)}
 					local entity = Blueprint.get_entity_at(blueprint, position)
@@ -175,59 +174,68 @@ high_level_commands = {
 			local added_commands = {}
 
 			for _, entity in pairs(entities) do
-				if get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
-					entity.built = true
-					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
-				end
-
-				if not entity.built then
-					entity.built = true
-					local build_command = {
-						"build",
-						entity.name,
-						entity.position,
-						entity.direction,
-						name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-						on_leaving_range = command.set_on_leaving_range and true,
-						namespace = command.namespace,
-					}
-					if entity.name == "underground-belt" then
-						build_command[5] = entity.type
-					end
-					table.insert(command.data.all_commands, build_command)
-					table.insert(added_commands, build_command)
-					if not entity.recipe then
-						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
-					end
-				end
-
-				if entity.recipe and entity.built and not entity.set_recipe then
-					entity.set_recipe = true
-					local recipe_command = {
-						"recipe",
-						entity.position,
-						entity.recipe,
-						name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-						namespace = command.namespace,
-					}
-					table.insert(added_commands, recipe_command)
-					table.insert(command.data.all_commands, recipe_command)
-
-					if entity.items then
-						for name, count in pairs(entity.items) do
-							local module_command = {
-								"put",
-								entity.position,
-								name,
-								count,
-								name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-								namespace = command.namespace,
-							}
-							table.insert(command.data.all_commands, module_command)
-							table.insert(added_commands, module_command)
+				local cmd_already_spawned = false
+				for _, cmd in pairs(global.command_list_parser.current_command_set) do
+					if cmd[1] == "build" then
+						if sqdistance(cmd[3], entity.position) < 0.01 and cmd[2] == entity.name then
+							cmd_already_spawned = true
+							break
 						end
 					end
+				end
+
+				if cmd_already_spawned or get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
+					entity.built = true
 					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+				else
+					if not entity.built then
+						entity.built = true
+						local build_command = {
+							"build",
+							entity.name,
+							entity.position,
+							entity.direction,
+							name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+							on_leaving_range = command.set_on_leaving_range and true,
+							namespace = command.namespace,
+						}
+						if entity.name == "underground-belt" then
+							build_command[5] = entity.type
+						end
+						table.insert(command.data.all_commands, build_command)
+						table.insert(added_commands, build_command)
+					end
+
+					if entity.recipe and entity.built and not entity.set_recipe then
+						entity.set_recipe = true
+						local recipe_command = {
+							"recipe",
+							entity.position,
+							entity.recipe,
+							name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+							namespace = command.namespace,
+						}
+						table.insert(added_commands, recipe_command)
+						table.insert(command.data.all_commands, recipe_command)
+
+						if entity.items then
+							for name, count in pairs(entity.items) do
+								local module_command = {
+									"put",
+									entity.position,
+									name,
+									count,
+									name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+									namespace = command.namespace,
+								}
+								table.insert(command.data.all_commands, module_command)
+								table.insert(added_commands, module_command)
+							end
+						end
+						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+					elseif not entity.recipe then
+						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+					end
 				end
 			end
 

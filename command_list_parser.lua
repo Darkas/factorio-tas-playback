@@ -121,7 +121,6 @@ function command_list_parser.add_command_to_current_set(command, myplayer, comma
 		error("The command with the name '" .. command[1] .. "' does not exist!")
 	end
 
-
 	-- Reset on_relative_tick time.
 	if command.name then global.command_list_parser.command_finished_times[command.name] = nil end
 
@@ -531,7 +530,7 @@ function command_list_parser.add_compatible_commands(executable_commands, comman
 	local command = commands[1]
 
 	if command.action_type == action_types.selection then -- if you want things to happen in the same frame, use the exact same coordinates!
-		local coordinates = command[2] -- all selection actions have there coordinates at [2]
+		local coordinates = command[2] -- all selection actions have their coordinates at [2]
 
 		local priority_take_or_put = nil
 
