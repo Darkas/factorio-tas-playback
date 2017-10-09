@@ -112,6 +112,25 @@ function auto_move_execute(command, myplayer, tick)
 	return {"move", command.data.move_dir}
 end
 
+function can_craft(craft, myplayer, need_intermediates)
+	if not myplayer.force.recipes[craft.name].enabled then
+		return false
+	end
+	if need_intermediates then
+		local recipe = game.recipe_prototypes[craft.name]
+		
+		if need_intermediates then
+			for _, ingr in pairs(recipe.ingredients) do
+				if (need_intermediates == true or has_value(need_intermediates, ingr.name)) and myplayer.get_item_count(ingr.name) < ingr.amount then
+					return false
+				end
+			end
+		end
+	end
+	
+	return myplayer.get_craftable_count(craft.name) >= 1
+end
+
 function empty()
 end
 
@@ -434,23 +453,6 @@ high_level_commands = {
 			local craft = command.data.crafts[command.data.craft_index]
 			local return_crafts = {}
 
-			local function can_craft(craft, myplayer, need_intermediates)
-				if not myplayer.force.recipes[craft.name].enabled then
-					return false
-				end
-				if need_intermediates then
-					local recipe = game.recipe_prototypes[craft.name]
-					for _, ingr in pairs(recipe.ingredients) do
-						if myplayer.get_item_count(ingr.name) < ingr.amount * craft.count then
-							return false
-						end
-					end
-					return true
-				else
-					return myplayer.get_craftable_count(craft.name) >= craft.count
-				end
-			end
-
 			while can_craft(craft, myplayer, craft.need_intermediates) do
 				TAScommands["craft"]({"craft", craft.name, 1}, myplayer)
 				table.insert(return_crafts, craft)
@@ -471,24 +473,18 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			local item = command.data.crafts[command.data.craft_index].name
-			local count = command.data.crafts[command.data.craft_index].count
 			local recipe = myplayer.force.recipes[item]
+			local craft = command.data.crafts[command.data.craft_index]
 
 			if not recipe.enabled then
 				return "Recipe " .. item .. " is not available."
 			end
-			if command.data.crafts[command.data.craft_index].need_intermediates then
-				for _, ingr in pairs(recipe.ingredients) do
-					if myplayer.get_item_count(ingr.name) < ingr.amount then
-						return "Player is missing " .. ingr.name .. " to craft " .. item .. "."
-					end
-				end
-				return ""
-			elseif myplayer.get_craftable_count(item) >= count then
-				return ""
-			else
-				return "Player does not have enough items to craft " .. item
+			
+			if not can_craft(craft, myplayer, craft.need_intermediates) then
+				return "The requested item cannot be crafted."
 			end
+			
+			return ""
 		end,
 		default_priority = 5,
 		initialize = function(command)
