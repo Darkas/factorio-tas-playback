@@ -117,6 +117,19 @@ TAScommands["build"] = function (tokens, myplayer)
 
 end
 
+TAScommands["car-enter"] = function(tokens, myplayer)
+    myplayer.driving = true
+    if not myplayer.driving then errprint("Entering car failed! Player at " .. serpent.block(myplayer.position)) end
+end
+
+TAScommands["car-leave"] = function(tokens, myplayer)
+    myplayer.driving = false
+end
+
+TAScommands["riding-state"] = function(tokens, myplayer)
+    myplayer.riding_state = tokens[2]
+end
+
 TAScommands["put"] = function (tokens, myplayer)
   local position = tokens[2]
   local item = tokens[3]
