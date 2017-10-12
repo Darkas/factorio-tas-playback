@@ -349,11 +349,13 @@ function command_list_parser.create_commandqueue(executable_commands, command, m
 	local current_commands = "Commands in this tick: "
 	local queue = {}
 
-	for _,cmd in pairs(command_collection) do
+	for _, cmd in pairs(command_collection) do
 		current_commands = current_commands .. cmd[1] .. ", "
-		local low_level_command = high_level_commands[cmd[1]].execute(cmd, myplayer, tick)
-		if low_level_command then
-			queue[#queue + 1] = low_level_command
+		local low_level_commands = table.pack(high_level_commands[cmd[1]].execute(cmd, myplayer, tick))
+		for _, low_level_command in ipairs(low_level_commands) do
+			if low_level_command then
+				queue[#queue + 1] = low_level_command
+			end
 		end
 	end
 

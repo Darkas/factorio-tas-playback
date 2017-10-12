@@ -134,9 +134,14 @@ end
 function empty()
 end
 
+function strip_command(command)
+	if command[6] then error("Command " .. command[1] .. " has more arguments than expected: !") end
+	return {command[1], command[2], command[3], command[4], command[5], already_executed = command.already_executed}
+end
+
 function return_self_finished(command, myplayer, tick)
 	command.finished = true
-	return command
+	return strip_command(command)
 end
 
 function set_finished(command)
@@ -179,7 +184,7 @@ high_level_commands = {
 		},
 		default_priority = 100,
 
-		execute = return_phantom,
+		execute = empty,
 
 		executable = function (command)
 			return ""
@@ -306,7 +311,7 @@ high_level_commands = {
 			skip_coal_drills = "boolean",
 			type = {"nil", "string"}
 		},
-		execute = return_phantom,
+		execute = empty,
 		spawn_commands = function(command, myplayer, tick)
 			if not command.data.already_refueled then
 				command.data.already_refueled = {}
@@ -433,7 +438,7 @@ high_level_commands = {
 				TAScommands["build"](command, myplayer)
 				command.finished = true
 				command.already_executed = true
-				return command
+				return strip_command(command)
 			else
 				return
 			end
@@ -467,11 +472,12 @@ high_level_commands = {
 		},
 		execute = function(command, myplayer)
 			local craft = command.data.crafts[command.data.craft_index]
-			local return_crafts = {}
+			local return_commands = {}
 
 			while can_craft(craft, myplayer, craft.need_intermediates) do
-				TAScommands["craft"]({"craft", craft.name, 1}, myplayer)
-				table.insert(return_crafts, craft)
+				local cmd = {"craft", craft.name, 1, already_executed = true}
+				TAScommands["craft"](cmd, myplayer)
+				table.insert(return_commands, cmd)
 
 				craft.count = craft.count - 1
 				if craft.count == 0 then
@@ -485,7 +491,7 @@ high_level_commands = {
 				end
 			end
 
-			return {"craft", return_crafts, already_executed=true}
+			return table.unpack(return_commands)
 		end,
 		executable = function(command, myplayer, tick)
 			local item = command.data.crafts[command.data.craft_index].name
@@ -533,7 +539,7 @@ high_level_commands = {
 			[4] = {"nil", "number"},
 		},
 		default_priority = 5,
-		execute = return_phantom,
+		execute = empty,
 		executable = function (command)
 			if command.data.build_command then
 				if command.data.build_command.finished then
@@ -558,7 +564,7 @@ high_level_commands = {
 		type_signature = {
 			[2] = "string",
 		},
-		execute = return_phantom,
+		execute = empty,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			errprint(command[2])
@@ -570,7 +576,7 @@ high_level_commands = {
 		type_signature = {
 			[2] = "position",
 		},
-		execute = return_phantom,
+		execute = empty,
 		executable = function (command, myplayer)
 			if not command.data.entity then
 				command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
@@ -603,7 +609,7 @@ high_level_commands = {
 
 	["freeze-daytime"] = {
 		type_signature = { },
-		execute = return_phantom,
+		execute = empty,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			myplayer.surface.freeze_daytime = true
@@ -616,9 +622,7 @@ high_level_commands = {
 			amount = {"nil", "number"},
 			type  = {"nil", "string"},
 		},
-		execute = function (command, myplayer, tick)
-			return command
-		end,
+		execute = strip_command,
 
 		executable = function(command, myplayer, tick)
 			if not in_range(command, myplayer) then
@@ -755,7 +759,7 @@ high_level_commands = {
 		type_signature = {
 			[2] = "table",
 		},
-		execute = return_phantom,
+		execute = empty,
 		initialize = empty,
 		spawn_commands = function(command, myplayer, tick)
 			local commands = {}
@@ -790,7 +794,7 @@ high_level_commands = {
 			[2] = "string",
 			[3] = "string",
 		},
-		execute = return_phantom,
+		execute = empty,
 		executable = function (command, myplayer, tick)
 			command.data.spawn_queue = {}
 
@@ -829,7 +833,7 @@ high_level_commands = {
 		},
 		execute = function (command, myplayer, tick)
 			if command.oneshot then command.finished = true end
-			return command
+			return strip_command(command)
 		end,
 		default_priority = 100,
 	},
@@ -978,7 +982,7 @@ high_level_commands = {
 
 	stop = {
 		type_signature = { },
-		execute = return_phantom,
+		execute = empty,
 		default_priority = 100,
 	},
 
@@ -986,7 +990,7 @@ high_level_commands = {
 		type_signature = {
 			[2] = "string",
 		},
-		execute = return_phantom,
+		execute = empty,
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			for _,com in pairs(global.command_list_parser.current_command_set) do
@@ -1127,7 +1131,7 @@ high_level_commands = {
 		execute = function(command)
 			command.finished = true
 			global.high_level_commands.throw_cooldown = game.tick
-			return command
+			return strip_command(command)
 		end,
 		default_action_type = action_types.throw,
 		executable = function (command, myplayer, tick)
@@ -1166,7 +1170,7 @@ high_level_commands = {
 				command.data.namespace = command.data.namespace .. global.high_level_commands.simple_sequence_index .. "."
 			end
 		end,
-		execute = return_phantom,
+		execute = empty,
 		spawn_commands = function(command, myplayer, tick)
 			command.data.index = command.data.index + 1
 			if command.data.index + 2 > #command then
@@ -1235,7 +1239,7 @@ high_level_commands = {
 				command.data.namespace = command.namespace .. "sequence-" .. global.high_level_commands.sequence_index .. "."
 			end
 		end,
-		execute = return_phantom,
+		execute = empty,
 		spawn_commands = function(command, myplayer, tick)
 			command.data.index = command.data.index + 1
 			if command[command.data.index + 1] == nil then

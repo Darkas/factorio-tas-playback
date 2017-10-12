@@ -347,6 +347,20 @@ commands.add_command("alert", "Alert when entering command group and set game sp
 	end
 end)
 
+commands.add_command("exportqueue", "Export the command queue to file.", function(event)
+	local name = "TAS_" .. global.system.tas_name
+	if event.parameter and event.parameter ~= "" then
+		name = name .. "_" .. event.parameter .. "_queue.lua"
+	else
+		name = name .. "_queue.lua"
+	end
+	local list = commandqueue.command_list
+	commandqueue.command_list= nil
+	local data = "return " .. serpent.block(commandqueue)
+	commandqueue.command_list = list
+	game.write_file(name, data, false, event.player_index)
+end)
+
 
 script.on_event(defines.events.on_gui_click, function(event)
 	silo_script.on_gui_click(event)
