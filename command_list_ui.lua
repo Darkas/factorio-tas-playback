@@ -102,7 +102,7 @@ function update_command_list_ui(player, command_list)
 			if next_command_group.required then
 				local s = ""
 				for _, name in ipairs(next_command_group.required) do
-					if not global.command_list_parser.finished_command_names[name] then
+					if not global.command_list_parser.finished_named_commands[name] then
 						s = s .. name .. " | "
 					end
 				end

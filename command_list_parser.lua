@@ -24,7 +24,7 @@ function command_list_parser.init()
 	global.command_list_parser.command_finished_times = {}
 	global.command_list_parser.loaded_command_groups = {}
 	global.command_list_parser.initialized_names = {}
-	global.command_list_parser.finished_command_names = {}
+	global.command_list_parser.finished_named_commands = {}
 
 	global.command_list_parser.typecheck_errors = {}
 
@@ -169,29 +169,37 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	-- Check if we finished all commands in the current command set
 
 	local finished = true
+	local check_for_next = false
+	local current_command_set = global.command_list_parser.current_command_set
 
-	for _, command in pairs(global.command_list_parser.current_command_set) do
-		if command.finished and command.name then
-			global.command_list_parser.finished_command_names[command.namespace .. command.name] = true
-			--table.remove(global.command_list_parser.current_command_set, k)
+	local index = 1
+	local cmd = current_command_set[index]
+	while cmd do
+		if cmd.finished and cmd.name then
+			global.command_list_parser.finished_named_commands[cmd.namespace .. cmd.name] = cmd
+			table.remove(current_command_set, index)
+		else
+			index = index + 1
 		end
 
-		if not command.finished then
+		if cmd.finished then
+			check_for_next = true
+		else
 			finished = false
 		end
+		cmd = current_command_set[index]
 	end
 
-	if command_list[global.command_list_parser.current_command_group_index + 1]
-	and command_list[global.command_list_parser.current_command_group_index + 1].required then
+	local next_command_group = command_list[global.command_list_parser.current_command_group_index + 1]
+	if next_command_group and next_command_group.required then
 		finished = true
 
-		if type(command_list[global.command_list_parser.current_command_group_index + 1].required) == "string" then
-			command_list[global.command_list_parser.current_command_group_index + 1].required
-				= {command_list[global.command_list_parser.current_command_group_index + 1].required}
+		if type(next_command_group.required) == "string" then
+			next_command_group.required	= {next_command_group.required}
 		end
-		for _,name in pairs(command_list[global.command_list_parser.current_command_group_index + 1].required) do
-			if not (global.command_list_parser.finished_command_names[command_list[global.command_list_parser.current_command_group_index].name .. "." .. name]
-					or global.command_list_parser.finished_command_names[name]) then
+		for _,name in pairs(next_command_group.required) do
+			if not (global.command_list_parser.finished_named_commands[command_list[global.command_list_parser.current_command_group_index].name .. "." .. name]
+			or global.command_list_parser.finished_named_commands[name]) then
 				finished = false
 			end
 		end
@@ -471,15 +479,8 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	end
 
 	if command.command_finished then
-		local com_finished = false
-
-		for _, com in pairs(global.command_list_parser.current_command_set) do
-			if com.finished and com.name and has_value({command.command_finished, command.namespace .. command.command_finished}, com.namespace .. com.name) then
-				com_finished = true
-			end
-		end
-
-		if not com_finished then
+		if not (global.command_list_parser.finished_named_commands[command.command_finished]
+		or global.command_list_parser.finished_named_commands[command.namespace .. command.command_finished]) then
 			log_to_ui(command[1] .. ": " .. "The prerequisite (" .. command.command_finished  .. ") command has not finished", "command-not-executable")
 			return false
 		end

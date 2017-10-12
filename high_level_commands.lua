@@ -993,7 +993,13 @@ high_level_commands = {
 		execute = empty,
 		default_priority = 100,
 		initialize = function (command, myplayer)
-			for _,com in pairs(global.command_list_parser.current_command_set) do
+			if global.command_list_parser.finished_named_commands[command[2]]
+			or global.command_list_parser.finished_named_commands[command.namespace .. command[2]] then
+				errprint("Attempting to stop command that is already finished: " .. command[2])
+				command.finished = true
+				return
+			end
+			for _, com in pairs(global.command_list_parser.current_command_set) do
 				if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 					com.finished = true
 					command.finished = true
@@ -1001,13 +1007,11 @@ high_level_commands = {
 						global.command_list_parser.current_mining = 0
 					end
 
-					break
+					return
 				end
 			end
 
-			if not command.finished then
-				errprint("No command with the name " .. command[2] .. " found!")
-			end
+			errprint("No command with the name " .. command[2] .. " found!")
 		end,
 	},
 
@@ -1210,7 +1214,7 @@ high_level_commands = {
 			end
 		end,
 		executable = function(command, myplayer, tick)
-			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.namespace .. "command-" .. command.data.index] then
+			if command.data.index == 0 or global.command_list_parser.finished_named_commands[command.data.namespace .. "command-" .. command.data.index] then
 				return ""
 			else
 				return "Waiting for command: command-" .. command.data.index
@@ -1254,7 +1258,7 @@ high_level_commands = {
 			end
 		end,
 		executable = function(command, myplayer, tick)
-			if command.data.index == 0 or global.command_list_parser.finished_command_names[command.data.namespace .. "command-" .. command.data.index] then
+			if command.data.index == 0 or global.command_list_parser.finished_named_commands[command.data.namespace .. "command-" .. command.data.index] then
 				return ""
 			else
 				return "Waiting for command: command-" .. command.data.index
