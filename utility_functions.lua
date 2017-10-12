@@ -173,7 +173,7 @@ function sqdistance(pos1, pos2)
 	return (x1 - x2)^2 + (y1 - y2)^2
 end
 
--- works for name or entity or table {name, position, direction}
+-- works for name or entity or table {name=..., position=..., direction=...}
 function collision_box(entity)
 	if not entity then game.print(debug.traceback()) error("Called collision_box with parameter nil!") end
 

@@ -2,6 +2,7 @@
 - Blueprinting cmd should track finished commands and have a flag to end only when everything is actually built.
 - Extend auto-take s.t. it can take coal if we run out?
 - Redo movement logic. It's super costly at the moment.
+- Two auto-take cmds that take the same item are problematic!
 
 Low Priority:
 - Simple-Sequence doesnt work with build-command

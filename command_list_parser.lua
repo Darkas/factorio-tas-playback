@@ -361,7 +361,7 @@ function command_list_parser.create_commandqueue(executable_commands, command, m
 
 	-- save finishing time for on_relative_tick
 	for _, cmd in pairs(queue) do
-		if cmd.name then
+		if cmd.name and cmd.finished then
 			global.command_list_parser.command_finished_times[cmd.name] = tick
 		end
 	end

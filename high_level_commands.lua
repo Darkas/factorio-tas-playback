@@ -118,7 +118,7 @@ function can_craft(craft, myplayer, need_intermediates)
 	end
 	if need_intermediates then
 		local recipe = game.recipe_prototypes[craft.name]
-		
+
 		if need_intermediates then
 			for _, ingr in pairs(recipe.ingredients) do
 				if (need_intermediates == true or has_value(need_intermediates, ingr.name)) and myplayer.get_item_count(ingr.name) < ingr.amount then
@@ -127,7 +127,7 @@ function can_craft(craft, myplayer, need_intermediates)
 			end
 		end
 	end
-	
+
 	return myplayer.get_craftable_count(craft.name) >= 1
 end
 
@@ -156,6 +156,19 @@ entities_with_inventory = {"furnace", "assembling-machine", "container", "car", 
 
 
 high_level_commands = {
+	alert = {
+		type_signature = {
+			[2] = "string",
+		},
+		execute = function(command, myplayer, tick)
+			if #game.players == 1 then
+				game.show_message_dialog{text="Now entering: " .. command[2]}
+			else
+				game.print("Now entering: " .. command[2])
+			end
+			command.finished = true
+		end
+	},
 	["auto-build-blueprint"] = {
 		type_signature =
 		{
@@ -430,11 +443,14 @@ high_level_commands = {
 				return "Item not available (" .. command[2] .. ")"
 			end
 
-			if in_range(command, myplayer, tick) then
-				return ""
-			else
+			if not in_range(command, myplayer, tick) then
 				return "Player not in range (" .. command[2] .. ")"
 			end
+
+			if inside_rect(myplayer.position, collision_box{name=command[2], position=command[3], direction=command[4]}) then
+				return "Player is in the way!"
+			end
+			return ""
 		end,
 		default_priority = 5,
 		initialize = function (command, myplayer)
@@ -479,11 +495,11 @@ high_level_commands = {
 			if not recipe.enabled then
 				return "Recipe " .. item .. " is not available."
 			end
-			
+
 			if not can_craft(craft, myplayer, craft.need_intermediates) then
 				return "The requested item cannot be crafted."
 			end
-			
+
 			return ""
 		end,
 		default_priority = 5,

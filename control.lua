@@ -330,6 +330,23 @@ commands.add_command("init_run", "Start the speedrun", function(event)
 	end
 end)
 
+commands.add_command("alert", "Alert when entering command group and set game speed.", function(arg)
+	if commandqueue.command_list then
+		local found = false
+		for _, cmd_grp in pairs(commandqueue.command_list) do
+			if cmd_grp.name == arg.parameter then
+				found = true
+				game.print("Alerting for command group " .. arg.parameter)
+				table.insert(cmd_grp.commands, {"alert", arg.parameter})
+				table.insert(cmd_grp.commands, {"speed", 0.05})
+			end
+		end
+		if not found then game.print("Command group with name " .. arg.parameter .. " not found!") end
+	else
+		game.print("Can only use /wait_for if the command_list is set!")
+	end
+end)
+
 
 script.on_event(defines.events.on_gui_click, function(event)
 	silo_script.on_gui_click(event)
