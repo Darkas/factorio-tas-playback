@@ -807,9 +807,21 @@ high_level_commands = {
 	pickup = {
 		type_signature = {
 			oneshot = "boolean",
+			ticks = "number",
 		},
 		execute = function (command, myplayer, tick)
-			if command.oneshot then command.finished = true end
+			if command.ticks then
+				if command.data.final then
+					if tick >= command.data.final then
+						command.finished = true
+					end
+				else
+					command.data.final = tick + command.ticks
+				end
+			elseif command.oneshot then
+				command.finished = true
+			end
+			
 			return strip_command(command)
 		end,
 		default_priority = 100,
@@ -1157,24 +1169,19 @@ high_level_commands = {
 			if command.data.index + 2 > #command then
 				command.finished = true
 			else
+				local cmd = {
+					command[2],
+					command[command.data.index + 2],
+					name= "command-" .. command.data.index,
+					namespace=command.data.namespace,
+				}
+				
 				if command[2] == "move" then
-					local cmd = {
-						command[2],
-						command[command.data.index + 2],
-						name = "command-" .. command.data.index,
-						namespace = command.data.namespace
-					}
 					for k, v in pairs(command.pass_arguments or {}) do
 						cmd[k] = v
 					end
 					return {cmd}
 				else
-					local cmd = {
-						command[2],
-						command[command.data.index + 2],
-						name= "command-" .. command.data.index,
-						namespace=command.data.namespace,
-					}
 					for k, v in pairs(command.pass_arguments or {}) do
 						cmd[k] = v
 					end

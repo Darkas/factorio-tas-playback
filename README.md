@@ -161,7 +161,7 @@ commandqueue.command_list = {
 
 Currently implemented commands:
 * `{"auto-build-blueprint", <name>, {<X>, <Y>}, rotation=<rotation>}`: Automates building blueprints (movement must still be entered manually though). Add build commands, recipe commands and put commands (for modules) to the current command set as we get in build range of the individual entities in the blueprint. `<name>` refers to the name of the blueprint in the `blueprint_data_raw` field, this can be set in the `blueprint_list.lua` of the run scenario - see examples. We have a mod that adds a command to conveniently export blueprints. The second argument is the offset, the third argument is the rotation and should be one of `defines.direction.north, east, south, west`. The blueprint build commands are added with the `on_leaving_range` constraint.
-* `{"auto-refuel", min=..., amount=..., type=..., skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type and skip_coal_drills.
+* `{"auto-refuel", min=..., amount=..., type=..., pos={<X>, <Y>}, skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type, pos and skip_coal_drills.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
 * `{"build", <entity>, {<X>,<Y>}, <facing direction>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
 * `{"craft", <item>, <count>, need_intermediates}`
@@ -171,8 +171,8 @@ Currently implemented commands:
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
 * `{"freeze-daytime"}`
 * `{"mine", {<X>,<Y>}, amount=<int>, type=<string>}`: The `type` param is the entity type of the mined entity - typically "resource", "tree"; instead of "simple-entity" the string "rock" can also be used here.
-* `{"move-to", {<X>,<Y>}}`: move to a position, walking diagonal first, without smart path-finding around entities.
-* `{"move-to-command", "<command name>"}`: move to the closest point from the player that allows the command with the given name to be executed.
+* `{"move", {<X>,<Y>,entity=<bool>}}`: move to a position, walking diagonal first, without smart path-finding around entities. If entity is set to true, move in range of the entity at the given position.
+* `{"move", "<command>"}`: move to the closest point from the player that allows the command with the given name to be executed.
 * `{"move-sequence", {x1, y1}, ..., pass_arguments}`: Move to the positions in order.
 * `{"parallel", {<command-list>}}`: Add the commands in the list to the current command set.
 * `{"passive-take", <item>, <type>}`: Spawns `take` commands whenever there is an `<item>` in range available from an entity of the given type. `<type>` is not optional.
