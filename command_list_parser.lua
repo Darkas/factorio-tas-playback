@@ -419,6 +419,15 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		LogUI.log_to_ui(command[1] .. ": Not leaving range.", "command-not-executable")
 		return false
 	end
+	
+	if command.on_entering_area then
+		if Utils.inside_rect(myplayer.position, command.on_entering_area) then
+			command.on_entering_area = nil
+		else
+			LogUI.log_to_ui(command[1] .. ": Not in the given area.", "command-not-executable")
+			return false
+		end
+	end
 
 	if command.items_available then
 		local pos
