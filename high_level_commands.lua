@@ -806,8 +806,8 @@ high_level_commands = {
 
 	pickup = {
 		type_signature = {
-			oneshot = "boolean",
-			ticks = "number",
+			oneshot = {"nil", "boolean"},
+			ticks = {"nil", "number"},
 		},
 		execute = function (command, myplayer, tick)
 			if command.ticks then

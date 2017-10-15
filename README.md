@@ -176,7 +176,7 @@ Currently implemented commands:
 * `{"move-sequence", {x1, y1}, ..., pass_arguments}`: Move to the positions in order.
 * `{"parallel", {<command-list>}}`: Add the commands in the list to the current command set.
 * `{"passive-take", <item>, <type>}`: Spawns `take` commands whenever there is an `<item>` in range available from an entity of the given type. `<type>` is not optional.
-* `{"pickup", oneshot=<bool>}`: Pick up items from ground. If `oneshot` is not set, we pick up until this command is stopped.
+* `{"pickup", oneshot=<bool>, ticks=<number>}`: Pick up items from ground. If `oneshot` is not set, we pick up until this command is stopped, or if the given amount of ticks have passed.
 * `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"recipe", {<X>,<Y>}, <recipe>}`
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
