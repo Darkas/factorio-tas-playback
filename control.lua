@@ -31,17 +31,23 @@ else
 	return
 end
 
-require("util")
-require("utility_functions")
 require("silo-script")
 require("command_list_parser")
 
-require("log_ui")
-require("command_list_ui")
+local CmdUI = require("command_list_ui")
+local LogUI = require("log_ui")
+local Event = require("stdlib/event/event")
+local Utils = require("utility_functions")
+local MvRec = require("record_movement")
+local movement_records = {}
+pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
+MvRec.init(movement_records)
 
-
+local BP = require("blueprint")
+local blueprint_data_raw = {}
 pcall( function() blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list") end )
 if global.blueprint_error then error("Failed to load blueprints: " .. serpent.block(global.blueprint_error)) end
+BP.init(blueprint_data_raw)
 
 
 -- Get the commands that the speedrun can use
@@ -49,7 +55,7 @@ local TAScommands = require("commands")
 
 
 function set_run_logging_types()
-	configure_log_type(
+	LogUI.configure_log_type(
 		"run-debug",
 		{font_color = {r=0.5, g=0.9, b=0.9}},
 		50,
@@ -58,7 +64,7 @@ function set_run_logging_types()
 		end,
 		true
 	)
-	configure_log_type(
+	LogUI.configure_log_type(
 		"tascommand-error",
 		{font_color = {r=0.9, g=0.3, b=0.2}, font = "default-bold"},
 		50,
@@ -66,7 +72,7 @@ function set_run_logging_types()
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
-	configure_log_type(
+	LogUI.configure_log_type(
 		"run-output",
 		{font_color = {r=0.5, g=1, b=0.5}, font = "default"},
 		50,
@@ -74,7 +80,7 @@ function set_run_logging_types()
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
-	configure_log_type(
+	LogUI.configure_log_type(
 		"command-not-executable",
 		{font_color = {r=1, g=0.5, b=0.5}, font = "default"},
 		50,
@@ -113,21 +119,21 @@ end
 -- This function initializes the run's clock and a few properties
 function init_run(myplayer_index)
 	set_run_logging_types()
-	debugprint("Initializing the run")
+	Utils.debugprint("Initializing the run")
 	-- Examine the command queue for errors.
 	if not commandqueue then
-		errprint("The command queue is empty! No point in starting.")
+		Utils.errprint("The command queue is empty! No point in starting.")
 		return
 	end
-	debugprint("Command queue size is " .. table_size(commandqueue)) --includes settings "field"
+	Utils.debugprint("Command queue size is " .. table_size(commandqueue)) --includes settings "field"
 
 	if not commandqueue.settings then
-		errmessage("The settings for of the command queue don't exist.")
+		Utils.errmessage("The settings for of the command queue don't exist.")
 		return
 	end
 	-- Applying command queue settings
 	global.allowspeed = commandqueue.settings.allowspeed
-	debugprint("Changing the speed of the run through commands is " .. ((global.allowspeed and "allowed") or "forbidden") .. ".")
+	Utils.debugprint("Changing the speed of the run through commands is " .. ((global.allowspeed and "allowed") or "forbidden") .. ".")
 	-- Initiating the game:
 	-- Prepare the players:
 	-- Prepare the runner
@@ -164,20 +170,15 @@ function init_run(myplayer_index)
 		spectators.set_allows_action(input_action, true)
 	end
 	-- make everyone spectator except the runner
-	for _, player in pairs(game.connected_players) do
-		if player.index ~= myplayer_index then
-			player.game_view_settings.update_entity_selection = true
-			--local char_entity = pl.character
-			--pl.character = nil
-			--char_entity.destroy()
-			--pl.game_view_settings.show_entity_info = true
-			--pl.game_view_settings.show_controller_gui = false
+	for _, pl in pairs(game.connected_players) do
+		if pl.index ~= myplayer_index then
+			pl.game_view_settings.update_entity_selection = true
 			spectators.add_player(pl)
 		end
 	end
 
 	global.start_tick = game.tick
-	debugprint("Starting tick is " .. global.start_tick)
+	Utils.debugprint("Starting tick is " .. global.start_tick)
 
 	global.running = true
 end
@@ -188,12 +189,12 @@ local function end_of_input(player)
 	end
 end
 
-script.on_event(defines.events.on_tick, function()
+Event.register(defines.events.on_tick, function()
 	for _, player in pairs(game.players) do
 		if player.connected then
-			update_log_ui(player)
+			LogUI.update_log_ui(player)
 			if commandqueue then
-				update_command_list_ui(player, commandqueue.command_list)
+				CmdUI.update_command_list_ui(player, commandqueue.command_list)
 			end
 		end
 	end
@@ -237,7 +238,7 @@ script.on_event(defines.events.on_tick, function()
 	end
 
 	if global.system.save then
-		if type(global.system.save) ~= "string" then error("Save name must be a string! Is: " .. printable(global.system.save)) end
+		if type(global.system.save) ~= "string" then error("Save name must be a string! Is: " .. Utils.printable(global.system.save)) end
 		local name = global.system.save
 		global.system.save = false
 		game.server_save("_TAS_" .. name)
@@ -261,7 +262,7 @@ local function init_world(player_index) --does what the freeplay scenario usuall
 	silo_script.gui_init(myplayer)
 end
 
-script.on_event(defines.events.on_player_created, function(event)
+Event.register(defines.events.on_player_created, function(event)
 	init_world(event.player_index)
 	init_spectator(game.players[event.player_index])
 	if global.init_on_player_created and (event.player_index == 1) then -- Only the first player created automatically starts the run
@@ -269,7 +270,7 @@ script.on_event(defines.events.on_player_created, function(event)
 	end
 end)
 
-script.on_event(defines.events.on_player_joined_game, function (event)
+Event.register(defines.events.on_player_joined_game, function(event)
 	if global.running and (event.player_index ~= global.myplayer.index) then
 		local player = game.players[event.player_index]
 		player.game_view_settings.update_entity_selection = true
@@ -283,7 +284,7 @@ script.on_init(function()
 	global.walkstate = {walking = false}
 	silo_script.init()
 	command_list_parser.init()
-	init_logging()
+	--init_logging()
 end)
 
 
@@ -361,8 +362,7 @@ commands.add_command("exportqueue", "Export the command queue to file.", functio
 	game.write_file(name, data, false, event.player_index)
 end)
 
-
-script.on_event(defines.events.on_gui_click, function(event)
+Event.register(defines.events.on_gui_click, function(event)
 	silo_script.on_gui_click(event)
 
 	if event.element.name == "next_command_group" then
@@ -381,7 +381,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 	end
 end)
 
-script.on_event(defines.events.on_rocket_launched, function(event)
+Event.register(defines.events.on_rocket_launched, function(event)
 	silo_script.on_rocket_launched(event)
 end)
 

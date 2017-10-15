@@ -1,9 +1,9 @@
-require("mod-gui")
+local mod_gui = require("mod-gui")
 
-NUM_LINES = 40
---[[
+local Utils = require("utility_functions")
+local NUM_LINES = 40
 
---]]
+CmdUI = {} --luacheck: allow defined top
 
 local passive_commands = {
 	"passive-take",
@@ -12,14 +12,14 @@ local passive_commands = {
 }
 
 
-function init_command_list_ui()
+function CmdUI.init()
 	if global.command_list_ui then return end
 	global.command_list_ui = {}
 	global.command_list_ui.ui_hidden = {}
 
 end
 
-function create_command_list_ui(player)
+function CmdUI.create(player)
 	local flow = mod_gui.get_frame_flow(player)
 	if not flow.direction == "vertical" then flow.direction = "vertical" end
 	local frame = flow.command_list_frame
@@ -30,13 +30,13 @@ function create_command_list_ui(player)
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Command List"}
 	title.style.font = "default-frame"
 
-	local label = top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
+	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
 	top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
-	local label = top_flow.add{type="label", style="label_style", name = "title_show_passive", caption="[Show Passive]"}
+	top_flow.add{type="label", style="label_style", name = "title_show_passive", caption="[Show Passive]"}
 	top_flow.add{type="checkbox", name="show_passive_button", state=false}
 
 	local group_flow = frame.add{type="flow", name="group_flow", style="flow_style", direction="horizontal"}
-	label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
+	local label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
 	label.style.font = "default-semibold"
 	local button = group_flow.add{type="button", style="button_style", name="next_command_group", caption="Next Command Group"}
 	button.style.top_padding = 0
@@ -60,21 +60,20 @@ function create_command_list_ui(player)
 		label.style.top_padding = 0
 		label.style.bottom_padding = 0
 		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
-
 	end
 end
 
 
-function update_command_list_ui(player, command_list)
+function CmdUI.update_command_list_ui(player, command_list)
 	if not command_list then return end
 	if not global.command_list_parser.current_command_group_index or not command_list[global.command_list_parser.current_command_group_index] then return end
 	local flow = mod_gui.get_frame_flow(player)
 	local frame = flow.command_list_frame
 
-	if not global.command_list_ui then init_command_list_ui() end
+	if not global.command_list_ui then CmdUI.init() end
 
 	if not frame then
-		create_command_list_ui(player)
+		CmdUI.create(player)
 		frame = flow.command_list_frame
 	end
 
@@ -120,13 +119,13 @@ function update_command_list_ui(player, command_list)
 			repeat
 				command = global.command_list_parser.current_command_set[command_set_index]
 				command_set_index = command_set_index + 1
-			until (command and not command.finished and (show_passive_commands or not in_list(command[1], passive_commands))) or command_set_index > #global.command_list_parser.current_command_set
+			until (command and not command.finished and (show_passive_commands or not Utils.in_list(command[1], passive_commands))) or command_set_index > #global.command_list_parser.current_command_set
 
 			if command and not command.finished then
-				s = "[" .. index .. "] | "
+				local s = "[" .. index .. "] | "
 				for key, value in pairs(command) do
-					if not in_list(key, {"data", "action_type", "tested", "rect", "distance"}) then
-						s = s .. key .. "= " .. printable(value) .. " | "
+					if not Utils.in_list(key, {"data", "action_type", "tested", "rect", "distance"}) then
+						s = s .. key .. "= " .. Utils.printable(value) .. " | "
 					end
 				end
 				frame.scroll_pane.table["text_" .. index].caption = s
@@ -137,7 +136,9 @@ function update_command_list_ui(player, command_list)
 	end
 end
 
-function destroy_command_list_ui(player)
+function CmdUI.destroy_command_list_ui(player)
 	local fr = mod_gui.get_frame_flow(player).command_list_frame
 	if fr and fr.valid then fr.destroy() end
 end
+
+return CmdUI

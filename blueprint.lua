@@ -1,5 +1,11 @@
 
-Blueprint = {}
+Blueprint = {} --luacheck: allow defined top
+local Utils = require("utility_functions")
+
+local blueprint_data_raw
+function Blueprint.init(blueprint_raw)
+    blueprint_data_raw = blueprint_raw or {}
+end
 
 function Blueprint.load(name, offset, rotation, chunk_size, area)
     local blueprint_raw = blueprint_data_raw[name]
@@ -18,9 +24,9 @@ function Blueprint.load(name, offset, rotation, chunk_size, area)
     }
 
     for _, ent in pairs(entities) do
-        local entity = copy(ent)
-        entity.position = translate(rotate_orthogonal(entity.position, rotation), {offset[1] - blueprint_raw.anchor.x + 0.5, offset[2] - blueprint_raw.anchor.y + 0.5})
-        if not area or inside_rect(entity.position, area) then
+        local entity = Utils.copy(ent)
+        entity.position = Utils.translate(Utils.rotate_orthogonal(entity.position, rotation), {offset[1] - blueprint_raw.anchor.x + 0.5, offset[2] - blueprint_raw.anchor.y + 0.5})
+        if not area or Utils.inside_rect(entity.position, area) then
             if blueprint.counts[entity.name] then
                 blueprint.counts[entity.name] = blueprint.counts[entity.name] + 1
             else
@@ -55,16 +61,11 @@ function Blueprint.remove_entity(blueprint, entity)
     if not blueprint.chunked_entities[key] then game.print(debug.traceback()); error("Attempted to delete entity in chunk that does not exist from blueprint! Blueprint name: " .. blueprint.name .. ", entity: " .. serpent.block(entity)) end
     if not blueprint.chunked_entities[key][entity._index] then game.print(debug.traceback()); error("Attempted to delete entity that does not exist in blueprint! Blueprint name: " .. blueprint.name .. ", entity: " .. serpent.block(entity)) end
     blueprint.chunked_entities[key][entity._index] = nil
-    local finished = true
-    for _, _ in pairs(blueprint.chunked_entities[key]) do
-        finished = false
-        break
+    if next(blueprint.chunked_entities[key]) == nil then
+        blueprint.chunked_entities[key] = nil
     end
-    if finished then blueprint.chunked_entities[key] = nil end
-    for _, _ in pairs(blueprint.chunked_entities) do
-        return true
-    end
-    return false
+    local entities_left = (next(blueprint.chunked_entities) ~= nil)
+    return entities_left
 end
 
 
@@ -80,7 +81,7 @@ function Blueprint.get_entities_in_build_range(blueprint_data, player)
     for X = x-1, x+1 do
         for Y = y-1, y+1 do
             for _, entity in pairs(entities[X .. "_" .. Y] or {}) do
-                if distance_from_rect(position, collision_box(entity)) <= player.build_distance then -- TODO: This should be done dynamically.
+                if Utils.distance_from_rect(position, Utils.collision_box(entity)) <= player.build_distance then -- TODO: This should be done dynamically.
                     table.insert(res, entity)
                 end
             end
@@ -111,7 +112,7 @@ end
 function Blueprint.get_entity_at(blueprint_data, position)
     local entities = blueprint_data.chunked_entities
     for _, entity in pairs(entities[Blueprint.key_from_position(position, blueprint_data.chunk_size)] or {}) do
-        if sqdistance(entity.position, position) < 0.01 then
+        if Utils.sqdistance(entity.position, position) < 0.01 then
             return entity
         end
     end
@@ -120,3 +121,5 @@ end
 function Blueprint.key_from_position(position, chunk_size)
     return math.floor((position.x or position[1]) / chunk_size) .. "_" .. math.floor((position.y or position[2]) / chunk_size)
 end
+
+return Blueprint

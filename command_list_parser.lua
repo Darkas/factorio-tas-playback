@@ -1,12 +1,15 @@
 require("high_level_commands")
+local Event = require("stdlib/event/event")
+local LogUI = require("log_ui")
+local Utils = require("utility_functions")
 
-command_list_parser = {}
+command_list_parser = {} --luacheck: allow defined top
 
 global.command_list_parser = global.command_list_parser or {}
 
 -- TODO: all sorts of vehicle things.
 
-inherited_actions = {
+local inherited_actions = {
 	["auto-refuel"] = "put",
 	["move-to"] = "move",
 	["move-to-command"] = "move",
@@ -14,7 +17,7 @@ inherited_actions = {
 	["auto-build-blueprint"] = "build",
 }
 
-max_ranges = {
+local max_ranges = {
 	["build"] = 6,
 	["throw-grenade"] = 15,
 }
@@ -38,8 +41,8 @@ function command_list_parser.init()
 	global.command_list_parser.current_command_group_tick = nil
 end
 
-script.on_event(defines.events.on_player_mined_entity, function(event)
-	local player = game.players[event.player_index]
+Event.register(defines.events.on_player_mined_entity, function(event)
+	-- local player = game.players[event.player_index]
 	for _, command in pairs(global.command_list_parser.current_command_set) do
 		if command[1] == "mine" then
 			if command_list_parser.command_sqdistance(command, {position=event.entity.position}) <= 0.3 then
@@ -52,7 +55,7 @@ script.on_event(defines.events.on_player_mined_entity, function(event)
 	end
 end)
 
-script.on_event(defines.events.on_player_mined_item, function(event)
+Event.register(defines.events.on_player_mined_item, function(event)
 	local player = game.players[event.player_index]
 	if not player.selected then return end
 	for _, command in pairs(global.command_list_parser.current_command_set) do
@@ -83,7 +86,7 @@ function command_list_parser.check_type(command)
 		end
 
 		for _, t in pairs(types) do
-			if t == "position" and is_position(value) then
+			if t == "position" and Utils.is_position(value) then
 				return true
 			elseif t == "boolean" then
 				return value == true or value == false or value == nil
@@ -96,7 +99,7 @@ function command_list_parser.check_type(command)
 
 	for k, t in pairs(type_signature) do
 		if not check_argument(command[k], t) then
-			error("Command has wrong type. \nGroup: " .. command.data.parent_command_group.name .. "\nCommand: " .. command[1] .. "\nArgument: " .. k .. "\nValue: " .. printable(command[k]))
+			error("Command has wrong type. \nGroup: " .. command.data.parent_command_group.name .. "\nCommand: " .. command[1] .. "\nArgument: " .. k .. "\nValue: " .. Utils.printable(command[k]))
 		end
 	end
 end
@@ -269,7 +272,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	end
 
 	if auto_move_commands > 1 then
-		errprint("You are using more than one move command at once! Don't do this!")
+		Utils.errprint("You are using more than one move command at once! Don't do this!")
 	end
 
 	-- Determine first out of range command
@@ -302,7 +305,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	end
 
 	if priority_command then
-		log_to_ui("Priority command: " .. priority_command[1], "command-not-executable")
+		LogUI.log_to_ui("Priority command: " .. priority_command[1], "command-not-executable")
 		commandqueue[tick] = command_list_parser.create_commandqueue(executable_commands, priority_command, myplayer, tick)
 	else
 		commandqueue[tick] = {}
@@ -325,7 +328,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		end
 
 		if craft_action and ui_action then
-			errprint("You are executing a craft and a ui action in adjacent frames! This is impossible! The craft action is " .. serpent.block(craft_action) .. " and the ui action is " .. serpent.block(ui_action))
+			Utils.errprint("You are executing a craft and a ui action in adjacent frames! This is impossible! The craft action is " .. serpent.block(craft_action) .. " and the ui action is " .. serpent.block(ui_action))
 		end
 	end
 
@@ -336,7 +339,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		if command[1] == "move" then
 			moves = moves .. command[2] .. ", "
 			if move_found then
-				errprint("You are executing more than one move action in the same frame! Moves: " .. moves)
+				Utils.errprint("You are executing more than one move action in the same frame! Moves: " .. moves)
 				break
 			else
 				move_found = true
@@ -367,7 +370,7 @@ function command_list_parser.create_commandqueue(executable_commands, command, m
 		end
 	end
 
-	log_to_ui(current_commands, "command-not-executable")
+	LogUI.log_to_ui(current_commands, "command-not-executable")
 
 	-- save finishing time for on_relative_tick
 	for _, cmd in pairs(queue) do
@@ -388,7 +391,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 
 	if fail_reason ~= "" then
 		if fail_reason == nil then game.print(serpent.block(command)) end
-		log_to_ui(command[1] .. ": " .. fail_reason, "command-not-executable")
+		LogUI.log_to_ui(command[1] .. ": " .. fail_reason, "command-not-executable")
 		return false
 	end
 
@@ -397,13 +400,13 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	if command.on_relative_tick then
 		if type(command.on_relative_tick) == type(1) then
 			if tick < global.command_list_parser.current_command_group_tick + command.on_relative_tick then
-				log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
+				LogUI.log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
 				return false
 			end
 		else
 			if type(command.on_relative_tick) == type({}) then
 				if not global.command_list_parser.command_finished_times[command.on_relative_tick[2]] or tick < global.command_list_parser.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then
-					log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
+					LogUI.log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
 					return false
 				end
 			else
@@ -413,7 +416,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	end
 
 	if command.on_leaving_range and not command_list_parser.leaving_range(command, myplayer, tick) then
-		log_to_ui(command[1] .. ": Not leaving range.", "command-not-executable")
+		LogUI.log_to_ui(command[1] .. ": Not leaving range.", "command-not-executable")
 		return false
 	end
 
@@ -428,10 +431,10 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		end
 
 		if pos then
-			entity = get_entity_from_pos(pos, myplayer)
+			entity = Utils.get_entity_from_pos(pos, myplayer)
 
 			if not entity then
-				errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
+				Utils.errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
 				return false
 			end
 		else
@@ -439,7 +442,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		end
 
 		if entity.get_item_count(command.items_available[1]) < command.items_available[2] then
-			log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
+			LogUI.log_to_ui(command[1] .. ": " .. "Not enough items available!", "command-not-executable")
 			return false
 		end
 
@@ -459,10 +462,10 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		end
 
 		if pos then
-			entity = get_entity_from_pos(pos, myplayer, command.type or command.items_total.type)
+			entity = Utils.get_entity_from_pos(pos, myplayer, command.type or command.items_total.type)
 
 			if not entity then
-				errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
+				Utils.errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
 				return false
 			end
 
@@ -470,10 +473,10 @@ function command_list_parser.command_executable(command, myplayer, tick)
 		end
 
 		if (not command.items_total.min) and count < command.items_total[2] then
-			log_to_ui(command[1] .. ": " .. "Not enough items available! " .. count .. " / " .. command.items_total[2], "command-not-executable")
+			LogUI.log_to_ui(command[1] .. ": " .. "Not enough items available! " .. count .. " / " .. command.items_total[2], "command-not-executable")
 			return false
 		elseif command.items_total.min and count > command.items_total[2] then
-			log_to_ui(command[1] .. ": " .. "Too many items available!", "command-not-executable")
+			LogUI.log_to_ui(command[1] .. ": " .. "Too many items available!", "command-not-executable")
 			return false
 		end
 	end
@@ -481,7 +484,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	if command.command_finished then
 		if not (global.command_list_parser.finished_named_commands[command.command_finished]
 		or global.command_list_parser.finished_named_commands[command.namespace .. command.command_finished]) then
-			log_to_ui(command[1] .. ": " .. "The prerequisite (" .. command.command_finished  .. ") command has not finished", "command-not-executable")
+			LogUI.log_to_ui(command[1] .. ": " .. "The prerequisite (" .. command.command_finished  .. ") command has not finished", "command-not-executable")
 			return false
 		end
 	end
@@ -511,14 +514,14 @@ end
 
 function command_list_parser.command_sqdistance(command, player)
 	local position = nil
-	if in_list(command[1], {"rotate", "recipe", "take", "put", "mine", "throw-grenade"}) then position = command[2]
+	if Utils.in_list(command[1], {"rotate", "recipe", "take", "put", "mine", "throw-grenade"}) then position = command[2]
 	elseif command[1] == "move-to" or command[1] == "build" then position = command[3]
 	end
 
 	--game.print(serpent.block(position))
 	--if position == nil then game.print(command[1]) end
 	if position then
-		return sqdistance(position, player.position)
+		return Utils.sqdistance(position, player.position)
 	else
 		return nil
 	end
@@ -537,11 +540,11 @@ function command_list_parser.add_compatible_commands(executable_commands, comman
 
 		local priority_take_or_put = nil
 
-		if not has_value({"put", "take"}, basic_action(command)) then
+		if not Utils.has_value({"put", "take"}, basic_action(command)) then
 			-- find the highest priority take or put-stack action at this position
 
 			for _, comm in pairs(executable_commands) do
-				if has_value({"put", "take"}, basic_action(comm)) and comm.action_type == action_types.selection and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
+				if Utils.has_value({"put", "take"}, basic_action(comm)) and comm.action_type == action_types.selection and comm[2][1] == coordinates[1] and comm[2][2] == coordinates[2] then
 					if not priority_take_or_put and priority_take_or_put.priority > comm.priority then
 						priority_take_or_put = comm
 					end

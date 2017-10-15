@@ -1,5 +1,6 @@
-require("blueprint")
+local Blueprint = require("blueprint")
 local TAScommands = require("commands")
+local Utils = require("utility_functions")
 
 global.high_level_commands = global.high_level_commands or {
 	throw_cooldown = nil,
@@ -8,7 +9,7 @@ global.high_level_commands = global.high_level_commands or {
 	command_requests = {},
 }
 
-function can_craft(craft, myplayer, need_intermediates)
+function Utils.can_craft(craft, myplayer, need_intermediates)
 	if not myplayer.force.recipes[craft.name].enabled then
 		return false
 	end
@@ -17,7 +18,7 @@ function can_craft(craft, myplayer, need_intermediates)
 
 		if need_intermediates then
 			for _, ingr in pairs(recipe.ingredients) do
-				if (need_intermediates == true or has_value(need_intermediates, ingr.name)) and myplayer.get_item_count(ingr.name) < ingr.amount then
+				if (need_intermediates == true or Utils.has_value(need_intermediates, ingr.name)) and myplayer.get_item_count(ingr.name) < ingr.amount then
 					return false
 				end
 			end
@@ -27,29 +28,29 @@ function can_craft(craft, myplayer, need_intermediates)
 	return myplayer.get_craftable_count(craft.name) >= 1
 end
 
-function empty()
+local function empty()
 end
 
-function strip_command(command)
+local function strip_command(command)
 	if command[6] then error("Command " .. command[1] .. " has more arguments than expected: !") end
 	return {command[1], command[2], command[3], command[4], command[5], already_executed = command.already_executed}
 end
 
-function return_self_finished(command, myplayer, tick)
+local function return_self_finished(command, myplayer, tick)
 	command.finished = true
 	return strip_command(command)
 end
 
-function set_finished(command)
+local function set_finished(command)
 	command.finished = true
 end
 
-function return_phantom ()
+local function return_phantom ()
 	return {"phantom"}
 end
 
 action_types = {always_possible = 1, selection = 2, ui = 3, throw = 4}
-entities_with_inventory = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"}
+local entities_with_inventory = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"}
 
 
 
@@ -61,7 +62,7 @@ high_level_commands = {
 		type_signature = {
 			[2] = "string",
 		},
-		execute = function(command, myplayer, tick)
+		execute = function(command, myplayer, tick) 
 			if #game.players == 1 then
 				game.show_message_dialog{text="Now entering: " .. command[2]}
 			else
@@ -114,14 +115,14 @@ high_level_commands = {
 				local cmd_already_spawned = false
 				for _, cmd in pairs(global.command_list_parser.current_command_set) do
 					if cmd[1] == "build" then
-						if sqdistance(cmd[3], entity.position) < 0.01 and cmd[2] == entity.name then
+						if Utils.sqdistance(cmd[3], entity.position) < 0.01 and cmd[2] == entity.name then
 							cmd_already_spawned = true
 							break
 						end
 					end
 				end
 
-				if cmd_already_spawned or get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
+				if cmd_already_spawned or Utils.get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
 					entity.built = true
 					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 				else
@@ -229,7 +230,7 @@ high_level_commands = {
 								priority = 4
 							end
 
-							if distance_from_rect(myplayer.position, collision_box(entity)) <= myplayer.reach_distance then
+							if Utils.distance_from_rect(myplayer.position, Utils.collision_box(entity)) <= myplayer.reach_distance then
 								if command.min then
 									if entity.burner.inventory.get_item_count("coal") < command.min then
 										if not command.data.already_refueled[i] then
@@ -280,12 +281,12 @@ high_level_commands = {
 			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
 			local entities = {}
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
-				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
+				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
-				if (in_range({rect = collision_box(entity), distance = myplayer.build_distance}, myplayer) and get_recipe(entity) == item) then
+				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
@@ -301,7 +302,7 @@ high_level_commands = {
 			local ret = {}
 			if count_crafts_all <= 0 then
 				if count_crafts_all < 0 then
-					errprint("Auto-take was not optimal: there were more resources in the entities than needed.")
+					Utils.errprint("Auto-take was not optimal: there were more resources in the entities than needed.")
 				end
 
 				table.sort(entities, function(a, b) return a.crafting_progress > b.crafting_progress end)
@@ -316,7 +317,7 @@ high_level_commands = {
 				command.finished = true
 			end
 
-			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[get_recipe(entities[1])].energy * 60
+			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[Utils.get_recipe(entities[1])].energy * 60
 			command.data.next_tick = tick + math.max(math.min(ticks / 3, 40), 1)
 			return ret
 		end,
@@ -345,11 +346,11 @@ high_level_commands = {
 				return "Item not available (" .. command[2] .. ")"
 			end
 
-			if not in_range(command, myplayer, tick) then
+			if not Utils.in_range(command, myplayer, tick) then
 				return "Player not in range (" .. command[2] .. ")"
 			end
 
-			if inside_rect(myplayer.position, collision_box{name=command[2], position=command[3], direction=command[4]}) then
+			if Utils.inside_rect(myplayer.position, Utils.collision_box{name=command[2], position=command[3], direction=command[4]}) then
 				return "Player is in the way!"
 			end
 			return ""
@@ -357,7 +358,7 @@ high_level_commands = {
 		default_priority = 5,
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
-			command.rect = collision_box{name=command[2], position=copy(command[3])}
+			command.rect = Utils.collision_box{name=command[2], position=Utils.copy(command[3])}
 		end,
 	},
 
@@ -371,7 +372,7 @@ high_level_commands = {
 			local craft = command.data.crafts[command.data.craft_index]
 			local return_commands = {}
 
-			while can_craft(craft, myplayer, craft.need_intermediates) do
+			while Utils.can_craft(craft, myplayer, craft.need_intermediates) do
 				local cmd = {"craft", craft.name, 1, already_executed = true}
 				TAScommands["craft"](cmd, myplayer)
 				table.insert(return_commands, cmd)
@@ -399,7 +400,7 @@ high_level_commands = {
 				return "Recipe " .. item .. " is not available."
 			end
 
-			if not can_craft(craft, myplayer, craft.need_intermediates) then
+			if not Utils.can_craft(craft, myplayer, craft.need_intermediates) then
 				return "The requested item cannot be crafted."
 			end
 
@@ -422,7 +423,7 @@ high_level_commands = {
 					command.data.crafts[#command.data.crafts + 1] = {name = name, count = count, need_intermediates = need_intermediates}
 				end
 			else
-				errprint("Craft: Wrong parameter type")
+				Utils.errprint("Craft: Wrong parameter type")
 			end
 
 			command.data.craft_index = 1
@@ -449,7 +450,7 @@ high_level_commands = {
 			return ""
 		end,
 		spawn_commands = function (command, myplayer, tick)
-			local x, y = get_coordinates(command[3])
+			local x, y = Utils.get_coordinates(command[3])
 			local name = "craftbuild_build_{" .. x .. ", " .. y .. "}"
 			command.data.build_command = {"build", command[2], command[3], command[4], name=name}
 
@@ -464,7 +465,7 @@ high_level_commands = {
 		execute = empty,
 		default_priority = 100,
 		initialize = function (command, myplayer)
-			errprint(command[2])
+			Utils.errprint(command[2])
 			command.finished = true
 		end,
 	},
@@ -476,7 +477,7 @@ high_level_commands = {
 		execute = empty,
 		executable = function (command, myplayer)
 			if not command.data.entity then
-				command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
+				command.data.entity = Utils.get_entity_from_pos(command[2], myplayer, entities_with_inventory)
 
 				if not command.data.entity then
 					return "No valid entity found at (" .. command[2][1] .. "," .. command[2][2] .. ")"
@@ -489,11 +490,11 @@ high_level_commands = {
 			end
 
 			if not command.rect then
-				command.rect = collision_box(command.data.entity)
+				command.rect = Utils.collision_box(command.data.entity)
 				command.distance = myplayer.reach_distance
 			end
 
-			if in_range(command, myplayer) then
+			if Utils.in_range(command, myplayer) then
 				command.finished = true
 
 				return ""
@@ -522,7 +523,7 @@ high_level_commands = {
 		execute = strip_command,
 
 		executable = function(command, myplayer, tick)
-			if not in_range(command, myplayer) then
+			if not Utils.in_range(command, myplayer) then
 				return "Out of range"
 			end
 
@@ -552,16 +553,16 @@ high_level_commands = {
 				if type == "res" then type = "resource" end
 			end
 
-			local entity = get_entity_from_pos(position, myplayer, type)
+			local entity = Utils.get_entity_from_pos(position, myplayer, type)
 
 			command.distance = myplayer.resource_reach_distance
 
 			if entity then
-				command.rect = collision_box(entity)
+				command.rect = Utils.collision_box(entity)
 				command[2] = {entity.position.x, entity.position.y}
 			else
-				errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
-				command.rect = {copy(position), copy(position)}
+				Utils.errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
+				command.rect = {Utils.copy(position), Utils.copy(position)}
 			end
 		end,
 		default_action_type = action_types.selection,
@@ -572,7 +573,7 @@ high_level_commands = {
 			[2] = {"string", "position"},
 		},
 		execute = function (command, myplayer, tick)
-			if (command.data.move_to_command and in_range(command.data.target_command, myplayer)) or (command.data.move_to_entity and in_range(command, myplayer)) then
+			if (command.data.move_to_command and Utils.in_range(command.data.target_command, myplayer)) or (command.data.move_to_entity and Utils.in_range(command, myplayer)) then
 				command.finished = true
 				return {"phantom"}
 			end
@@ -587,7 +588,7 @@ high_level_commands = {
 			end
 
 			if not command.data.move_started then
-				debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+				Utils.debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 				command.data.move_started = true
 			end
 
@@ -598,24 +599,24 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			if command.data.move_to_entity then
 				if not command.data.target_entity then
-					command.data.target_entity = get_entity_from_pos(command[2], myplayer)
+					command.data.target_entity = Utils.get_entity_from_pos(command[2], myplayer)
 					if not command.data.target_entity then
 						return "No entity at " .. serpent.block(command.position) .. "."
 					else
-						command.rect = collision_box(command.data.target_entity)
+						command.rect = Utils.collision_box(command.data.target_entity)
 					end
 				end
 			elseif command.data.move_to_command then
 				if not command.data.target_command then
 					for _, com in pairs(global.command_list_parser.current_command_set) do
-						if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
+						if com.name and Utils.has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 							command.data.target_command = com
 						end
 					end
 				end
 
 				if not command.data.target_command then
-					errprint("move: There is no command named: " .. command[2])
+					Utils.errprint("move: There is no command named: " .. command[2])
 					return "There is no command named: " .. command[2]
 				end
 
@@ -631,14 +632,14 @@ high_level_commands = {
 			if (not command.data.target_pos or not command.data.move_started) then
 				if command[1] == "move"  then
 					if command.data.move_to_command then
-						command.data.target_pos = closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
+						command.data.target_pos = Utils.closest_point(command.data.target_command.rect, command.data.target_command.distance, myplayer.position)
 					elseif command.data.move_to_entity then
-						command.data.target_pos = closest_point(command.rect, command.distance, myplayer.position)
+						command.data.target_pos = Utils.closest_point(command.rect, command.distance, myplayer.position)
 					else
 						command.data.target_pos = command[2]
 					end
 				else
-					command.data.target_pos = closest_point(command.rect, command.distance, myplayer.position)
+					command.data.target_pos = Utils.closest_point(command.rect, command.distance, myplayer.position)
 				end
 			end
 
@@ -710,14 +711,14 @@ high_level_commands = {
 			command.data.move_south = false
 			command.data.move_west = false
 			command.data.move_east = false
-			
+
 			command.distance = myplayer.reach_distance
 
 			if type(command[2]) == "string" then
 				command.data.move_to_command = true
-				
+
 				for _, com in pairs(global.command_list_parser.current_command_set) do
-					if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
+					if com.name and Utils.has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 						command.data.target_command = com
 					end
 				end
@@ -751,7 +752,7 @@ high_level_commands = {
 					i = i + 1
 					cmd.name = i
 				end
-				commands[#commands + 1] = copy(cmd)
+				commands[#commands + 1] = Utils.copy(cmd)
 				if command.name then
 					commands[#commands].namespace = command.namespace .. command.name .. "."
 				else
@@ -828,12 +829,12 @@ high_level_commands = {
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
-				command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
+				command.data.entity = Utils.get_entity_from_pos(command[2], myplayer, entities_with_inventory)
 				if not command.data.entity then
 					return "No entity found"
 				else
 					if not command.rect then
-						command.rect = collision_box(command.data.entity)
+						command.rect = Utils.collision_box(command.data.entity)
 						command.distance = myplayer.reach_distance
 					end
 				end
@@ -895,7 +896,7 @@ high_level_commands = {
 				return "Recipe is not set for assembling-machine"
 			end
 
-			if not in_range(command, myplayer, tick) then
+			if not Utils.in_range(command, myplayer, tick) then
 				return "Out of range (" .. item .. ")"
 			end
 
@@ -915,14 +916,14 @@ high_level_commands = {
 			[3] = "string",
 		},
 		executable = function(command, myplayer, tick)
-			local entity = get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
+			local entity = Utils.get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
 			if entity then
-				command.rect = collision_box(entity)
+				command.rect = Utils.collision_box(entity)
 			else
 				return "Entity not built"
 			end
 
-			if in_range(command, myplayer, tick) then
+			if Utils.in_range(command, myplayer, tick) then
 				return ""
 			else
 				return "Player not in range"
@@ -971,12 +972,12 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			if global.command_list_parser.finished_named_commands[command[2]]
 			or global.command_list_parser.finished_named_commands[command.namespace .. command[2]] then
-				errprint("Attempting to stop command that is already finished: " .. command[2])
+				Utils.errprint("Attempting to stop command that is already finished: " .. command[2])
 				command.finished = true
 				return
 			end
 			for _, com in pairs(global.command_list_parser.current_command_set) do
-				if com.name and has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
+				if com.name and Utils.has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 					com.finished = true
 					command.finished = true
 					if com[1] == "mine" then
@@ -987,7 +988,7 @@ high_level_commands = {
 				end
 			end
 
-			errprint("No command with the name " .. command[2] .. " found!")
+			Utils.errprint("No command with the name " .. command[2] .. " found!")
 		end,
 	},
 
@@ -1006,9 +1007,9 @@ high_level_commands = {
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
 				if command.type then
-					command.data.entity = get_entity_from_pos(command[2], myplayer, command.type)
+					command.data.entity = Utils.get_entity_from_pos(command[2], myplayer, command.type)
 				else
-					command.data.entity = get_entity_from_pos(command[2], myplayer, entities_with_inventory)
+					command.data.entity = Utils.get_entity_from_pos(command[2], myplayer, entities_with_inventory)
 				end
 
 				if not command.data.entity then
@@ -1022,7 +1023,7 @@ high_level_commands = {
 			end
 
 			if not command.rect then
-				command.rect = collision_box(command.data.entity)
+				command.rect = Utils.collision_box(command.data.entity)
 				command.distance = myplayer.reach_distance
 			end
 
@@ -1040,7 +1041,7 @@ high_level_commands = {
 					command.data.inventory = invs[command.data.entity.type]
 
 					if not command.data.inventory then
-						errprint("No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type)
+						Utils.errprint("No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type)
 						return "No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type
 					end
 				end
@@ -1056,7 +1057,7 @@ high_level_commands = {
 					if entity_inventory and entity_inventory[1] and entity_inventory[1].valid_for_read then
 						command.data.item = command.data.entity.get_inventory(command.data.inventory)[1].name
 					else
-						local x, y = get_coordinates(command[2])
+						local x, y = Utils.get_coordinates(command[2])
 						return "Entity " .. command.data.entity.name .. " at (" .. x .. "," .. y .. ") has no valid inventory item to guess"
 					end
 				end
@@ -1079,7 +1080,7 @@ high_level_commands = {
 				return "Not enough items available!"
 			end
 
-			if not in_range(command, myplayer) then
+			if not Utils.in_range(command, myplayer) then
 				return "Player too far away"
 			end
 
@@ -1118,7 +1119,7 @@ high_level_commands = {
 			if myplayer.get_item_count("grenade") < 1 then
 				return "Need more grenades!"
 			end
-			if sqdistance(myplayer.position, command[2]) > 15^2 then
+			if Utils.sqdistance(myplayer.position, command[2]) > 15^2 then
 				return "Not in range!"
 			end
 			if global.high_level_commands.throw_cooldown and game.tick - global.high_level_commands.throw_cooldown < 30 then
@@ -1225,7 +1226,7 @@ high_level_commands = {
 			if command[command.data.index + 1] == nil then
 				command.finished = true
 			else
-				local cmd = copy(command[2][command.data.index + 1])
+				local cmd = Utils.copy(command[2][command.data.index + 1])
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
 				end
@@ -1245,7 +1246,7 @@ high_level_commands = {
 }
 
 
-defaults = {
+local defaults = {
 	type_sequence = nil,
 	execute = return_self_finished,
 	executable = function () return "" end,
@@ -1258,3 +1259,5 @@ defaults = {
 for _, command in pairs(high_level_commands) do
 	setmetatable(command, {__index = defaults})
 end
+
+return high_level_commands
