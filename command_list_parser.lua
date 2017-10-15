@@ -250,6 +250,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 
 					for _, com in pairs(new_commands or {}) do
 						unchecked_commands = true
+						com.spawned_by = command
 						command_list_parser.add_command_to_current_set(com, myplayer, command.data.parent_command_group)
 					end
 				end

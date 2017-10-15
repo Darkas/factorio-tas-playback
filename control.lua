@@ -38,10 +38,10 @@ local CmdUI = require("command_list_ui")
 local LogUI = require("log_ui")
 local Event = require("stdlib/event/event")
 local Utils = require("utility_functions")
-local MvRec = require("record_movement")
-local movement_records = {}
-pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
-MvRec.init(movement_records)
+-- local MvRec = require("record_movement")
+-- local movement_records = {}
+-- pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
+-- MvRec.init(movement_records)
 
 local BP = require("blueprint")
 local blueprint_data_raw = {}

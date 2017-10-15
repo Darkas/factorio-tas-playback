@@ -30,10 +30,21 @@ function CmdUI.create(player)
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Command List"}
 	title.style.font = "default-frame"
 
-	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
-	top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
+	local label = top_flow.add{type="label", style="label_style", name = "title_show", caption="[Show]"}
+	label.style.left_padding = 40
+	local box = top_flow.add{type="checkbox", style="checkbox_style", name="show_command_list_ui_checkbox", state=true}
+	box.style.top_padding = 3
+	box.style.right_padding = 8
+
 	top_flow.add{type="label", style="label_style", name = "title_show_passive", caption="[Show Passive]"}
-	top_flow.add{type="checkbox", name="show_passive_button", state=false}
+	box = top_flow.add{type="checkbox", style="checkbox_style", name="show_passive_button", state=false}
+	box.style.top_padding = 3
+	box.style.right_padding = 8
+
+	top_flow.add{type="label", style="label_style", name = "title_show_spawned", caption="[Show Spawned]"}
+	box = top_flow.add{type="checkbox", style="checkbox_style", name="show_spawned_button", state=true}
+	box.style.top_padding = 3
+	box.style.right_padding = 8
 
 	local group_flow = frame.add{type="flow", name="group_flow", style="flow_style", direction="horizontal"}
 	local label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
@@ -93,6 +104,7 @@ function CmdUI.update_command_list_ui(player, command_list)
 	-- Update
 	if show then
 		local show_passive_commands = frame.top_flow.show_passive_button.state
+		local show_spawned_commands = frame.top_flow.show_spawned_button.state
 		local current_command_group = command_list[global.command_list_parser.current_command_group_index]
 		frame.group_flow.current_command_group.caption = "Active Command Group: " .. current_command_group.name
 
@@ -113,22 +125,33 @@ function CmdUI.update_command_list_ui(player, command_list)
 			frame.required_for_next.caption = "End of Input."
 		end
 
-		local command_set_index = 1
+		local command_set_index = 0
 		for index = 1, NUM_LINES do
 			local command
 			repeat
-				command = global.command_list_parser.current_command_set[command_set_index]
 				command_set_index = command_set_index + 1
-			until (command and not command.finished and (show_passive_commands or not Utils.in_list(command[1], passive_commands))) or command_set_index > #global.command_list_parser.current_command_set
+				command = global.command_list_parser.current_command_set[command_set_index]
+			until ( (command and not command.finished 
+			and (show_passive_commands or not Utils.in_list(command[1], passive_commands))
+			and (show_spawned_commands or not command.spawned_by)) 
+			or command_set_index > #global.command_list_parser.current_command_set )
 
-			if command and not command.finished then
+			if command then
 				local s = "[" .. index .. "] | "
 				for key, value in pairs(command) do
 					if not Utils.in_list(key, {"data", "action_type", "tested", "rect", "distance"}) then
 						s = s .. key .. "= " .. Utils.printable(value) .. " | "
 					end
 				end
-				frame.scroll_pane.table["text_" .. index].caption = s
+				local label = frame.scroll_pane.table["text_" .. index]
+				label.caption = s
+				if command.spawned_by then
+					label.style.font_color = {r=0.8, g=0.6, b=0.3, a=1}
+				elseif Utils.in_list(command[1], passive_commands) then
+					label.style.font_color = {r=0.7, g=0.7, b=0.7, a=1}
+				else
+					label.style.font_color = {r=1, g=1, b=1, a=1}
+				end
 			else
 				frame.scroll_pane.table["text_" .. index].caption = ""
 			end
