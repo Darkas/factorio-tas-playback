@@ -200,6 +200,7 @@ Further ideas:
 "build-blueprint" different build conditions - on_moving_away, on_leaving_range, on_entering_range
 
 Currently implemented conditions:
+* `on_entering_area={<top_left>, <bottom_right>}`: start the command if the given area is entered
 * `on_leaving_range=<bool>`: shortly before this action becomes impossible
 * `on_tick={<tick>}`: do this on or after a certain tick
 * `on_relative_tick = {<tick>, <name>}`: do this on or after a given amount of ticks have passed since the command with given name finished or since the current command set began (if the name is not set or the param is a single int).
