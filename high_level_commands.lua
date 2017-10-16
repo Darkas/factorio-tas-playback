@@ -1190,11 +1190,10 @@ high_level_commands = {
 			end
 
 			command.data.index = 0
-			command.data.namespace = command.namespace .. command[2] .. "-sequence-"
 			if command.name then
-				command.data.namespace = command.data.namespace .. command.name .. "."
+				command.data.namespace = command.namespace .. command.name .. "."
 			else
-				command.data.namespace = command.data.namespace .. global.high_level_commands.simple_sequence_index .. "."
+				command.data.namespace = command.namespace .. command[2] .. "-sequence-" .. global.high_level_commands.simple_sequence_index .. "."
 			end
 		end,
 		execute = empty,
