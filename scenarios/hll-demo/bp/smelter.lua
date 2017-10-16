@@ -1,5 +1,9 @@
 return {
-  entities = {
+  anchor = {
+    x = 0.5,
+    y = 0.5
+  },
+entities = {
     {
       direction = 4,
       entity_number = 1,

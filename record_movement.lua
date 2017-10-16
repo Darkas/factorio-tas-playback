@@ -2,65 +2,69 @@
 local Utils = require("utility_functions")
 local Event = require("stdlib/event/event")
 
+-- Usage: 
+-- TODO: Document
+-- Raises MvRec.on_started_recording
 
-
-RecordMovement = {} --luacheck: allow defined top
-global.RecordMovement = global.RecordMovement or {
+MvRec = {} --luacheck: allow defined top
+global.MvRec = global.MvRec or {
     record_tasks = {},
 }
 
 local movement_data_raw
 
-function RecordMovement.init(movement_data)
+function MvRec.init(movement_data)
     movement_data_raw = movement_data
-    RecordMovement.on_started_recording = script.generate_event_name()
+    if movement_data then global.MvRec.initialized = true end
+    MvRec.on_replaying_finished = script.generate_event_name()
+end
+
+local function process_record_task(record_task)
+    local tick = game.tick - record_task.tick
+
+    if record_task.replay then
+        local state = record_task.data[tick]
+        if state then 
+            record_task.last_state = state
+        else
+            state = record_task.last_state
+        end
+
+        if record_task.data.end_of_input == tick then
+            record_task.replay = false
+            if record_task.record and #game.players == 1 then
+                Event.dispatch{ name = MvRec.on_replaying_finished, record_task = record_task}
+            end
+        end
+
+        if record_task.drive then
+            record_task.player.riding_state = state
+        else
+            record_task.walking_state = state
+        end
+
+    elseif record_task.record then
+        local state
+        if not record_task.drive then
+            state = record_task.player.walking_state
+            if record_task.last_state.walking ~= state.walking or record_task.last_state.direction ~= state.direction then
+                record_task.last_state = state
+            end
+        else
+            state = record_task.player.riding_state
+            if record_task.last_state.acceleration ~= state.acceleration or record_task.last_state.direction ~= state.direction then
+                record_task.last_state = state
+            end
+        end
+        record_task.data[game.tick - record_task.tick] = state
+        record_task.data.end_of_input = tick
+    end
 end
 
 
 local function process_recordings()
-    for _, record_task in pairs(global.RecordMovement.record_tasks) do
-        local tick = game.tick - record_task.tick
-
-        if record_task.replay then
-            local state = record_task.data[tick]
-            if state then 
-                record_task.last_state = state
-            else
-                state = record_task.last_state
-            end
-
-            if record_task.data.end_of_input == tick then
-                record_task.replay = false
-                if record_task.record and #game.players == 1 then
-                    Event.dispatch{ name = RecordMovement.on_started_recording, record_name = record_task.name}
-                    -- TODO move this and set permissions!
-                    game.speed = 0.01
-                    game.show_message_dialong{text = "Recording Car Movements for " .. record_task.name .. " now!"}
-                end
-            end
-
-            if record_task.drive then
-                record_task.player.riding_state = state
-            else
-                record_task.walking_state = state
-            end
-
-        elseif record_task.record then
-            local state
-            if not record_task.drive then
-                state = record_task.player.walking_state
-                if record_task.last_state.walking ~= state.walking or record_task.last_state.direction ~= state.direction then
-                    record_task.last_state = state
-                end
-            else
-                state = record_task.player.riding_state
-                if record_task.last_state.acceleration ~= state.acceleration or record_task.last_state.direction ~= state.direction then
-                    record_task.last_state = state
-                end
-            end
-            record_task.data[game.tick - record_task.tick] = state
-            record_task.data.end_of_input = tick
-        end
+    for _, record_task in pairs(global.MvRec.record_tasks) do
+        process_record_task(record_task)
     end
 end
 
@@ -74,19 +78,19 @@ end
 -- replay (boolean) - are we replaying?
 -- data (table, optional) - table that is used to represent recorded movement data.
 
-function RecordMovement.start_record(record_task)
+function MvRec.start_record(record_task)
     if not record_task.name then
         Utils.errprint("Missing name parameter for movement recording!")
         return
     elseif not record_task.player then
         Utils.errprint("Missing player parameter for movement recording " .. record_task.name .. "!")
         return   
-    elseif global.RecordMovement[record_task.name] then
-        Utils.errprint("Already recording movement " .. record_task.name .. "!")
+    elseif global.MvRec[record_task.player.index] then
+        Utils.errprint("Already recording movement " .. record_task.name .. " for player " .. record_task.player.index .. "!")
         return
     end
 
-    if next(global.RecordMovement.record_tasks) == nil then
+    if next(global.MvRec.record_tasks) == nil then
         Event.register(defines.events.on_tick, process_recordings)
     end
 
@@ -101,32 +105,38 @@ function RecordMovement.start_record(record_task)
     record_task.last_state = record_task.last_state or {}
     record_task.tick = game.tick
 
-    table.insert(global.RecordMovement.record_tasks, record_task)
+    table.insert(global.MvRec.record_tasks, record_task)
 end
 
 
 
-function RecordMovement.stop_record(name)
-    if not global.RecordMovement[name] then
-        Utils.errprint("Attempting to stop unexisting movement record: " .. name)
+function MvRec.stop_record(player_index)
+    if not global.MvRec[player_index] then
+        Utils.errprint("Attempting to stop unexisting movement record for player " .. player_index)
         return
     end
 
-    table.remove(global.RecordMovement[name])
-    if next(global.RecordMovement.record_tasks) == nil then
+    global.MvRec[player_index] = nil
+    if next(global.MvRec.record_tasks) == nil then
         Event.remove(defines.events.on_tick, process_recordings)
     end
 end
 
 
 
-function RecordMovement.write_data(name, filename)
-    if not global.RecordMovement[name] then
-        game.print("Attempting to write unexisting movement record " .. name " to file " .. filename .. ".")
+function MvRec.write_data(player_index, filename)
+    local record_task = global.MvRec.record_tasks[player_index]
+    if not record_task then
+        game.print("Attempting to write unexisting movement record for player " .. player_index .. " to file " .. filename .. ".")
         return
     end
-    local data = "return " .. serpent.block(global.RecordMovement[name].data)
+    local data = "return " .. serpent.block(record_task.data)
     game.write_file(filename, data)
-    game.print("Movement data " .. name .. " exported to file " .. filename ".")
+    game.print("Movement data " .. record_task.name .. " exported to file " .. filename ".")
 end
 
+function MvRec.is_recording(player_index)
+    return global.MvRec.record_tasks[player_index] ~= nil
+end
+
+return MvRec

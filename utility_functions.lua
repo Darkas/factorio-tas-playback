@@ -461,4 +461,26 @@ function Utils.craft_interpolate(entity, ticks)
 	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end
 
+-- Returns true if the player can craft at least one. 
+-- craft is a table {name = <item_name>}
+function Utils.can_craft(craft, player, need_intermediates)
+	if not player.force.recipes[craft.name].enabled then
+		return false
+	end
+	if need_intermediates then
+		local recipe = game.recipe_prototypes[craft.name]
+
+		if need_intermediates then
+			for _, ingr in pairs(recipe.ingredients) do
+				if (need_intermediates == true or Utils.has_value(need_intermediates, ingr.name)) and player.get_item_count(ingr.name) < ingr.amount then
+					return false
+				end
+			end
+		end
+	end
+
+	return player.get_craftable_count(craft.name) >= 1
+end
+
+
 return Utils

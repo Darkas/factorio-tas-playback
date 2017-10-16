@@ -138,14 +138,14 @@ TAScommands["build"] =
     end
 end
 
-TAScommands["car-enter"] = function(tokens, myplayer)
+TAScommands["enter-vehicle"] = function(tokens, myplayer)
     myplayer.driving = true
     if not myplayer.driving then
-        Utils.errprint("Entering car failed! Player at " .. serpent.block(myplayer.position))
+        Utils.errprint("Entering vehicle failed! Player at " .. serpent.block(myplayer.position))
     end
 end
 
-TAScommands["car-leave"] = function(tokens, myplayer)
+TAScommands["leave-vehicle"] = function(tokens, myplayer)
     myplayer.driving = false
 end
 
