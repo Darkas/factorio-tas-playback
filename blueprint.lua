@@ -81,7 +81,7 @@ function Blueprint.get_entities_in_build_range(blueprint_data, player)
     for X = x-1, x+1 do
         for Y = y-1, y+1 do
             for _, entity in pairs(entities[X .. "_" .. Y] or {}) do
-                if Utils.distance_from_rect(position, Utils.collision_box(entity)) <= player.build_distance then -- TODO: This should be done dynamically.
+                if Utils.distance_from_rect(position, Utils.collision_box(entity)) <= player.build_distance + 0.1 then -- TODO: This should be done dynamically.
                     table.insert(res, entity)
                 end
             end
@@ -114,6 +114,17 @@ function Blueprint.get_entity_at(blueprint_data, position)
     for _, entity in pairs(entities[Blueprint.key_from_position(position, blueprint_data.chunk_size)] or {}) do
         if Utils.sqdistance(entity.position, position) < 0.01 then
             return entity
+        end
+    end
+end
+
+function Blueprint.save_entity_data(blueprint_data, position, t)
+    local entities = blueprint_data.chunked_entities
+    for _, entity in pairs(entities[Blueprint.key_from_position(position, blueprint_data.chunk_size)] or {}) do
+        if Utils.sqdistance(entity.position, position) < 0.01 then
+            for k, v in pairs(t) do
+                entity[k] = v
+            end
         end
     end
 end

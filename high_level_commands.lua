@@ -102,62 +102,94 @@ high_level_commands = {
 
 		spawn_commands = function (command, myplayer, tick)
 			local blueprint = command.data.blueprint_data
-			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
-
-			-- This is for compatibility between move-to-command and build-blueprint.
-			for index, request in pairs(global.high_level_commands.command_requests) do
-				local name = request[1]
-				local move_to_namespace = request[2]
-				local _, _, namespace, data = string.find(name, "(.*%.)bp_(.*)")
-				if not data then _, _, data = string.find(name, "bp_(.*)") end
-				if data and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
-					local _, _, x, y = string.find(data, "{(.*),(.*)}")
-					local position = {tonumber(x), tonumber(y)}
-					local entity = Blueprint.get_entity_at(blueprint, position)
-					if entity then
-						entities[#entities + 1] = entity
-						table.remove(global.high_level_commands.command_requests, index)
-					end
-				end
-			end
-
-			command.data.all_commands = command.data.all_commands or {}
 			local added_commands = {}
+			command.data.all_commands = command.data.all_commands or {}
 
-			for _, entity in pairs(entities) do
-				local cmd_already_spawned = false
+			if not command.data.build_commands then
+				command.data.build_commands = {}
+
+				local commands_by_type = {}
 				for _, cmd in pairs(global.command_list_parser.current_command_set) do
 					if cmd[1] == "build" then
-						if Utils.sqdistance(cmd[3], entity.position) < 0.01 and cmd[2] == entity.name then
-							cmd_already_spawned = true
-							break
+						commands_by_type[cmd[2]] = commands_by_type[cmd[2]] or {}
+						table.insert(commands_by_type[cmd[2]], cmd)
+					end
+				end
+
+				for _, l in pairs(command.data.blueprint_data.chunked_entities) do
+					for _, entity in pairs(l) do
+						entity.built = true
+						local command_already_spawned = false
+						for _, cmd in pairs(commands_by_type[entity.name] or {}) do
+							if Utils.sqdistance(cmd[3], entity.position) < 0.01 then
+								command_already_spawned = true
+								break
+							end
+						end
+
+						local x, y = Utils.get_coordinates(entity.position)
+						local entity_built = myplayer.surface.find_entities_filtered{name=entity.name, area={{x-0.1, y-0.1}, {x+0.1, y+0.1}}}[1]
+						-- TODO: allow name parameter in Utils.get_entity_from_pos
+						if not command_already_spawned and not entity_built then
+							local build_command = {
+								"build",
+								entity.name,
+								entity.position,
+								entity.direction,
+								name = "bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+								on_leaving_range = command.set_on_leaving_range,
+								namespace = command.namespace,
+								disabled = true,
+							}
+							if entity.name == "underground-belt" then
+								build_command[5] = entity.type
+							end
+
+							entity.build_command = build_command
+
+							table.insert(command.data.all_commands, build_command)
+							table.insert(added_commands, build_command)
+							table.insert(command.data.build_commands, build_command)
+							if Utils.distance_from_rect(myplayer.position, Utils.collision_box(entity)) <= myplayer.build_distance + 0.1 then 
+								build_command.disabled = false
+							end
+						else
+							command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)							
+						end
+					end
+				end
+			else
+				local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
+				for _, entity in pairs(entities) do
+					if entity.build_command then
+						entity.build_command.disabled = false
+					end
+				end
+
+				-- This is for compatibility between move-to-command and build-blueprint.
+				for index, request in pairs(global.high_level_commands.command_requests) do
+					local name = request[1]
+					local move_to_namespace = request[2]
+					local _, _, namespace, data = string.find(name, "(.*%.)bp_(.*)")
+					if not data then _, _, data = string.find(name, "bp_(.*)") end
+					if data and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
+						local _, _, x, y = string.find(data, "{(.*),(.*)}")
+						local position = {tonumber(x), tonumber(y)}
+						local entity = Blueprint.get_entity_at(blueprint, position)
+						if entity then
+							entity.build_command.disabled = false
+							table.remove(global.high_level_commands.command_requests, index)
 						end
 					end
 				end
 
-				if cmd_already_spawned or Utils.get_entity_from_pos(entity.position, myplayer, game.entity_prototypes[entity.name].type) then
-					entity.built = true
-					command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
-				else
-					if not entity.built then
+				for _, entity in pairs(entities) do
+					if not entity.build_command or entity.build_command.finished then
 						entity.built = true
-						local build_command = {
-							"build",
-							entity.name,
-							entity.position,
-							entity.direction,
-							name="bp_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-							on_leaving_range = command.set_on_leaving_range and true,
-							namespace = command.namespace,
-						}
-						if entity.name == "underground-belt" then
-							build_command[5] = entity.type
+						if not entity.recipe then
+							command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 						end
-						table.insert(command.data.all_commands, build_command)
-						table.insert(added_commands, build_command)
-					end
-
-					if entity.recipe and entity.built and not entity.set_recipe then
+					elseif entity.recipe and entity.built and not entity.set_recipe then
 						entity.set_recipe = true
 						local recipe_command = {
 							"recipe",
@@ -184,21 +216,23 @@ high_level_commands = {
 							end
 						end
 						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
-					elseif not entity.recipe then
-						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
 					end
 				end
 			end
 
-			if command.data.all_commands then
-				local finished = true
-				for index, cmd in pairs(command.data.all_commands) do
-					finished = cmd.finished and finished
-					if cmd.finished then table.remove(command.data.all_commands, index) end
+			local finished = true
+			local cmd = command.data.all_commands[1]
+			while cmd do
+				if cmd.finished then 
+					table.remove(command.data.all_commands, 1) 
+				else
+					finished = false
+					break
 				end
-				if command.data.added_all_entities and finished then
-					command.finished = true
-				end
+				cmd = command.data.all_commands[1]
+			end
+			if finished then
+				command.finished = true
 			end
 
 			return added_commands
@@ -962,9 +996,12 @@ high_level_commands = {
 			[3] = "string",
 		},
 		executable = function(command, myplayer, tick)
-			local entity = Utils.get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
-			if entity then
-				command.rect = Utils.collision_box(entity)
+			if not command.data.entity or not command.data.entity.valid then
+				command.data.entity = Utils.get_entity_from_pos(command[2], myplayer, "assembling-machine", 0.5)
+			end
+
+			if command.data.entity and command.data.entity.valid then
+				command.rect = Utils.collision_box(command.data.entity)
 			else
 				return "Entity not built"
 			end

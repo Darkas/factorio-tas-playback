@@ -72,6 +72,9 @@ end)
 
 
 function command_list_parser.check_type(command)
+	--for k, v in pairs(command) do
+	--end
+	
 	local type_signature = high_level_commands[command[1]].type_signature
 	if not type_signature then
 		if not global.command_list_parser.typecheck_errors[command[1]] then
@@ -384,7 +387,7 @@ function command_list_parser.create_commandqueue(executable_commands, command, m
 end
 
 function command_list_parser.command_executable(command, myplayer, tick)
-	if command.finished then
+	if command.finished or command.disabled then
 		return false
 	end
 

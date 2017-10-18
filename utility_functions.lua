@@ -17,6 +17,14 @@ function Utils.tables_equal(t1, t2)
 	return serpent.block(t1) == serpent.block(t2)
 end
 
+function Utils.table_keys(t)
+	local keys = {}
+	for k, _ in pairs(t) do
+		keys[#keys + 1] = k
+	end
+	return keys
+end
+
 function Utils.is_position(v)
 	return type(v) == "table" and type(v[1] or v.x) == "number" and type(v[2] or v.y) == "number" and not v[3]
 end
@@ -177,12 +185,26 @@ function Utils.sqdistance(pos1, pos2)
 end
 
 -- works for name or entity or table {name=..., position=..., direction=...}
+Utils.collision_box_cache = {}
 function Utils.collision_box(entity)
+	local cache_key
+	if type(entity) == "string" then 
+		cache_key = entity
+	else
+		local x, y = Utils.get_coordinates(entity.position)
+		cache_key = "_" .. entity.name .. "_" .. x .. "_" .. y .. "_" .. (entity.direction or "")
+	end
+	if Utils.collision_box_cache[cache_key] then
+		return Utils.collision_box_cache[cache_key]
+	end
+
 	if not entity then game.print(debug.traceback()) error("Called collision_box with parameter nil!") end
 
 	local rect = nil
 	if type(entity) == "string" then
-		return game.entity_prototypes[entity].collision_box
+		local ret_val = game.entity_prototypes[entity].collision_box
+		Utils.collision_box_cache[cache_key] = ret_val
+		return ret_val
 	end
 	pcall(function()
 		if entity.prototype then
@@ -194,7 +216,9 @@ function Utils.collision_box(entity)
 	-- Note: copy outputs a rect as {left_top=..., right_bottom=...}, rotate_rect handles this and returns {[1]=..., [2]=...}.
 	rect = Utils.rotate_rect(rect, Utils.rotation_stringtoint(entity.direction))
 
-	return {Utils.translate(rect[1], entity.position), Utils.translate(rect[2], entity.position)}
+	local ret_val = {Utils.translate(rect[1], entity.position), Utils.translate(rect[2], entity.position)}
+	Utils.collision_box_cache[cache_key] = ret_val	
+	return ret_val
 end
 
 function Utils.in_range(command, myplayer)
