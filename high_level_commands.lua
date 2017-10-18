@@ -1,6 +1,8 @@
 local Blueprint = require("blueprint")
 local TAScommands = require("commands")
 local Utils = require("utility_functions")
+local MvRec = require("record_movement")
+local Event = require("stdlib/event/event")
 
 global.high_level_commands = global.high_level_commands or {
 	throw_cooldown = nil,
@@ -9,25 +11,34 @@ global.high_level_commands = global.high_level_commands or {
 	command_requests = {},
 }
 
-function Utils.can_craft(craft, myplayer, need_intermediates)
-	if not myplayer.force.recipes[craft.name].enabled then
-		return false
-	end
-	if need_intermediates then
-		local recipe = game.recipe_prototypes[craft.name]
-
-		if need_intermediates then
-			for _, ingr in pairs(recipe.ingredients) do
-				if (need_intermediates == true or Utils.has_value(need_intermediates, ingr.name)) and myplayer.get_item_count(ingr.name) < ingr.amount then
-					return false
-				end
+if global.MvRec and global.MvRec.initialized then
+	Event.register("stop-recording", function(event)
+		MvRec.stop_record(event.player_index)
+		for _, cmd in pairs(global.command_list_parser.current_command_set) do
+			if cmd[1] == "drive-recorded" then
+				cmd.finished = true
 			end
 		end
-	end
+	end)
+	Event.register("save-recording", function(event)
+		local name
+		for _, cmd in pairs(global.command_list_parser.current_command_set) do
+			if cmd[1] == "drive-recorded" then
+				name = "Drive_" .. cmd[2]
+			end
+		end
+		MvRec.write_data(event.player_index, global.system.tas_name .. "/" .. name)
+	end)
 
-	return myplayer.get_craftable_count(craft.name) >= 1
+	Event.register(MvRec.on_replaying_finished, function(event)
+		local record_task = event.record_task
+		if record_task.recording then
+			game.speed = 0.01
+			game.show_message_dialong{text = "Recording Car Movements for " .. record_task.name .. " now!"}
+		end
+	end)
 end
-
+			
 local function empty()
 end
 
@@ -487,6 +498,27 @@ high_level_commands = {
 	["enable-manual-walking"] = {
 		type_signature = {},
 		execute = return_self_finished,
+	},
+
+	["drive-recorded"] = {
+		type_signature = {
+			[2] = "string",
+			["recording"] = "boolean",
+		},
+		initialize = function(command, myplayer, tick)
+		end,
+		execute = function(command, myplayer, tick)
+			if not command.data.record_task then
+				command.data.record_task = {
+					name = command[2],
+					player = myplayer,
+					drive = true,
+					replay = true,
+					record = command.recording,
+				}
+				MvRec.start_record(command.data.record_task)			
+			end
+		end,
 	},
 
 	["entity-interaction"] = {
@@ -1225,6 +1257,7 @@ high_level_commands = {
 		default_priority = 100,
 	},
 
+	-- TODO: Sequence just doesnt work currently.
 	sequence = {
 		type_signature = {
 			[2] = "table",
@@ -1251,7 +1284,7 @@ high_level_commands = {
 			if command[command.data.index + 1] == nil then
 				command.finished = true
 			else
-				local cmd = Utils.copy(command[2][command.data.index + 1])
+				local cmd = Utils.copy(command[2][command.data.index])
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
 				end
@@ -1267,12 +1300,18 @@ high_level_commands = {
 			end
 		end,
 		default_priority = 100,
-	}
+	},
+	["enter-vehicle"] = {
+		type_signature = {}
+	},
+	["leave-vehicle"] = {
+		type_signature = {}
+	},
 }
 
 
 local defaults = {
-	type_sequence = nil,
+	type_signature = nil,
 	execute = return_self_finished,
 	executable = function () return "" end,
 	initialize = empty,

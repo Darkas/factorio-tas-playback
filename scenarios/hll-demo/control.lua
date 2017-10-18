@@ -1,6 +1,7 @@
 
 local config = require("configuration")
 --require("blueprint_list")
+--luacheck: ignore 212
 
 script.on_event(defines.events.on_player_created, function(event)
 	if config.autorun then
@@ -13,9 +14,12 @@ script.on_event(defines.events.on_tick, function(event)
 
 	if game.tick ~= 1 then return end
 
+	script.on_event(defines.events.on_tick, nil)
+
 	game.print("Inserting items for general testing purposes.")
-	items = {
+	local items = {
 		{"grenade", 50},
+		{"car", 1},
 	}
 	for _, item in pairs(items) do
 		game.players[1].insert{name=item[1], count=item[2]}

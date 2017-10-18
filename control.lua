@@ -31,17 +31,19 @@ else
 	return
 end
 
-require("silo-script")
 require("command_list_parser")
 
+require("silo-script")
 local CmdUI = require("command_list_ui")
 local LogUI = require("log_ui")
 local Event = require("stdlib/event/event")
 local Utils = require("utility_functions")
--- local MvRec = require("record_movement")
--- local movement_records = {}
--- pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
--- MvRec.init(movement_records)
+local MvRec = require("record_movement")
+local movement_records = {}
+pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
+if movement_records then
+	MvRec.init(movement_records)
+end
 
 local BP = require("blueprint")
 local blueprint_data_raw = {}
@@ -224,7 +226,11 @@ Event.register(defines.events.on_tick, function()
 				end
 			end
 		end
+<<<<<<< HEAD
 		if not global.enable_manual_walking then
+=======
+		if not MvRec.is_recording(myplayer.index) then
+>>>>>>> ed63d79ef9a732dafb377ade6027ff36dba8b621
 			myplayer.walking_state = global.walkstate
 		end
 		myplayer.picking_state = myplayer.picking_state or global.pickstate
