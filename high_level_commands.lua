@@ -658,9 +658,13 @@ high_level_commands = {
 					end
 				end
 			elseif command.data.move_to_command then
+				if not command.parent_namespace then
+					command.parent_namespace = ""
+				end
+				
 				if not command.data.target_command then
 					for _, com in pairs(global.command_list_parser.current_command_set) do
-						if com.name and Utils.has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
+						if com.name and Utils.has_value({command.parent_namespace .. command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 							command.data.target_command = com
 						end
 					end
@@ -1224,6 +1228,7 @@ high_level_commands = {
 					command[command.data.index + 2],
 					name= "command-" .. command.data.index,
 					namespace=command.data.namespace,
+					parent_namespace=command.namespace,
 				}
 				
 				if command[2] == "move" then
