@@ -176,14 +176,15 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 
 	local finished = true
 	local check_for_next = false
-	local current_command_set = global.command_list_parser.current_command_set
 
 	local index = 1
-	local cmd = current_command_set[index]
+	local cmd = global.command_list_parser.current_command_set[index]
 	while cmd do
-		if cmd.finished and cmd.name then
-			global.command_list_parser.finished_named_commands[cmd.namespace .. cmd.name] = cmd
-			table.remove(current_command_set, index)
+		if cmd.finished then
+			if cmd.name then
+				global.command_list_parser.finished_named_commands[cmd.namespace .. cmd.name] = cmd
+			end
+			table.remove(global.command_list_parser.current_command_set, index)
 		else
 			index = index + 1
 		end
@@ -193,7 +194,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		else
 			finished = false
 		end
-		cmd = current_command_set[index]
+		cmd = global.command_list_parser.current_command_set[index]
 	end
 
 	local next_command_group = command_list[global.command_list_parser.current_command_group_index + 1]
@@ -372,16 +373,14 @@ function command_list_parser.create_commandqueue(executable_commands, command, m
 				queue[#queue + 1] = low_level_command
 			end
 		end
+		
+		-- save finishing time for on_relative_tick
+		if cmd.name and cmd.finished then
+			global.command_list_parser.command_finished_times[cmd.namespace .. cmd.name] = tick
+		end
 	end
 
 	LogUI.log_to_ui(current_commands, "command-not-executable")
-
-	-- save finishing time for on_relative_tick
-	for _, cmd in pairs(queue) do
-		if cmd.name and cmd.finished then
-			global.command_list_parser.command_finished_times[cmd.name] = tick
-		end
-	end
 
 	return queue
 end
@@ -402,20 +401,25 @@ function command_list_parser.command_executable(command, myplayer, tick)
 	-- on_tick, on_relative_tick
 	if command.on_tick and command.on_tick < tick then return false end
 	if command.on_relative_tick then
+		local remaining_ticks
 		if type(command.on_relative_tick) == type(1) then
-			if tick < global.command_list_parser.current_command_group_tick + command.on_relative_tick then
-				LogUI.log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
+			remaining_ticks = global.command_list_parser.current_command_group_tick + command.on_relative_tick - tick
+		elseif type(command.on_relative_tick) == type({}) then
+			local finished_tick = global.command_list_parser.command_finished_times[command.on_relative_tick[2]] or global.command_list_parser.command_finished_times[command.namespace .. command.on_relative_tick[2]]
+			
+			if not finished_tick then
+				LogUI.log_to_ui(command[1] .. ": The previous command has not been finished.", "command-not-executable")
 				return false
 			end
+			
+			remaining_ticks = finished_tick + command.on_relative_tick[1] - tick
 		else
-			if type(command.on_relative_tick) == type({}) then
-				if not global.command_list_parser.command_finished_times[command.on_relative_tick[2]] or tick < global.command_list_parser.command_finished_times[command.on_relative_tick[2]] + command.on_relative_tick[1] then
-					LogUI.log_to_ui(command[1] .. ": " .. "The tick has not been reached", "command-not-executable")
-					return false
-				end
-			else
-				error("Unrecognized format for on_relative_tick!")
-			end
+			error("Unrecognized format for on_relative_tick!")
+		end
+		
+		if remaining_ticks > 0 then
+			LogUI.log_to_ui(command[1] .. ": The tick has not been reached. Remaining " .. remaining_ticks, "command-not-executable")
+			return false
 		end
 	end
 

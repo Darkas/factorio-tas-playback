@@ -226,7 +226,7 @@ Event.register(defines.events.on_tick, function()
 				end
 			end
 		end
-		if not MvRec.is_recording(myplayer.index) then
+		if not global.enable_manual_walking then
 			myplayer.walking_state = global.walkstate
 		end
 		myplayer.picking_state = myplayer.picking_state or global.pickstate
