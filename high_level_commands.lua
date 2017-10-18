@@ -213,45 +213,52 @@ high_level_commands = {
 		},
 		execute = empty,
 		spawn_commands = function(command, myplayer, tick)
-			if not command.data.already_refueled then
-				command.data.already_refueled = {}
-			end
-
-			local target_fuel = command.target or command.min or 1
-
 			local new_commands = {}
 			local priority = 5
+			
+			if #global.command_list_parser.entities_with_burner > command.data.cached_amount then
+				local entity = global.command_list_parser.entities_with_burner[command.data.cached_amount + 1]
+				
+				while entity do
+					if not (command.skip_coal_drills and entity.type == "mining-drill" and entity.mining_target and entity.mining_target.name == "coal") then
+						if ((not command.type) or entity.type == command.type) and ((not command.pos) or (entity.position.x == command.pos[1] and entity.position.y == command.pos[2])) then
+							command.data.entity_cache[#command.data.entity_cache + 1] = {entity, Utils.collision_box(entity)}
+						end
+					end
+					command.data.cached_amount = command.data.cached_amount + 1
+					entity = global.command_list_parser.entities_with_burner[command.data.cached_amount + 1]
+				end
+			end
 
-			for i, entity in pairs(global.command_list_parser.entities_with_burner) do
+			for i, entity_cache in pairs(command.data.entity_cache) do
+				local entity = entity_cache[1]
+				local collision_box = entity_cache[2]
+				
 				if not entity.valid then
 					game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
 				else
-					if not (command.skip_coal_drills and entity.type == "mining-drill" and entity.mining_target and entity.mining_target.name == "coal") then
-						if ((not command.type) or entity.type == command.type) and ((not command.pos) or (entity.position.x == command.pos[1] and entity.position.y == command.pos[2])) then
-							if entity.type == "mining-drill" then
-								priority = 4
-							end
+					if entity.type == "mining-drill" then
+						priority = 4
+					end
 
-							if Utils.distance_from_rect(myplayer.position, Utils.collision_box(entity)) <= myplayer.reach_distance then
-								if command.min then
-									if entity.burner.inventory.get_item_count("coal") < command.min then
-										if not command.data.already_refueled[i] then
-											command.data.already_refueled[i] = true
-											new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
-										end
-									else
-										command.data.already_refueled[i] = false
-									end
-								else
-									if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
-										if not command.data.already_refueled[i] then
-											command.data.already_refueled[i] = true
-											new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", target_fuel, priority=priority}
-										end
-									else
-										command.data.already_refueled[i] = false
-									end
+					if Utils.distance_from_rect(myplayer.position, collision_box) <= myplayer.reach_distance then
+						if command.min then
+							if entity.burner.inventory.get_item_count("coal") < command.min then
+								if not command.data.already_refueled[i] then
+									command.data.already_refueled[i] = true
+									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", command.data.target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
 								end
+							else
+								command.data.already_refueled[i] = false
+							end
+						else
+							if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
+								if not command.data.already_refueled[i] then
+									command.data.already_refueled[i] = true
+									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", command.data.target_fuel, priority=priority}
+								end
+							else
+								command.data.already_refueled[i] = false
 							end
 						end
 					end
@@ -261,6 +268,13 @@ high_level_commands = {
 			return new_commands
 		end,
 		default_priority = 100,
+		initialize = function (command, myplayer, tick)
+			command.data.already_refueled = {}
+			command.data.entity_cache = {}
+			command.data.cached_amount = 0
+			
+			command.data.target_fuel = command.target or command.min or 1
+		end
 	},
 
 	["auto-take"] = {
