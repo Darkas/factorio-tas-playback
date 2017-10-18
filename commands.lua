@@ -349,6 +349,10 @@ TAScommands["pickup"] = function(tokens, myplayer)
     end
 end
 
+TAScommands["enable-manual-walking"] = function(tokens, myplayer)
+    global.enable_manual_walking = true
+end
+
 TAScommands["throw-grenade"] = function(tokens, myplayer)
     -- We could generalize this to arbitrary capsules but then we'd have to parse through item.capsule_action
     local target = tokens[2]

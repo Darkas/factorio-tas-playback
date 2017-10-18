@@ -2,8 +2,6 @@ local Blueprint = require("blueprint")
 local TAScommands = require("commands")
 local Utils = require("utility_functions")
 
---luacheck: ignore 212
-
 global.high_level_commands = global.high_level_commands or {
 	throw_cooldown = nil,
 	simple_sequence_index = 1,
@@ -484,6 +482,11 @@ high_level_commands = {
 			Utils.errprint(command[2])
 			command.finished = true
 		end,
+	},
+	
+	["enable-manual-walking"] = {
+		type_signature = {},
+		execute = return_self_finished,
 	},
 
 	["entity-interaction"] = {
