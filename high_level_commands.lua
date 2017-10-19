@@ -374,9 +374,9 @@ high_level_commands = {
 			if not Utils.in_range(command, myplayer, tick) then
 				return "Player not in range (" .. command[2] .. ")"
 			end
-
-			if Utils.inside_rect(myplayer.position, Utils.collision_box{name=command[2], position=command[3], direction=command[4]}) then
-				return "Player is in the way!"
+			
+		    if not myplayer.surface.can_place_entity{name=command[2], position=command[3], direction=command[4], force="player"} then
+				return "Something is in the way."
 			end
 			return ""
 		end,
