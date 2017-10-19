@@ -375,8 +375,14 @@ high_level_commands = {
 				return "Player not in range (" .. command[2] .. ")"
 			end
 			
-		    if not myplayer.surface.can_place_entity{name=command[2], position=command[3], direction=command[4], force="player"} then
-				return "Something is in the way."
+			for _,type in pairs(command.data.blocked_by) do
+				if #myplayer.surface.find_entities_filtered {area = command.rect, type = type} > 0 then
+					return "Something of type " .. type .. " is in the way at {" .. command[3][1] .. ", " .. command[3][2] .. "}."
+				end
+			end
+			
+		    if blocked then
+				
 			end
 			return ""
 		end,
@@ -384,6 +390,18 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
 			command.rect = Utils.collision_box{name=command[2], position=Utils.copy(command[3])}
+			
+			local floor_entities = {"transport-belt", "underground-belt", "splitter"}
+			local collision_entities = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "simple-entity", "tree", "lab", "rocket-silo"}
+			
+			command.data.blocked_by = {}
+			
+			if not Utils.has_value(floor_entities, game.entity_prototypes[command[2]].type) then
+				command.data.blocked_by = {"player"}
+			end
+			
+			command.data.blocked_by = Utils.concat_tables(command.data.blocked_by, floor_entities)
+			command.data.blocked_by = Utils.concat_tables(command.data.blocked_by, collision_entities)
 		end,
 	},
 
