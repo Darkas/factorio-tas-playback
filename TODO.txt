@@ -1,5 +1,6 @@
 
 - Passive-Take produces too many warnings.
+- Hide disabled category
 - Two auto-take cmds that take the same item are problematic!
 - Log Craft Inactivity, unoptimal movement (UI alert), dump inventory into file
 - Blueprint ghosts

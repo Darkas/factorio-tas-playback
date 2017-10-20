@@ -160,6 +160,7 @@ commandqueue.command_list = {
 ```
 
 Currently implemented commands:
+* `{"alert", "<cmd-group-name>"}`: Alert the player if a certain cmd-group starts and set game-speed to 0.05. Will pause the game if in SP.
 * `{"auto-build-blueprint", <name>, {<X>, <Y>}, rotation=<rotation>}`: Automates building blueprints (movement must still be entered manually though). Add build commands, recipe commands and put commands (for modules) to the current command set as we get in build range of the individual entities in the blueprint. `<name>` refers to the name of the blueprint in the `blueprint_data_raw` field, this can be set in the `blueprint_list.lua` of the run scenario - see examples. We have a mod that adds a command to conveniently export blueprints. The second argument is the offset, the third argument is the rotation and should be one of `defines.direction.north, east, south, west`. The blueprint build commands are added with the `on_leaving_range` constraint.
 * `{"auto-refuel", min=..., amount=..., type=..., pos={<X>, <Y>}, skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type, pos and skip_coal_drills.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
@@ -214,3 +215,10 @@ on_player_in_range=<range> (player is range away from )
 on_exact_tick=<tick> (do this on exactly the tick - do we need this?)
 on_exact_relative_tick={<tick>, <name>} (do this a given amount of ticks after the command with the given name finished or after the current command set began (if name is not set))
 on_moving_away (player is moving away from the command target)
+
+
+## Chat Commands
+
+`/alert <cmd-group>` Alert the player if a certain cmd-grp starts. Pause game when command group is reached and set game speed = 0.05
+`/exportqueue <name>` Export the cmd queue to a file in `script-output/TAS_<tas_name>_<name>_queue.lua` or `script-output/TAS_<tas_name>_queue.lua` if `name` is not set.
+`/init_run` Start the run if it is not started already.
