@@ -408,9 +408,15 @@ high_level_commands = {
 			if not Utils.in_range(command, myplayer, tick) then
 				return "Player not in range (" .. command[2] .. ")"
 			end
-
-			if Utils.inside_rect(myplayer.position, Utils.collision_box{name=command[2], position=command[3], direction=command[4]}) then
-				return "Player is in the way!"
+			
+			for _,type in pairs(command.data.blocked_by) do
+				if #myplayer.surface.find_entities_filtered {area = command.rect, type = type} > 0 then
+					return "Something of type " .. type .. " is in the way at {" .. command[3][1] .. ", " .. command[3][2] .. "}."
+				end
+			end
+			
+		    if blocked then
+				
 			end
 			return ""
 		end,
@@ -418,6 +424,18 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			command.distance = myplayer.build_distance
 			command.rect = Utils.collision_box{name=command[2], position=Utils.copy(command[3])}
+			
+			local floor_entities = {"transport-belt", "underground-belt", "splitter"}
+			local collision_entities = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "simple-entity", "tree", "lab", "rocket-silo"}
+			
+			command.data.blocked_by = {}
+			
+			if not Utils.has_value(floor_entities, game.entity_prototypes[command[2]].type) then
+				command.data.blocked_by = {"player"}
+			end
+			
+			command.data.blocked_by = Utils.concat_tables(command.data.blocked_by, floor_entities)
+			command.data.blocked_by = Utils.concat_tables(command.data.blocked_by, collision_entities)
 		end,
 	},
 
@@ -692,9 +710,13 @@ high_level_commands = {
 					end
 				end
 			elseif command.data.move_to_command then
+				if not command.parent_namespace then
+					command.parent_namespace = ""
+				end
+				
 				if not command.data.target_command then
 					for _, com in pairs(global.command_list_parser.current_command_set) do
-						if com.name and Utils.has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
+						if com.name and Utils.has_value({command.parent_namespace .. command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 							command.data.target_command = com
 						end
 					end
@@ -1261,6 +1283,7 @@ high_level_commands = {
 					command[command.data.index + 2],
 					name= "command-" .. command.data.index,
 					namespace=command.data.namespace,
+					parent_namespace=command.namespace,
 				}
 				
 				if command[2] == "move" then
