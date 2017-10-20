@@ -4,6 +4,8 @@ local Utils = require("utility_functions")
 local MvRec = require("record_movement")
 local Event = require("stdlib/event/event")
 
+-- luacheck: ignore 212
+
 global.high_level_commands = global.high_level_commands or {
 	throw_cooldown = nil,
 	simple_sequence_index = 1,
@@ -243,6 +245,19 @@ high_level_commands = {
 			local rotation = command.rotation or defines.direction.north
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
 			command.data.area = area
+
+			if command.show_ghosts then
+				local chest = myplayer.surface.create_entity{name="iron-chest", position={0,0}, force="player"}
+				local inv = chest.get_inventory(defines.inventory.chest)
+				inv.insert{name="blueprint", count=1}
+				local bp = inv[1]
+				local bp_data = Blueprint.get_raw_data(name)
+				bp.set_blueprint_entities(bp_data.entities)
+				local x, y = Utils.get_coordinates(offset)
+				local off = {x - bp_data.anchor.x + 0.5, y - bp_data.anchor.y + 0.5}
+				bp.build_blueprint{surface=myplayer.surface, force=myplayer.force, position=off, force_build=true, direction=rotation}
+				chest.destroy()
+			end
 		end
 	},
 
@@ -415,9 +430,6 @@ high_level_commands = {
 				end
 			end
 			
-		    if blocked then
-				
-			end
 			return ""
 		end,
 		default_priority = 5,

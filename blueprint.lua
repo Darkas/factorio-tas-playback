@@ -7,6 +7,12 @@ function Blueprint.init(blueprint_raw)
     blueprint_data_raw = blueprint_raw or {}
 end
 
+
+function Blueprint.get_raw_data(name)
+    return blueprint_data_raw[name]
+end
+
+
 function Blueprint.load(name, offset, rotation, chunk_size, area)
     local blueprint_raw = blueprint_data_raw[name]
     if not blueprint_raw then
