@@ -79,7 +79,7 @@ Event.register(defines.events.on_player_mined_entity, function(event)
 			if command_list_parser.command_sqdistance(command, {position=event.entity.position}) <= 0.3 then
 				command.data.amount = command.data.amount - 1
 				if command.data.amount <= 0 then
-					command.finished = true
+					command_list_parser.set_finished(command)
 				end
 			end
 		end
@@ -94,13 +94,19 @@ Event.register(defines.events.on_player_mined_item, function(event)
 			if command_list_parser.command_sqdistance(command, {position=player.selected.position}) <= 0.3 then
 				command.data.amount = command.data.amount - 1
 				if command.data.amount <= 0 then
-					command.finished = true
+					command_list_parser.set_finished(command)
 				end
 			end
 		end
 	end
 end)
 
+function command_list_parser.set_finished(command)
+	command.finished = true
+	if command.name then
+		global.command_list_parser.finished_named_commands[command.namespace .. command.name] = command
+	end
+end
 
 function command_list_parser.check_type(command)
 	local type_signature = high_level_commands[command[1]].type_signature
@@ -220,9 +226,6 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	local cmd = global.command_list_parser.current_command_set[index]
 	while cmd do
 		if cmd.finished then
-			if cmd.name then
-				global.command_list_parser.finished_named_commands[cmd.namespace .. cmd.name] = cmd
-			end
 			table.remove(global.command_list_parser.current_command_set, index)
 		else
 			index = index + 1
