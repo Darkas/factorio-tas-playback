@@ -164,7 +164,7 @@ Currently implemented commands:
 * `{"auto-build-blueprint", <name>, {<X>, <Y>}, rotation=<rotation>}`: Automates building blueprints (movement must still be entered manually though). Add build commands, recipe commands and put commands (for modules) to the current command set as we get in build range of the individual entities in the blueprint. `<name>` refers to the name of the blueprint in the `blueprint_data_raw` field, this can be set in the `blueprint_list.lua` of the run scenario - see examples. We have a mod that adds a command to conveniently export blueprints. The second argument is the offset, the third argument is the rotation and should be one of `defines.direction.north, east, south, west`. The blueprint build commands are added with the `on_leaving_range` constraint.
 * `{"auto-refuel", min=..., amount=..., type=..., pos={<X>, <Y>}, skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type, pos and skip_coal_drills.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
-* `{"build", <entity>, {<X>,<Y>}, <facing direction>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
+* `{"build", <entity>, {<X>,<Y>}, <facing direction>, <type>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
 * `{"craft", <item>, <count>, need_intermediates}`
 * `{"craft", {{<item>, <count>, need_intermediates = <bool> or <table>}, {<item>, <count>}, ...}, need_intermediates = <bool> or <table>}`: Executes craft commands in order. If `need_intermediates` is set, the craft will only be started if all (or the given, if it is a table) necessary intermediate products in the recipe are already available.
 * `{"craft-build", <entity>, {<X>, <Y>}, <facing direction>}`: Add a craft command for the entity, when that command is finished, add a build command.
@@ -206,7 +206,7 @@ Currently implemented conditions:
 * `on_tick={<tick>}`: do this on or after a certain tick
 * `on_relative_tick = {<tick>, <name>}`: do this on or after a given amount of ticks have passed since the command with given name finished or since the current command set began (if the name is not set or the param is a single int).
 * `items_available = {"<name>", <count>}`: Execute only when the specified amount of items is in inventory.
-* `item_total = {"<name>", <count>, pos={<x>, <y>}}`: Execute only when the specified amount of items is in player inventory plus optionally the entity at the given position if `pos` is set, or plus the other entity's inventory if the command is "take").
+* `items_total = {"<name>", <count>, pos={<x>, <y>}}`: Execute only when the specified amount of items is in player inventory plus optionally the entity at the given position if `pos` is set, or plus the other entity's inventory if the command is "take").
 * `command_finished = "<name>"`: Name of command that needs to terminate before this one is executable.
 
 
