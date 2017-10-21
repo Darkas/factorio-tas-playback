@@ -62,6 +62,27 @@ local function return_phantom ()
 	return {"phantom"}
 end
 
+
+
+local collected_entities = {}
+local function record_blueprint_order_pressed(event)
+	if not current_blueprint_order_record then return end
+	local bp_data = current_blueprint_order_record
+	local player = game.players[event.player_index]
+	local entity = player.selected
+	
+	if not entity or entity.type ~= "entity-ghost" then return end
+
+	local position = entity.position
+	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, 9, position)
+	table.insert(collected_entities, bp_entity)
+
+	bp_entity.build_command.disabled = false
+	entity.destroy()
+end
+
+
+
 action_types = {always_possible = 1, selection = 2, ui = 3, throw = 4}
 local entities_with_inventory = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "lab", "rocket-silo"}
 

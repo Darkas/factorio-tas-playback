@@ -4,7 +4,6 @@
 - Log Craft Inactivity, unoptimal movement (UI alert), dump inventory into file
 - UI Option: Number of commands to show.
 - Redo movement logic. It's super costly at the moment.
-- Replace command.finished by set_finished(command)
 - Make high_level_commands a proper module.
 
 
