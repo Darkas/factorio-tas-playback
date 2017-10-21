@@ -18,7 +18,7 @@ if global.MvRec and global.MvRec.initialized then
 		MvRec.stop_record(event.player_index)
 		for _, cmd in pairs(global.command_list_parser.current_command_set) do
 			if cmd[1] == "drive-recorded" then
-				cmd.finished = true
+				command_list_parser.set_finished(cmd)
 			end
 		end
 	end)
@@ -50,12 +50,12 @@ local function strip_command(command)
 end
 
 local function return_self_finished(command, myplayer, tick)
-	command.finished = true
+	command_list_parser.set_finished(command)
 	return strip_command(command)
 end
 
 local function set_finished(command)
-	command.finished = true
+	command_list_parser.set_finished(command)
 end
 
 local function return_phantom ()
@@ -81,7 +81,7 @@ high_level_commands = {
 			else
 				game.print("Now entering: " .. command[2])
 			end
-			command.finished = true
+			command_list_parser.set_finished(command)
 		end
 	},
 	["auto-build-blueprint"] = {
@@ -233,7 +233,7 @@ high_level_commands = {
 				cmd = command.data.all_commands[1]
 			end
 			if finished then
-				command.finished = true
+				command_list_parser.set_finished(command)
 			end
 
 			return added_commands
@@ -399,7 +399,7 @@ high_level_commands = {
 						ret[#ret + 1] = cmd
 					end
 				end
-				command.finished = true
+				command_list_parser.set_finished(command)
 			end
 
 			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[Utils.get_recipe(entities[1])].energy * 60
@@ -420,7 +420,7 @@ high_level_commands = {
 		execute = function(command, myplayer)
 			if myplayer.get_item_count(command[2]) ~= 0 then
 				TAScommands["build"](command, myplayer)
-				command.finished = true
+				command_list_parser.set_finished(command)
 				command.already_executed = true
 				return strip_command(command)
 			else
@@ -472,7 +472,7 @@ high_level_commands = {
 				end
 
 				if not craft then
-					command.finished = true
+					command_list_parser.set_finished(command)
 					break
 				end
 			end
@@ -529,7 +529,7 @@ high_level_commands = {
 		executable = function (command)
 			if command.data.build_command then
 				if command.data.build_command.finished then
-					command.finished = true
+					command_list_parser.set_finished(command)
 				end
 
 				return "craft-build is never executable"
@@ -554,7 +554,7 @@ high_level_commands = {
 		default_priority = 100,
 		initialize = function (command, myplayer)
 			Utils.errprint(command[2])
-			command.finished = true
+			command_list_parser.set_finished(command)
 		end,
 	},
 	
@@ -609,8 +609,8 @@ high_level_commands = {
 			end
 
 			if Utils.in_range(command, myplayer) then
-				command.finished = true
-
+				command_list_parser.set_finished(command)
+				
 				return ""
 			else
 				return "Out of range"
@@ -642,7 +642,7 @@ high_level_commands = {
 			end
 
 			if global.command_list_parser.current_mining >= command.data.amount then
-				command.finished = true
+				command_list_parser.set_finished(command)
 				global.command_list_parser.current_mining = 0
 				return "finished"
 			end
@@ -688,13 +688,13 @@ high_level_commands = {
 		},
 		execute = function (command, myplayer, tick)
 			if (command.data.move_to_command and Utils.in_range(command.data.target_command, myplayer)) or (command.data.move_to_entity and Utils.in_range(command, myplayer)) then
-				command.finished = true
+				command_list_parser.set_finished(command)
 				return {"phantom"}
 			end
 
 			if command.data.move_dir == "" then
 				if (command[1] == "move" and not command.data.move_to_command) or command.data.move_to_entity then
-					command.finished = true
+					command_list_parser.set_finished(command)
 					return {"phantom"}
 				else
 					command.data.move_dir = command.data.last_dir
@@ -878,7 +878,7 @@ high_level_commands = {
 				end
 			end
 
-			command.finished = true
+			command_list_parser.set_finished(command)
 			return commands
 		end,
 		default_priority = 100,
@@ -942,13 +942,13 @@ high_level_commands = {
 			if command.ticks then
 				if command.data.final then
 					if tick >= command.data.final then
-						command.finished = true
+						command_list_parser.set_finished(command)
 					end
 				else
 					command.data.final = tick + command.ticks
 				end
 			elseif command.oneshot then
-				command.finished = true
+				command_list_parser.set_finished(command)
 			end
 			
 			return strip_command(command)
@@ -964,8 +964,8 @@ high_level_commands = {
 			[5] = {"nil", "number"},
 		},
 		execute = function(command, myplayer, tick)
-			command.finished = true
-
+			command_list_parser.set_finished(command)
+			
 			return {command[1], command[2], command[3], command.data.count, command.data.inventory}
 		end,
 		executable = function(command, myplayer, tick)
@@ -1117,13 +1117,13 @@ high_level_commands = {
 			if global.command_list_parser.finished_named_commands[command[2]]
 			or global.command_list_parser.finished_named_commands[command.namespace .. command[2]] then
 				Utils.errprint("Attempting to stop command that is already finished: " .. command[2])
-				command.finished = true
+				command_list_parser.set_finished(command)
 				return
 			end
 			for _, com in pairs(global.command_list_parser.current_command_set) do
 				if com.name and Utils.has_value({command[2], command.namespace .. command[2]}, com.namespace .. com.name) then
 					com.finished = true
-					command.finished = true
+					command_list_parser.set_finished(command)
 					if com[1] == "mine" then
 						global.command_list_parser.current_mining = 0
 					end
@@ -1145,8 +1145,8 @@ high_level_commands = {
 			type = {"nil", "string"},
 		},
 		execute = function(command, myplayer, tick)
-			command.finished = true
-
+			command_list_parser.set_finished(command)
+			
 			return {command[1], command[2], command.data.item, command.data.amount, command.data.inventory, action_type = command.action_type}
 		end,
 		executable = function(command, myplayer, tick)
@@ -1255,7 +1255,7 @@ high_level_commands = {
 			[2] = "position",
 		},
 		execute = function(command)
-			command.finished = true
+			command_list_parser.set_finished(command)
 			global.high_level_commands.throw_cooldown = game.tick
 			return strip_command(command)
 		end,
@@ -1300,7 +1300,7 @@ high_level_commands = {
 		spawn_commands = function(command, myplayer, tick)
 			command.data.index = command.data.index + 1
 			if command.data.index + 2 > #command then
-				command.finished = true
+				command_list_parser.set_finished(command)
 			else
 				local cmd = {
 					command[2],
@@ -1366,7 +1366,7 @@ high_level_commands = {
 		spawn_commands = function(command, myplayer, tick)
 			command.data.index = command.data.index + 1
 			if command[command.data.index + 1] == nil then
-				command.finished = true
+				command_list_parser.set_finished(command)
 			else
 				local cmd = Utils.copy(command[2][command.data.index])
 				for k, v in pairs(command.pass_arguments or {}) do
