@@ -1087,8 +1087,28 @@ high_level_commands = {
 			[3] = {"nil", "string"},
 		},
 		execute = return_self_finished,
+		executable = function (command, myplayer, tick)
+			if not command.data.entity then
+				command.data.entity = Utils.get_entity_from_pos(command[2], myplayer)
+			end
+
+			if command.data.entity and command.data.entity.valid then
+				command.rect = Utils.collision_box(command.data.entity)
+			else
+				return "Entity not built"
+			end
+
+			if Utils.in_range(command, myplayer, tick) then
+				return ""
+			else
+				return "Player not in range"
+			end
+		end,
 		default_priority = 5,
 		default_action_type = action_types.selection,
+		initialize = function (command, myplayer)
+			command.distance = myplayer.build_distance
+		end,
 	},
 
 	speed = {
