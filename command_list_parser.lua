@@ -253,6 +253,34 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 			end
 		end
 	end
+	
+	if not next_command_group and not global.run_finished then
+		global.run_finished = true
+		local command_count = {}
+		
+		for _, commands in pairs(commandqueue) do
+			for _,com in pairs(commands) do
+				if type(com) == type({}) and com[1] then
+					if not command_count[com[1]] then
+						command_count[com[1]] = 1
+					else
+						command_count[com[1]] = command_count[com[1]] + 1
+					end
+				end
+			end
+		end
+		
+		local total = 0
+		
+		for type, number in pairs(command_count) do
+			if not Utils.has_value({"move", "mine", "pickup"}, type) then
+				total = total + number
+			end
+			LogUI.log_to_ui("Number of " .. type .. " commands: " .. number, "run-output")
+		end
+		
+		LogUI.log_to_ui("Total number of commands without move, mine and pickup: " .. total, "run-output")
+	end
 
 	-- Add the next command group to the current command set.
 
