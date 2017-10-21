@@ -514,4 +514,38 @@ function Utils.can_craft(craft, player, need_intermediates)
 end
 
 
+-- Check if a player can place entity.
+-- surface is the target surface.
+-- entity = {name=..., position=..., direction=..., force=...} is a table that describes the entity we wish to describe
+function Utils.can_player_place(surface, entity)
+	-- local name = entity.name
+	-- local position = entity.position
+	-- local direction = entity.direction
+	-- local force = entity.force or "player"
+
+	local target_collision_box = Utils.collision_box(entity)
+
+	-- Remove Items on ground
+	local items = surface.find_entities_filtered {area = target_collision_box, type = "item-entity"}
+	local items_saved = {}
+
+	for _, item in pairs(items) do
+		table.insert(items_saved, {name = item.stack.name, position = item.position, count = item.stack.count})
+		item.destroy()
+	end
+
+	-- Check if we can actually place the entity at this tile
+	local can_place = surface.can_place_entity(entity)
+
+	-- Put items back.
+	for _, item in pairs(items_saved) do
+		surface.create_entity {
+			name = "item-on-ground",
+			position = item.position,
+			stack = {name = item.name, count = item.count}
+		}
+	end
+	return can_place
+end
+
 return Utils

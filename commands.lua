@@ -108,7 +108,7 @@ TAScommands["build"] =
         )
         for _, _item in pairs(items_saved) do
             myplayer.surface.create_entity {
-                name = item,
+                name = "item-on-ground",
                 position = _item.position,
                 stack = {name = _item.name, count = _item.count}
             }
