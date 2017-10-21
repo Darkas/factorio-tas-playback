@@ -91,6 +91,7 @@ high_level_commands = {
 			[3] = {"nil", "position"},
 			area = {"nil", "table"},
 			rotation = {"nil", "number"},
+			set_on_leaving_range = "boolean",
 		},
 		default_priority = 100,
 
@@ -414,6 +415,7 @@ high_level_commands = {
 			[2] = "string",
 			[3] = "position",
 			[4] = {"nil", "number"},
+			[5] = {"nil", "string"},
 		},
 		execute = function(command, myplayer)
 			if myplayer.get_item_count(command[2]) ~= 0 then
@@ -629,8 +631,8 @@ high_level_commands = {
 	mine = {
 		type_signature = {
 			[2] = "position",
+			[3]  = {"nil", "string"},
 			amount = {"nil", "number"},
-			type  = {"nil", "string"},
 		},
 		execute = strip_command,
 
@@ -1160,6 +1162,7 @@ high_level_commands = {
 			[3] = {"nil", "string"},
 			[4] = {"nil", "number"},
 			[5] = {"nil", "number"},
+			type = {"nil", "string"},
 		},
 		execute = function(command, myplayer, tick)
 			command.finished = true
@@ -1294,8 +1297,9 @@ high_level_commands = {
 	["simple-sequence"] = {
 		type_signature = {
 			[2] = "string",
-			[3] = "table",
-			passed_arguments = {"nil", "table"},
+			[3] = {"table", "string"},
+			[4] = {"table", "string", "nil"},
+			pass_arguments = {"nil", "table"},
 		},
 		initialize = function(command, myplayer, tick)
 			if global.high_level_commands.simple_sequence_name == command.data.parent_command_group.name then
@@ -1421,6 +1425,9 @@ local defaults = {
 }
 
 for _, command in pairs(high_level_commands) do
+	if command.type_signature then
+		setmetatable(command.type_signature, {__index = command_list_parser.generic_cmd_signature})
+	end
 	setmetatable(command, {__index = defaults})
 end
 

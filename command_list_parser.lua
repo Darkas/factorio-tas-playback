@@ -1,4 +1,3 @@
-require("high_level_commands")
 local Event = require("stdlib/event/event")
 local LogUI = require("log_ui")
 local Utils = require("utility_functions")
@@ -21,6 +20,38 @@ local max_ranges = {
 	["build"] = 6,
 	["throw-grenade"] = 15,
 }
+
+command_list_parser.generic_cmd_signature = {
+	[1] = "string",
+	finished = "boolean",
+	disabled = "boolean",
+	tested = "boolean",
+
+	name = {"string", "nil"},
+	namespace = "string",
+	data = "table",
+	action_type = "string",
+	spawned_by = "table",
+	parent_namespace = {"string", "nil"},
+	priority = {"number", "nil"},
+
+	rect = {"nil", "table"},
+	distance = {"nil", "number"},
+
+	command_finished = {"string", "nil"},
+	on_leaving_range = "boolean",
+	on_entering_range = "boolean",
+	on_entering_area = {"table", "nil"},
+	on_tick = {"table", "nil"},
+	on_relative_tick = {"table", "nil"},
+	items_available = {"table", "nil"},
+	items_total = {"table", "nil"},
+
+}
+
+require("high_level_commands")
+
+
 
 function command_list_parser.init()
 	global.command_list_parser.current_command_set = {}
@@ -72,9 +103,6 @@ end)
 
 
 function command_list_parser.check_type(command)
-	--for k, v in pairs(command) do
-	--end
-	
 	local type_signature = high_level_commands[command[1]].type_signature
 	if not type_signature then
 		if not global.command_list_parser.typecheck_errors[command[1]] then
@@ -98,6 +126,16 @@ function command_list_parser.check_type(command)
 			end
 		end
 		return false
+	end
+
+	for k, v in pairs(command) do
+		if command[1] == "simple-sequence" and type(k) == "number" and k > 4 then
+			if not check_argument(command[k], type_signature[4]) then
+				error("Command has wrong type. \nGroup: " .. command.data.parent_command_group.name .. "\nCommand: " .. command[1] .. "\nArgument: " .. k .. "\nValue: " .. Utils.printable(command[k]))
+			end	
+		elseif not type_signature[k] then
+			error(command[1] .. " typecheck failed: unexpected argument " .. Utils.printable(k) .. " = " .. serpent.block(v))
+		end
 	end
 
 	for k, t in pairs(type_signature) do
@@ -134,16 +172,8 @@ function command_list_parser.add_command_to_current_set(command, myplayer, comma
 		parent_command_group = command_group
 	}
 
-	command_list_parser.check_type(command)
-
 	if not command.namespace then
 		command.namespace = command_group.name .. "."
-	end
-
-	if command.name then
-		-- Filter duplicate named commands. This is used e.g. for building blueprints with the same raw data but different areas.
-		if global.command_list_parser.initialized_names[command.namespace .. command.name] then return end
-		global.command_list_parser.initialized_names[#global.command_list_parser.initialized_names + 1] = command.name
 	end
 
 	-- Set default priority
@@ -153,6 +183,15 @@ function command_list_parser.add_command_to_current_set(command, myplayer, comma
 
 	-- Set action type
 	command.action_type = high_level_commands[command[1]].default_action_type
+
+	-- Type check.
+	command_list_parser.check_type(command)
+	
+	if command.name then
+		-- Filter duplicate named commands. This is used e.g. for building blueprints with the same raw data but different areas.
+		if global.command_list_parser.initialized_names[command.namespace .. command.name] then return end
+		global.command_list_parser.initialized_names[#global.command_list_parser.initialized_names + 1] = command.name
+	end
 
 	local not_add = high_level_commands[command[1]].initialize(command, myplayer)
 	if not_add then return end
@@ -270,8 +309,8 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 
 	local auto_move_commands = 0
 
-	for _, cmd in pairs(executable_commands) do
-		if (not cmd.finished) and (cmd[1] == "move-to" or cmd[1] == "move-to-command") then
+	for _, command in pairs(executable_commands) do
+		if (not command.finished) and (command[1] == "move-to" or command[1] == "move-to-command") then
 			auto_move_commands = auto_move_commands + 1
 		end
 	end
