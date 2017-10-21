@@ -107,8 +107,25 @@ high_level_commands = {
 			local added_commands = {}
 			command.data.all_commands = command.data.all_commands or {}
 
-			if not command.data.build_commands then
-				command.data.build_commands = {}
+			if not command.data.commands_spawned then
+				command.data.commands_spawned = true
+				
+				if command.record_order then
+					table.insert(added_commands, {"enable-manual-walking"})
+				end
+				
+				if blueprint.build_order then
+					if not command.data.ordered_build_commands then
+						command.data.ordered_build_commands = {}
+						command.data.current_stage = 1
+						
+						for group_index, entity_indices in pairs(blueprint.build_order) do
+							if #entity_indices = 0 then
+								command.data.default_stage = group_index
+							end
+						end
+					end
+				end
 
 				local commands_by_type = {}
 				for _, cmd in pairs(global.command_list_parser.current_command_set) do
@@ -146,79 +163,108 @@ high_level_commands = {
 							if entity.name == "underground-belt" then
 								build_command[5] = entity.type
 							end
+							
+							if blueprint.build_order then
+								for stage_index, entity_indices in pairs(blueprint.build_order) do
+									local entity_stage_index
+									for _, entity_index in pairs(entity_indices) do
+										if entity_index == entity.index then
+											entity_stage_index = stage_index
+										end
+									end
+									
+									if not entity_stage_index then
+										entity_stage_index = command.data.default_stage
+									end
+									
+									table.insert(command.data.ordered_build_commands[entity_stage_index], build_command)
+									entity.stage = entity_stage_index
+								end
+							end
 
 							entity.build_command = build_command
 
 							table.insert(command.data.all_commands, build_command)
 							table.insert(added_commands, build_command)
-							table.insert(command.data.build_commands, build_command)
-							if Utils.distance_from_rect(myplayer.position, Utils.collision_box(entity)) <= myplayer.build_distance + 0.1 then 
-								build_command.disabled = false
-							end
 						else
 							command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)							
 						end
 					end
 				end
-			else
-				local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
-				for _, entity in pairs(entities) do
-					if entity.build_command then
+			end
+			
+			if blueprint.build_order then
+				local stage_finished = true
+				for i, com in pairs(command.data.ordered_build_commands[command.data.current_stage]) do
+					if com.finished then
+						command.data.ordered_build_commands[command.data.current_stage] = nil
+					else
+						stage_finished = false
+					end
+				end
+				
+				if stage_finished then
+					command.data.current_stage = command.data.current_stage + 1
+				end
+			end
+			
+			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
+			for _, entity in pairs(entities) do
+				if entity.build_command and (not blueprint.build_order or entity.stage == command.data.current_stage) then
+					entity.build_command.disabled = false
+				end
+			end
+
+			-- This is for compatibility between move-to-command and build-blueprint.
+			for index, request in pairs(global.high_level_commands.command_requests) do
+				local name = request[1]
+				local move_to_namespace = request[2]
+				local _, _, namespace, data = string.find(name, "(.*%.)bp_(.*)")
+				if not data then _, _, data = string.find(name, "bp_(.*)") end
+				if data and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
+					local _, _, x, y = string.find(data, "{(.*),(.*)}")
+					local position = {tonumber(x), tonumber(y)}
+					local entity = Utils.Chunked.get_entry_at(blueprint.chunked_entities, blueprint.chunk_size, position)
+					if entity then
 						entity.build_command.disabled = false
+						table.remove(global.high_level_commands.command_requests, index)
 					end
 				end
+			end
 
-				-- This is for compatibility between move-to-command and build-blueprint.
-				for index, request in pairs(global.high_level_commands.command_requests) do
-					local name = request[1]
-					local move_to_namespace = request[2]
-					local _, _, namespace, data = string.find(name, "(.*%.)bp_(.*)")
-					if not data then _, _, data = string.find(name, "bp_(.*)") end
-					if data and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
-						local _, _, x, y = string.find(data, "{(.*),(.*)}")
-						local position = {tonumber(x), tonumber(y)}
-						local entity = Utils.Chunked.get_entry_at(blueprint.chunked_entities, blueprint.chunk_size, position)
-						if entity then
-							entity.build_command.disabled = false
-							table.remove(global.high_level_commands.command_requests, index)
-						end
-					end
-				end
-
-				for _, entity in pairs(entities) do
-					if not entity.build_command or entity.build_command.finished then
-						entity.built = true
-						if not entity.recipe then
-							command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
-						end
-					elseif entity.recipe and entity.built and not entity.set_recipe then
-						entity.set_recipe = true
-						local recipe_command = {
-							"recipe",
-							entity.position,
-							entity.recipe,
-							name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-							namespace = command.namespace,
-						}
-						table.insert(added_commands, recipe_command)
-						table.insert(command.data.all_commands, recipe_command)
-
-						if entity.items then
-							for name, count in pairs(entity.items) do
-								local module_command = {
-									"put",
-									entity.position,
-									name,
-									count,
-									name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
-									namespace = command.namespace,
-								}
-								table.insert(command.data.all_commands, module_command)
-								table.insert(added_commands, module_command)
-							end
-						end
+			for _, entity in pairs(entities) do
+				if not entity.build_command or entity.build_command.finished then
+					entity.built = true
+					if not entity.recipe then
 						command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
 					end
+				elseif entity.recipe and entity.built and not entity.set_recipe then
+					entity.set_recipe = true
+					local recipe_command = {
+						"recipe",
+						entity.position,
+						entity.recipe,
+						name="bp_recipe_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+						namespace = command.namespace,
+					}
+					table.insert(added_commands, recipe_command)
+					table.insert(command.data.all_commands, recipe_command)
+
+					if entity.items then
+						for name, count in pairs(entity.items) do
+							local module_command = {
+								"put",
+								entity.position,
+								name,
+								count,
+								name="bp_module_{" .. entity.position[1] .. ", " .. entity.position[2] .. "}",
+								namespace = command.namespace,
+							}
+							table.insert(command.data.all_commands, module_command)
+							table.insert(added_commands, module_command)
+						end
+					end
+					command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
 				end
 			end
 
