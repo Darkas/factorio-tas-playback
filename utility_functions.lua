@@ -438,7 +438,8 @@ function Utils.get_entity_from_pos(pos, myplayer, types, epsilon)
 	elseif type(types) == type({}) then
 		accepted_types = types
 	else
-		accepted_types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler", "resource", "simple-entity", "tree", "lab", "rocket-silo"}
+		accepted_types = {"furnace", "assembling-machine", "container", "car", "cargo-wagon", "mining-drill", "boiler",
+			"resource", "simple-entity", "tree", "lab", "rocket-silo", "transport-belt", "underground-belt", "splitter"}
 	end
 
 	local entity = nil
