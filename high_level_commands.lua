@@ -92,6 +92,7 @@ high_level_commands = {
 			area = {"nil", "table"},
 			rotation = {"nil", "number"},
 			set_on_leaving_range = "boolean",
+			show_ghosts = "boolean",
 		},
 		default_priority = 100,
 
