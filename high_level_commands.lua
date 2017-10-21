@@ -154,7 +154,7 @@ high_level_commands = {
 								build_command.disabled = false
 							end
 						else
-							command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)							
+							command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)							
 						end
 					end
 				end
@@ -175,7 +175,7 @@ high_level_commands = {
 					if data and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
 						local _, _, x, y = string.find(data, "{(.*),(.*)}")
 						local position = {tonumber(x), tonumber(y)}
-						local entity = Blueprint.get_entity_at(blueprint, position)
+						local entity = Utils.Chunked.get_entry_at(blueprint.chunked_entities, blueprint.chunk_size, position)
 						if entity then
 							entity.build_command.disabled = false
 							table.remove(global.high_level_commands.command_requests, index)
@@ -187,7 +187,7 @@ high_level_commands = {
 					if not entity.build_command or entity.build_command.finished then
 						entity.built = true
 						if not entity.recipe then
-							command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+							command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
 						end
 					elseif entity.recipe and entity.built and not entity.set_recipe then
 						entity.set_recipe = true
@@ -215,7 +215,7 @@ high_level_commands = {
 								table.insert(added_commands, module_command)
 							end
 						end
-						command.data.added_all_entities = not Blueprint.remove_entity(blueprint, entity)
+						command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
 					end
 				end
 			end
@@ -280,7 +280,7 @@ high_level_commands = {
 				while entity do
 					if not (command.skip_coal_drills and entity.type == "mining-drill" and entity.mining_target and entity.mining_target.name == "coal") then
 						if ((not command.type) or entity.type == command.type) and ((not command.pos) or (entity.position.x == command.pos[1] and entity.position.y == command.pos[2])) then
-							command.data.entity_cache[#command.data.entity_cache + 1] = {entity, Utils.collision_box(entity)}
+							Utils.Chunked.create_entry(command.data.entity_cache, 9, entity.position, {entity, Utils.collision_box(entity)})
 						end
 					end
 					command.data.cached_amount = command.data.cached_amount + 1
@@ -288,7 +288,7 @@ high_level_commands = {
 				end
 			end
 
-			for i, entity_cache in pairs(command.data.entity_cache) do
+			for i, entity_cache in pairs(Utils.Chunked.get_entries_close(command.data.entity_cache, 9, myplayer.position)) do
 				local entity = entity_cache[1]
 				local collision_box = entity_cache[2]
 				
@@ -893,16 +893,26 @@ high_level_commands = {
 		execute = empty,
 		executable = function (command, myplayer, tick)
 			command.data.spawn_queue = {}
-
-			for i,entity in pairs(global.command_list_parser.entities_by_type[command[3]]) do
-				if command.data.take_spawned[i] and command.data.take_spawned[i].finished then
-					command.data.take_spawned[i] = nil
+			
+			if #global.command_list_parser.entities_by_type[command[3]] > command.data.cached_amount then
+				local entity = global.command_list_parser.entities_by_type[command[3]][command.data.cached_amount + 1]
+				
+				while entity do
+					Utils.Chunked.create_entry(command.data.entity_cache, 9, entity.position, {entity=entity, take_spawned = nil})
+					command.data.cached_amount = command.data.cached_amount + 1
+					entity = global.command_list_parser.entities_by_type[command[3]][command.data.cached_amount + 1]
 				end
-				if (not command.data.take_spawned[i]) and entity.get_item_count(command[2]) > 0 then
-					local cmd = {"take", {entity.position.x, entity.position.y}, command[2], data={}, namespace=command.namespace}
+			end
+
+			for i,entry in pairs(Utils.Chunked.get_entries_close(command.data.entity_cache, 9, myplayer.position)) do
+				if entry.take_spawned and entry.take_spawned.finished then
+					entry.take_spawned = nil
+				end
+				if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
+					local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
 
 					if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
-						command.data.take_spawned[i] = cmd
+						entry.take_spawned = cmd
 						table.insert(command.data.spawn_queue, cmd)
 					end
 				end
@@ -918,7 +928,8 @@ high_level_commands = {
 			return command.data.spawn_queue
 		end,
 		initialize = function(command, myplayer, tick)
-			command.data.take_spawned = {}
+			command.data.entity_cache = {}
+			command.data.cached_amount = 0
 		end,
 		default_priority = 100,
 	},

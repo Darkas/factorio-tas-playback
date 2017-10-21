@@ -513,5 +513,79 @@ function Utils.can_craft(craft, player, need_intermediates)
 	return player.get_craftable_count(craft.name) >= 1
 end
 
+-- Chunk optimization
+---------------------
+
+Utils.Chunked = {}
+
+function Utils.Chunked.get_entries_close(chunked_data, chunk_size, position)
+    local res = {}
+	
+    local x = math.floor((position.x or position[1]) / chunk_size)
+    local y = math.floor((position.y or position[2]) / chunk_size)
+
+    for X = x-1, x+1 do
+        for Y = y-1, y+1 do
+            for _, entity in ipairs(chunked_data[X .. "_" .. Y] or {}) do
+                table.insert(res, entity)
+            end
+        end
+    end
+
+    return res
+end
+
+function Utils.Chunked.key_from_position(position, chunk_size)
+    if not position then game.print(debug.traceback()) end
+    return math.floor((position.x or position[1]) / chunk_size) .. "_" .. math.floor((position.y or position[2]) / chunk_size)
+end
+
+function Utils.Chunked.get_entry_at(chunked_data, chunk_size, position)
+    for _, entity in pairs(chunked_data[Utils.Chunked.key_from_position(position, chunk_size)] or {}) do
+        if Utils.sqdistance(entity._position, position) < 0.01 then
+            return entity
+        end
+    end
+end
+
+function Utils.Chunked.save_entry_data(chunked_data, chunk_size, position, t)
+    for _, entity in pairs(chunked_data[Utils.Chunked.key_from_position(position, chunk_size)] or {}) do
+        if Utils.sqdistance(entity._position, position) < 0.01 then
+            for k, v in pairs(t) do
+                entity[k] = v
+            end
+			return entity
+        end
+    end
+end
+
+function Utils.Chunked.create_entry(chunked_data, chunk_size, position, entry)
+    local key = Utils.Chunked.key_from_position(position, chunk_size)
+    if chunked_data[key] then
+        table.insert(chunked_data[key], entry)
+    else
+        chunked_data[key] = {entry}
+    end
+    entry._index = #chunked_data[key]
+	entry._position = position
+end
+
+-- Returns wether the chunked table has entries left
+function Utils.Chunked.remove_entry(chunked_data, chunk_size, entry)
+    if not chunked_data or not entry then
+        game.print(debug.traceback())
+        error("Called Utils.Chunked.remove_entry with invalid param!")
+    end
+    local key = Utils.Chunked.key_from_position(entry._position, chunk_size)
+
+    if not chunked_data[key] then game.print(debug.traceback()); error("Attempted to delete entry in chunk that does not exist! Entry: " .. serpent.block(entry)) end
+    if not chunked_data[key][entry._index] then game.print(debug.traceback()); error("Attempted to delete entry that does not exist! Entry: " .. serpent.block(entry)) end
+    chunked_data[key][entry._index] = nil
+    if next(chunked_data[key]) == nil then
+        chunked_data[key] = nil
+    end
+    return (next(chunked_data) ~= nil)
+end
+
 
 return Utils
