@@ -462,27 +462,11 @@ end
 -- Note this should only be called for entities that are actually on a surface.
 function Utils.get_recipe(entity)
 	if not entity then game.print(debug.traceback()) error("Trying to access recipe of nil entity!") end
-	local x, y = Utils.get_coordinates(entity.position)
 	local recipe = nil
 	pcall(function() recipe = entity.recipe end)
-	if entity.type == "furnace" then
-		if recipe then
-			our_global.entity_recipe[x .. "_" .. y] = recipe.name
-			return recipe.name
-		end
-		if our_global.entity_recipe[x .. "_" .. y] then return our_global.entity_recipe[x .. "_" .. y] end
-
-		local stack = entity.get_output_inventory()[1]
-		if stack and stack.valid_for_read then
-			return stack.name
-		else
-			return nil
-		end
-	elseif entity.type == "assembling-machine" then
-		return recipe
-	else
-		error("Called get_recipe for entity without recipe.")
-	end
+	if recipe then return recipe end
+	pcall(function() recipe = entity.previous_recipe end)
+	return recipe
 end
 
 function Utils.craft_interpolate(entity, ticks)

@@ -64,7 +64,8 @@ end
 
 
 
-local function record_bp_order_pressed(event)
+-- Blueprint Order Record
+local function record_bp_order_entity(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
 	local record = global.high_level_commands.bp_order_record.record
@@ -80,11 +81,24 @@ local function record_bp_order_pressed(event)
 	entity.destroy()
 end
 
-local function record_bp_order_next(event)
+local function record_bp_order_group(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local record = global.high_level_commands.bp_order_record.record
 	table.insert(record, {})
 end
+
+local function record_bp_order_save(event)
+	local filename = "Blueprint_order/" .. global.high_level_commands.bp_order_record.blueprint_data.name
+	local data = "return " .. serpent.block(global.high_level_commands.bp_order_record.record)
+
+	game.write_file(filename, data, true)
+
+	global.high_level_commands.bp_order_record = nil
+end
+
+Event.register("bp_order_entity", record_bp_order_entity)
+Event.register("bp_order_group", record_bp_order_group)
+Event.register("bp_order_save", record_bp_order_save)
 
 
 
