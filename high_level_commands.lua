@@ -933,9 +933,35 @@ high_level_commands = {
 			[2] = "table",
 		},
 		execute = empty,
+		executable = function(command, myplayer, tick)
+			if command.data.all_commands then
+				local finished = true
+				local cmd = command.data.all_commands[1]
+				while cmd do
+					if cmd.finished then 
+						table.remove(command.data.all_commands, 1) 
+					else
+						finished = false
+						break
+					end
+					cmd = command.data.all_commands[1]
+				end
+				
+				if finished then
+					command_list_parser.set_finished(command)
+					return "finished"
+				else
+					return "Waiting for all commands to finish."
+				end
+			else
+				return ""
+			end
+		end,
 		initialize = empty,
 		spawn_commands = function(command, myplayer, tick)
 			local commands = {}
+			command.data.all_commands = {}
+			
 			local i = 1
 			if global.high_level_commands.parallel_name == command.data.parent_command_group.name then
 				global.high_level_commands.parallel_index = global.high_level_commands.parallel_index + 1
@@ -943,20 +969,23 @@ high_level_commands = {
 				global.high_level_commands.parallel_index = 1
 				global.high_level_commands.parallel_name = command.data.parent_command_group.name
 			end
-			for index, cmd in ipairs(command[2]) do
+			for index, _cmd in ipairs(command[2]) do
+				local cmd = Utils.copy(_cmd)
+				
 				if not cmd.name then
 					i = i + 1
 					cmd.name = i
 				end
-				commands[#commands + 1] = Utils.copy(cmd)
+				
 				if command.name then
-					commands[#commands].namespace = command.namespace .. command.name .. "."
+					cmd.namespace = command.namespace .. command.name .. "."
 				else
-					commands[#commands].namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
+					cmd.namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
 				end
+				table.insert(commands, cmd)
+				table.insert(command.data.all_commands, cmd)
 			end
-
-			command_list_parser.set_finished(command)
+			
 			return commands
 		end,
 		default_priority = 100,
