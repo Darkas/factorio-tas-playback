@@ -4,8 +4,6 @@ local Utils = require("utility_functions")
 local GuiEvent = require("stdlib/event/gui")
 local NUM_LINES = 40
 
-CmdUI = {} --luacheck: allow defined top
-
 local passive_commands = {
 	"passive-take",
 	"auto-refuel",
@@ -13,41 +11,52 @@ local passive_commands = {
 }
 
 
-function CmdUI.init()
-	if global.command_list_ui then return end
-	global.command_list_ui = {}
-	global.command_list_ui.ui_hidden = {}
-	global.command_list_ui.categories = {
-		spawned = {
-			check = function(command)
-				return command.spawned_by ~= nil
-			end,
-			show = true,
-			color = {r=0.8, g=0.6, b=0.3, a=1},
-		},
-		passive = {
-			check = function(command)
-				return Utils.in_list(command[1], passive_commands)
-			end,
-			show = false,
-			color = {r=0.7, g=0.7, b=0.7, a=1},
-		},
-		disabled = {
-			check = function(command)
-				return command.disabled
-			end,
-			show = false,
-			color = {r=0.2, g=0.2, b=0.2}
-		},
-	}
+CmdUI = {} --luacheck: allow defined top
 
-	for name, _ in pairs(global.command_list_ui.categories) do
-		GuiEvent.on_checked_state_changed("cmd_show_" .. name, function(event)
-			-- No closures in factorio-lua!
-			local the_name = string.sub(event.element.name, 10)
-			global.command_list_ui.categories[the_name].show = event.element.state
-		end)
-	end
+CmdUI.categories = {
+	disabled = {
+		check = function(command)
+			return command.disabled
+		end,
+		show_default = false,
+		color = {r=0.2, g=0.2, b=0.2}
+	},
+	spawned = {
+		check = function(command)
+			return command.spawned_by ~= nil
+		end,
+		show_default = true,
+		color = {r=0.8, g=0.6, b=0.3, a=1},
+	},
+	passive = {
+		check = function (command)
+			return Utils.in_list(command[1], passive_commands)
+		end,
+		show_default = false,
+		color = {r=0.7, g=0.7, b=0.7, a=1},
+	},
+}
+
+for name, _ in pairs(CmdUI.categories) do
+	GuiEvent.on_checked_state_changed("cmd_show_" .. name, function(event)
+		-- No closures in factorio-lua!
+		local the_name = string.sub(event.element.name, 10)
+		global.CmdUI.categories[the_name].show[event.player_index] = event.element.state
+	end)
+end
+
+
+global.CmdUI = global.CmdUI or {}
+global.CmdUI.ui_hidden = global.CmdUI.ui_hidden or {}
+global.CmdUI.categories = global.CmdUI.categories or {}
+
+for name, cfg in pairs(CmdUI.categories) do
+	global.CmdUI.categories[name] = global.CmdUI.categories[name] or {
+		show = {},
+	}
+end
+
+function CmdUI.init()
 end
 
 
@@ -72,9 +81,10 @@ function CmdUI.create(player)
 
 	--  Checkboxes to show/hide categories
 	local category_flow = frame.add{type="flow", name="category_flow", style="flow_style", direction="horizontal"}
-	for name, cfg in pairs(global.command_list_ui.categories) do
+	for name, cfg in pairs(global.CmdUI.categories) do
+		if cfg.show[player.index] == nil then cfg.show[player.index] = CmdUI.categories[name].show_default end
 		category_flow.add{type="label", style="label_style", name = "title_show_" .. name, caption = "[Show " .. name .. "]"}
-		box = category_flow.add{type="checkbox", style="checkbox_style", name="cmd_show_" .. name, state=cfg.show}
+		box = category_flow.add{type="checkbox", style="checkbox_style", name="cmd_show_" .. name, state=cfg.show[player.index]}
 		box.style.top_padding = 3
 		box.style.right_padding = 8
 	end
@@ -115,7 +125,7 @@ function CmdUI.update_command_list_ui(player, command_list)
 	local flow = mod_gui.get_frame_flow(player)
 	local frame = flow.command_list_frame
 
-	if not global.command_list_ui then CmdUI.init() end
+	if not global.CmdUI then CmdUI.init() end
 
 	if not frame then
 		CmdUI.create(player)
@@ -124,9 +134,9 @@ function CmdUI.update_command_list_ui(player, command_list)
 
 	-- Visibility
 	local show = frame.top_flow.show_command_list_ui_checkbox.state
-	if global.command_list_ui.ui_hidden[player.index] ~= not show then
+	if global.CmdUI.ui_hidden[player.index] ~= not show then
 		frame.scroll_pane.style.visible = show
-		global.command_list_ui.ui_hidden[player.index] = not show
+		global.CmdUI.ui_hidden[player.index] = not show
 	end
 
 
@@ -167,8 +177,8 @@ function CmdUI.update_command_list_ui(player, command_list)
 			if not command then 
 				valid = false 
 			else
-				for _, cfg in pairs(global.command_list_ui.categories) do
-					if not cfg.show and cfg.check(command) then
+				for name, cfg in pairs(global.CmdUI.categories) do
+					if not cfg.show[player.index] and CmdUI.categories[name].check(command) then
 						valid = false
 						break
 					end
@@ -187,10 +197,10 @@ function CmdUI.update_command_list_ui(player, command_list)
 			local label = frame.scroll_pane.table["text_" .. index]
 			label.caption = s
 			local set_color = false
-			for _, cfg in pairs(global.command_list_ui.categories) do
-				if cfg.show and cfg.check(command) then
+			for name, cfg in pairs(global.CmdUI.categories) do
+				if cfg.show[player.index] and CmdUI.categories[name].check(command) then
 					set_color = true
-					label.style.font_color = cfg.color or {r=1, g=1, b=1, a=1}
+					label.style.font_color = CmdUI.categories[name].color or {r=1, g=1, b=1, a=1}
 					break
 				end
 			end

@@ -64,21 +64,26 @@ end
 
 
 
-local collected_entities = {}
-local function record_blueprint_order_pressed(event)
-	if not current_blueprint_order_record then return end
-	local bp_data = current_blueprint_order_record
+local function record_bp_order_pressed(event)
+	if not global.high_level_commands.bp_order_record then return end
+	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
+	local record = global.high_level_commands.bp_order_record.record
 	local player = game.players[event.player_index]
 	local entity = player.selected
 	
 	if not entity or entity.type ~= "entity-ghost" then return end
 
-	local position = entity.position
-	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, 9, position)
-	table.insert(collected_entities, bp_entity)
+	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
+	table.insert(record[record], bp_entity.index)
 
 	bp_entity.build_command.disabled = false
 	entity.destroy()
+end
+
+local function record_bp_order_next(event)
+	if not global.high_level_commands.bp_order_record then return end
+	local record = global.high_level_commands.bp_order_record.record
+	table.insert(record, {})
 end
 
 
@@ -133,6 +138,11 @@ high_level_commands = {
 				
 				if command.record_order then
 					table.insert(added_commands, {"enable-manual-walking"})
+					if global.global.high_level_commands.bp_order_record then
+						error("Attempting to record a two blueprint orders simultaneously!")
+					end
+					
+					global.high_level_commands.bp_order_record = {blueprint_data = blueprint}
 				end
 				
 				if blueprint.build_order then
@@ -141,7 +151,7 @@ high_level_commands = {
 						command.data.current_stage = 1
 						
 						for group_index, entity_indices in pairs(blueprint.build_order) do
-							if #entity_indices = 0 then
+							if #entity_indices == 0 then
 								command.data.default_stage = group_index
 							end
 						end

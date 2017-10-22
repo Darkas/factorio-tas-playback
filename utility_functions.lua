@@ -51,6 +51,7 @@ end
 
 -- Yep, this is a duplicate.
 function Utils.in_list(element, list)
+	if not list then game.print(debug.traceback()) error("Nil argument to in_list!") end
 	for _, v in pairs(list) do
 		if v == element then
 			return true
