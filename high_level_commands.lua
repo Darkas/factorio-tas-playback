@@ -481,20 +481,29 @@ high_level_commands = {
 			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
 			local entities = {}
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
-				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe(entity) == item) then
+				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe_name(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
-				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe(entity) == item) then
+				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe_name(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
+
 
 			local count_to_craft = count
 			for _, entity in pairs(entities) do
 				count_to_craft = count_to_craft - entity.get_item_count(item)
 			end
+
+			if #entities == 0 then
+				command.data.next_tick = tick + 60
+				return
+			end
+
+			local recipe_prototype = game.recipe_prototypes[Utils.get_recipe_name(entities[1])]
+			
 
 			local count_crafts_all = math.floor(count_to_craft / #entities)
 			local remaining = count_to_craft % #entities
@@ -517,7 +526,7 @@ high_level_commands = {
 				command_list_parser.set_finished(command)
 			end
 
-			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[Utils.get_recipe(entities[1])].energy * 60
+			local ticks = (count_crafts_all - 1) * recipe_prototype.energy * 60
 			command.data.next_tick = tick + math.max(math.min(ticks / 3, 40), 1)
 			return ret
 		end,

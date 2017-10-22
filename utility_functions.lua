@@ -9,11 +9,6 @@ local our_global = global.utility_functions
 
 if not our_global.entity_recipe then our_global.entity_recipe = {} end
 
-
-
-
-
-
 -- Tables
 ----------
 
@@ -95,8 +90,6 @@ end
 
 
 
-
-
 -- Printing
 ------------
 
@@ -107,8 +100,6 @@ end
 function Utils.errprint(msg)
 	LogUI.log_to_ui(msg, "tascommand-error")
 end
-
-
 
 
 
@@ -275,7 +266,7 @@ function Utils.closest_point(square, circle_radius, position)
 		rx, ry = square_radius + circle_radius, py
 		--  then
 	elseif py <= square_radius + circle_radius * math.sin(3.14159 / 8) then
-		_, py = px - square_radius, py - square_radius
+		px, py = px - square_radius, py - square_radius
 		rx, ry = math.sqrt(circle_radius^2 - py^2), py
 		rx, ry = rx + square_radius, ry + square_radius
 	elseif px - (square_radius + circle_radius * math.cos(3.14159 / 8)) >= py - (square_radius + circle_radius * math.sin(3.14159 / 8))  then
@@ -389,12 +380,6 @@ end
 -- String Processing
 ---------------------
 
-function Utils.string_to_position(data)
-	local _, _, x, y = string.find(data, "{(.*),(.*)}")
-	return {tonumber(x), tonumber(y)}
-end
-
-
 function Utils.namespace_prefix(name, command_group)
 	if not name then
 		return nil
@@ -475,17 +460,39 @@ end
 ------------------
 
 -- Note this should only be called for entities that are actually on a surface.
-function Utils.get_recipe(entity)
+function Utils.get_recipe_name(entity)
 	if not entity then game.print(debug.traceback()) error("Trying to access recipe of nil entity!") end
+	local x, y = Utils.get_coordinates(entity.position)
 	local recipe
 	pcall(function() recipe = entity.recipe end)
-	pcall(function() recipe = recipe or entity.previous_recipe end)
-	return recipe
+	if entity.type == "furnace" then
+		if recipe then
+			our_global.entity_recipe[x .. "_" .. y] = recipe.name
+			return recipe.name
+		end
+		pcall(function() recipe = entity.previous_recipe end)
+		if recipe then
+			our_global.entity_recipe[x .. "_" .. y] = recipe.name
+			return recipe.name
+		end
+		if our_global.entity_recipe[x .. "_" .. y] then return our_global.entity_recipe[x .. "_" .. y] end
+
+		local stack = entity.get_output_inventory()[1]
+		if stack and stack.valid_for_read then
+			return stack.name
+		else
+			return nil
+		end
+	elseif entity.type == "assembling-machine" then
+		return recipe.name
+	else
+		error("Called get_recipe for entity without recipe.")
+	end
 end
 
 function Utils.craft_interpolate(entity, ticks)
 	local craft_speed = entity.prototype.crafting_speed
-	local recipe = Utils.get_recipe(entity)
+	local recipe = Utils.get_recipe_name(entity)
 	local energy = game.recipe_prototypes[recipe].energy
 	local progress = entity.crafting_progress
 
