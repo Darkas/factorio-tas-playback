@@ -9,6 +9,11 @@ local our_global = global.utility_functions
 
 if not our_global.entity_recipe then our_global.entity_recipe = {} end
 
+
+
+
+
+
 -- Tables
 ----------
 
@@ -90,6 +95,8 @@ end
 
 
 
+
+
 -- Printing
 ------------
 
@@ -100,6 +107,8 @@ end
 function Utils.errprint(msg)
 	LogUI.log_to_ui(msg, "tascommand-error")
 end
+
+
 
 
 
@@ -266,7 +275,7 @@ function Utils.closest_point(square, circle_radius, position)
 		rx, ry = square_radius + circle_radius, py
 		--  then
 	elseif py <= square_radius + circle_radius * math.sin(3.14159 / 8) then
-		px, py = px - square_radius, py - square_radius
+		_, py = px - square_radius, py - square_radius
 		rx, ry = math.sqrt(circle_radius^2 - py^2), py
 		rx, ry = rx + square_radius, ry + square_radius
 	elseif px - (square_radius + circle_radius * math.cos(3.14159 / 8)) >= py - (square_radius + circle_radius * math.sin(3.14159 / 8))  then
@@ -380,6 +389,12 @@ end
 -- String Processing
 ---------------------
 
+function Utils.string_to_position(data)
+	local _, _, x, y = string.find(data, "{(.*),(.*)}")
+	return {tonumber(x), tonumber(y)}
+end
+
+
 function Utils.namespace_prefix(name, command_group)
 	if not name then
 		return nil
@@ -462,10 +477,9 @@ end
 -- Note this should only be called for entities that are actually on a surface.
 function Utils.get_recipe(entity)
 	if not entity then game.print(debug.traceback()) error("Trying to access recipe of nil entity!") end
-	local recipe = nil
+	local recipe
 	pcall(function() recipe = entity.recipe end)
-	if recipe then return recipe end
-	pcall(function() recipe = entity.previous_recipe end)
+	pcall(function() recipe = recipe or entity.previous_recipe end)
 	return recipe
 end
 
