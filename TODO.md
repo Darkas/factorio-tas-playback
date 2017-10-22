@@ -5,6 +5,10 @@
 - UI Option: Number of commands to show.
 - Redo movement logic. It's super costly at the moment.
 - Make high_level_commands a proper module.
+- Make the global table available in the run file.
+- Allow build to build over entities of the same group.
+- Improve the warning given when a blueprint was added to the run but not to the blueprint_list.lua
+- New type of move command: give a direction and walk in that direction until condition is satisfied
 
 
 ## Low Priority:
