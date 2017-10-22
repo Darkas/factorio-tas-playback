@@ -382,7 +382,7 @@ high_level_commands = {
 				local collision_box = entity_cache[2]
 				
 				if not entity.valid then
-					game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
+					Utils.Chunked.remove_entry(command.data.entity_cache, 9, entity_cache)
 				else
 					if entity.type == "mining-drill" then
 						priority = 4
@@ -1011,16 +1011,20 @@ high_level_commands = {
 			end
 
 			for i,entry in pairs(Utils.Chunked.get_entries_close(command.data.entity_cache, 9, myplayer.position)) do
-				if entry.take_spawned and entry.take_spawned.finished then
-					entry.take_spawned = nil
-				end
-				if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
-					local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
-
-					if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
-						entry.take_spawned = cmd
-						table.insert(command.data.spawn_queue, cmd)
+				if entry.entity.valid then
+					if entry.take_spawned and entry.take_spawned.finished then
+						entry.take_spawned = nil
 					end
+					if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
+						local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
+
+						if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
+							entry.take_spawned = cmd
+							table.insert(command.data.spawn_queue, cmd)
+						end
+					end
+				else
+					Utils.Chunked.remove_entry(command.data.entity_cache, 9, entry)
 				end
 			end
 
