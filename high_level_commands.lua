@@ -396,7 +396,7 @@ high_level_commands = {
 				local collision_box = entity_cache[2]
 				
 				if not entity.valid then
-					game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
+					Utils.Chunked.remove_entry(command.data.entity_cache, 9, entity_cache)
 				else
 					if entity.type == "mining-drill" then
 						priority = 4
@@ -947,9 +947,35 @@ high_level_commands = {
 			[2] = "table",
 		},
 		execute = empty,
+		executable = function(command, myplayer, tick)
+			if command.data.all_commands then
+				local finished = true
+				local cmd = command.data.all_commands[1]
+				while cmd do
+					if cmd.finished then 
+						table.remove(command.data.all_commands, 1) 
+					else
+						finished = false
+						break
+					end
+					cmd = command.data.all_commands[1]
+				end
+				
+				if finished then
+					command_list_parser.set_finished(command)
+					return "finished"
+				else
+					return "Waiting for all commands to finish."
+				end
+			else
+				return ""
+			end
+		end,
 		initialize = empty,
 		spawn_commands = function(command, myplayer, tick)
 			local commands = {}
+			command.data.all_commands = {}
+			
 			local i = 1
 			if global.high_level_commands.parallel_name == command.data.parent_command_group.name then
 				global.high_level_commands.parallel_index = global.high_level_commands.parallel_index + 1
@@ -957,20 +983,23 @@ high_level_commands = {
 				global.high_level_commands.parallel_index = 1
 				global.high_level_commands.parallel_name = command.data.parent_command_group.name
 			end
-			for index, cmd in ipairs(command[2]) do
+			for index, _cmd in ipairs(command[2]) do
+				local cmd = Utils.copy(_cmd)
+				
 				if not cmd.name then
 					i = i + 1
 					cmd.name = i
 				end
-				commands[#commands + 1] = Utils.copy(cmd)
+				
 				if command.name then
-					commands[#commands].namespace = command.namespace .. command.name .. "."
+					cmd.namespace = command.namespace .. command.name .. "."
 				else
-					commands[#commands].namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
+					cmd.namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
 				end
+				table.insert(commands, cmd)
+				table.insert(command.data.all_commands, cmd)
 			end
-
-			command_list_parser.set_finished(command)
+			
 			return commands
 		end,
 		default_priority = 100,
@@ -996,16 +1025,20 @@ high_level_commands = {
 			end
 
 			for i,entry in pairs(Utils.Chunked.get_entries_close(command.data.entity_cache, 9, myplayer.position)) do
-				if entry.take_spawned and entry.take_spawned.finished then
-					entry.take_spawned = nil
-				end
-				if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
-					local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
-
-					if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
-						entry.take_spawned = cmd
-						table.insert(command.data.spawn_queue, cmd)
+				if entry.entity.valid then
+					if entry.take_spawned and entry.take_spawned.finished then
+						entry.take_spawned = nil
 					end
+					if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
+						local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
+
+						if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
+							entry.take_spawned = cmd
+							table.insert(command.data.spawn_queue, cmd)
+						end
+					end
+				else
+					Utils.Chunked.remove_entry(command.data.entity_cache, 9, entry)
 				end
 			end
 
@@ -1477,13 +1510,16 @@ high_level_commands = {
 		execute = empty,
 		spawn_commands = function(command, myplayer, tick)
 			command.data.index = command.data.index + 1
-			if command[command.data.index + 1] == nil then
+			if command[2][command.data.index] == nil then
 				command_list_parser.set_finished(command)
 			else
 				local cmd = Utils.copy(command[2][command.data.index])
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
 				end
+				
+				cmd.name = "command-" .. command.data.index
+				cmd.namespace = command.data.namespace
 
 				return { cmd }
 			end
