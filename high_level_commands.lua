@@ -469,23 +469,23 @@ high_level_commands = {
 							end
 						end
 
-						local delta_tick
-						local out = Utils.printable(command.min) .. ", " 
-						if command.min then coal_count = coal_count - command.min - 1 end
+						-- local delta_tick
+						-- local out = Utils.printable(command.min) .. ", " 
+						-- if command.min then coal_count = coal_count - command.min - 1 end
 						
-						if coal_count > 0 then
-							delta_tick = 8000000 / energy_usage / 4
-							out = out .. ", count > 0, "
-						elseif remaining_burning_fuel >= 20000 then
-							delta_tick = (remaining_burning_fuel - 20000) / energy_usage / 2
-							out = out .. ", remaining_burning_fuel >= 20000"
-						end
-						if delta_tick then 
-							entity_cache.autorefuel_next_tick = tick + delta_tick
-							Utils.display_floating_text(entity, myplayer, out .. " " .. Utils.printable(Utils.roundn(delta_tick / 60, 1)))
-						else
-							entity_cache.autorefuel_next_tick = nil
-						end
+						-- if coal_count > 0 then
+						-- 	delta_tick = 8000000 / energy_usage / 2
+						-- 	out = out .. ", count > 0, "
+						-- elseif remaining_burning_fuel >= 20000 then
+						-- 	delta_tick = (remaining_burning_fuel - 20000) / energy_usage / 2
+						-- 	out = out .. ", remaining_burning_fuel >= 20000"
+						-- end
+						-- if delta_tick then 
+						-- 	entity_cache.autorefuel_next_tick = tick + math.min(delta_tick, 5*60)
+						-- 	Utils.display_floating_text(entity, myplayer, out .. " " .. Utils.printable(Utils.roundn(delta_tick / 60, 1)))
+						-- else
+						-- 	entity_cache.autorefuel_next_tick = nil
+						-- end
 					end
 				end
 			end
