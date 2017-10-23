@@ -70,6 +70,7 @@ end
 local function record_bp_order_entity(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
+	local record = global.high_level_commands.bp_order_record
 	local record_data = global.high_level_commands.bp_order_record.record
 	local player = game.players[event.player_index]
 	local entity = player.selected
@@ -82,8 +83,7 @@ local function record_bp_order_entity(event)
 	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
 
 	local x, y = Utils.get_coordinates(entity.position)
-	if not record_data.stage_index then record_data.stage_index = 1 end
-	record_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = record_data.stage_index
+	record_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = record.stage_index
 	if not global.high_level_commands.bp_order_record.current_group then global.high_level_commands.bp_order_record.current_group = {} end
 	table.insert(global.high_level_commands.bp_order_record.current_group, bp_entity)
 
@@ -96,21 +96,20 @@ local function record_bp_order_group(event)
 	local record = global.high_level_commands.bp_order_record
 	local record_data = global.high_level_commands.bp_order_record.record
 	
-	if not record.stage_index then 
-		record.stage_index = 1
-	end
 	if #global.high_level_commands.bp_order_record.current_group == 0 then
 		record_data.default_stage = record.stage_index
 	end
 
 	record.stage_index = record.stage_index + 1
 
-	game.print("Blueprint record: Next group (" .. #record[#record_data] .. " entities saved in current).")
+	game.print("Blueprint record: Next group (" .. #record.current_group .. " entities saved in current, index is " .. record.stage_index - 1 .. ").")
+	
+	record.current_group = {}
 end
 
 local function record_bp_order_save(event)
 	local record_data = global.high_level_commands.bp_order_record
-	if not record_data or #record_data.record < 2 then 
+	if not record_data or not record_data.stage_index or record_data.stage_index < 2 then 
 		game.print("Attempting to save Blueprint build order while nothing is recorded!") 
 		return
 	end
@@ -123,8 +122,8 @@ local function record_bp_order_save(event)
 
 	local data = "return " .. serpent.block(global.high_level_commands.bp_order_record.record)
 
-	game.print("Writing build order to file " .. filename)
-	game.write_file(filename, data, true)
+	game.print("Writing build order to file " .. filename .. ".lua")
+	game.write_file(filename .. ".lua", data, true)
 
 	global.high_level_commands.bp_order_record = nil
 end
@@ -187,25 +186,22 @@ high_level_commands = {
 				
 				if command.record_order then
 					table.insert(added_commands, {"enable-manual-walking"})
+					
+					LogUI.log_to_ui("Press Ctrl+J to save the order and write it to a file.", "run-output")
+					LogUI.log_to_ui("Press Shift+J to start a new group of buildings.", "run-output")
+					LogUI.log_to_ui("Press J to mark a building for construction.", "run-output")
+					LogUI.log_to_ui("Blueprint order recording started!", "run-output")
 
-					if global.global.high_level_commands.bp_order_record then
+					if global.high_level_commands.bp_order_record then
 						error("Attempting to record a two blueprint orders simultaneously!")
 					end
 					
-					global.high_level_commands.bp_order_record = {blueprint_data = blueprint}
-				end
-				
-				if blueprint.build_order then
-					if not command.data.ordered_build_commands then
-						command.data.ordered_build_commands = {}
-						command.data.current_stage = 1
-						
-						for group_index, entity_indices in pairs(blueprint.build_order) do
-							if #entity_indices == 0 then
-								command.data.default_stage = group_index
-							end
-						end
-					end
+					global.high_level_commands.bp_order_record = {
+						blueprint_data = blueprint,
+						current_group = {},
+						stage_index = 1,
+						record = {}
+					}
 				end
 
 				local commands_by_type = {}
@@ -245,18 +241,24 @@ high_level_commands = {
 								build_command[5] = entity.type
 							end
 							
+							local stage_index
+							
 							if blueprint.build_order then
-								local stage_index = blueprint.build_order[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] or command.data.default_stage
-								if stage_index then
-									entity.stage = stage_index
-									table.insert(command.data.ordered_build_commands[stage_index], build_command)	
-								end
+								stage_index = blueprint.build_order[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] or command.data.default_stage
+							else
+								stage_index = 1
 							end
-
-							entity.build_command = build_command
-
-							table.insert(command.data.all_commands, build_command)
-							table.insert(added_commands, build_command)
+							
+							if stage_index then
+								if not command.data.ordered_build_commands[stage_index] then
+									command.data.ordered_build_commands[stage_index] = {}
+								end
+								entity.stage = stage_index
+								table.insert(command.data.ordered_build_commands[stage_index], build_command)	
+								table.insert(added_commands, build_command)
+								
+								entity.build_command = build_command
+							end
 						else
 							command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)							
 						end
@@ -264,24 +266,25 @@ high_level_commands = {
 				end
 			end
 			
-			if blueprint.build_order then
-				local stage_finished = true
+			local stage_finished = true
+			
+			if command.data.ordered_build_commands[command.data.current_stage] then
 				for i, com in pairs(command.data.ordered_build_commands[command.data.current_stage]) do
 					if com.finished then
-						command.data.ordered_build_commands[command.data.current_stage] = nil
+						command.data.ordered_build_commands[command.data.current_stage][i] = nil
 					else
 						stage_finished = false
 					end
 				end
-				
-				if stage_finished then
-					command.data.current_stage = command.data.current_stage + 1
-				end
+			end
+			
+			if stage_finished then
+				command.data.current_stage = command.data.current_stage + 1
 			end
 			
 			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
 			for _, entity in pairs(entities) do
-				if entity.build_command and (not blueprint.build_order or entity.stage == command.data.current_stage) then
+				if entity.build_command and entity.stage == command.data.current_stage and not command.record_order then
 					entity.build_command.disabled = false
 				end
 			end
@@ -337,19 +340,8 @@ high_level_commands = {
 					command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
 				end
 			end
-
-			local finished = true
-			local cmd = command.data.all_commands[1]
-			while cmd do
-				if cmd.finished then 
-					table.remove(command.data.all_commands, 1) 
-				else
-					finished = false
-					break
-				end
-				cmd = command.data.all_commands[1]
-			end
-			if finished then
+			
+			if not command.data.ordered_build_commands[command.data.current_stage] then
 				command_list_parser.set_finished(command)
 			end
 
@@ -363,7 +355,17 @@ high_level_commands = {
 			local rotation = command.rotation or defines.direction.north
 
 			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
-			command.data.blueprint_data.build_order = BPStorage.get_build_order(command)
+			
+			if not command.record_order then
+				command.data.blueprint_data.build_order = BPStorage.get_build_order(command)
+			
+				if command.data.blueprint_data.build_order then
+					command.data.default_stage = command.data.blueprint_data.build_order.default_stage
+				end
+			end
+			
+			command.data.ordered_build_commands = {}
+			command.data.current_stage = 1
 			
 			command.data.area = area
 
