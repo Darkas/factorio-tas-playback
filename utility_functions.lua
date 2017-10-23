@@ -507,22 +507,32 @@ function Utils.craft_interpolate(entity, ticks)
 	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end
 
-function Utils.display_floating_text(position, myplayer, text, color)
+function Utils.display_floating_text(position, myplayer, text, stay, color)
 	local pos = position.position or position
+	local entity_info = {name="flying-text", position=pos, text=text, color=color}
 	
-	local entity = myplayer.surface.create_entity{name="flying-text", position=pos, text=text, color=color}
+	local entity = myplayer.surface.create_entity(entity_info)
 	
-	table.insert(global.Utils.floating_texts, {entity, position})
+	global.Utils.floating_texts[#global.Utils.floating_texts + 1] = {entity, entity_info, stay}
 	
-	return entity
+	return entity,#global.Utils.floating_texts
 end
 
-Event.register(defines.events.on_tick, function ()
+function Utils.remove_floating_text(index)
+	global.Utils.floating_texts[index][1].destroy()
+	global.Utils.floating_texts[index] = nil
+end
+
+Event.register(defines.events.on_tick, function (event)
 	for i,text_data in pairs(global.Utils.floating_texts) do
-		if text_data[1].valid then
-			text_data[1].teleport(text_data[2])
+		if text_data[1] and text_data[1].valid then
+			text_data[1].teleport(text_data[2].position)
 		else
-			table.remove(global.Utils.floating_texts, i)
+			if text_data[3] then
+				text_data[1] = game.surfaces.nauvis.create_entity(text_data[2])
+			else
+				global.Utils.floating_texts[i] = nil
+			end
 		end
 	end
 end)
