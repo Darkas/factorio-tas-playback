@@ -437,10 +437,13 @@ high_level_commands = {
 							priority = 4
 						end
 
-						local energy_usage = entity.prototype.energy_usage
-						if not energy_usage and entity.name == "boiler" then
-							energy_usage = 30000
-						end
+						local energy_usages = {
+							boiler = 30000,
+							["burner-mining-drill"] = 5000,
+							["stone-furnace"] = 3000,
+							["steel-furnace"] = 6000,
+						}
+						local energy_usage = energy_usages[entity.name]
 						local remaining_burning_fuel = entity.burner.remaining_burning_fuel
 						local coal_count = entity.burner.inventory.get_item_count("coal")
 
@@ -471,7 +474,7 @@ high_level_commands = {
 						if command.min then coal_count = coal_count - command.min - 1 end
 						
 						if coal_count > 0 then
-							delta_tick = 8000000 / energy_usage / 2
+							delta_tick = 8000000 / energy_usage / 4
 							out = out .. ", count > 0, "
 						elseif remaining_burning_fuel >= 20000 then
 							delta_tick = (remaining_burning_fuel - 20000) / energy_usage / 2
@@ -479,7 +482,7 @@ high_level_commands = {
 						end
 						if delta_tick then 
 							entity_cache.autorefuel_next_tick = tick + delta_tick
-							game.print(out .. Utils.printable(delta_tick / 60))
+							Utils.display_floating_text(entity, myplayer, out .. " " .. Utils.printable(Utils.roundn(delta_tick / 60, 1)))
 						else
 							entity_cache.autorefuel_next_tick = nil
 						end

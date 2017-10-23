@@ -534,19 +534,6 @@ function Utils.can_craft(craft, player, need_intermediates)
 end
 
 
-function Utils.get_energy_usage(entity)
-	if not global.Utils.entity_energy_usages then 
-		global.Utils.entity_energy_usages = {}
-	end
-
-	local energy_usages = global.Utils.entity_energy_usages
-	local name = entity.name
-	if not energy_usages[name] then
-		energy_usages[name] = entity.prototype.energy_usage
-	end
-	return energy_usages[name]
-end
-
 -- Chunk optimization
 ---------------------
 
