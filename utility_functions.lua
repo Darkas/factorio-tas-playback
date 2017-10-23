@@ -392,6 +392,13 @@ function Utils.namespace_prefix(name, command_group)
 	end
 end
 
+
+function Utils.string_to_position(data)
+	local _, _, x, y = string.find(data, "{(.*),(.*)}")
+	return {tonumber(x), tonumber(y)}
+end
+
+
 local direction_ints = {N = 0, NE = 1, E = 2, SE = 3, S = 4, SW = 5, W = 6, NW = 7}
 function Utils.rotation_stringtoint(rot)
 	if type(rot) == "int" then

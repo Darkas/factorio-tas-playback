@@ -8,7 +8,7 @@
 - Make the global table available in the run file.
 - Improve the warning given when a blueprint was added to the run but not to the blueprint_list.lua
 - New type of move command: give a direction and walk in that direction until condition is satisfied
-
+- Raise on_built_entity event when entities are built.
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.
