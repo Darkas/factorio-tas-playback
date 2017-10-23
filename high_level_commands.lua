@@ -515,7 +515,7 @@ high_level_commands = {
 			end
 			
 			local entity = {name=command[2], position=command[3], direction=command[4] or 0}
-			if not Utils.can_player_place(myplayer.surface, entity) then
+			if not Utils.can_player_place(myplayer.surface, entity, myplayer) then
 				return "Something is in the way at " .. serpent.block(command[3]) .. " for " .. command[2] .. "."
 			end
 			

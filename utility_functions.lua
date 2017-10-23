@@ -589,11 +589,20 @@ function Utils.Chunked.remove_entry(chunked_data, chunk_size, entry)
     return (next(chunked_data) ~= nil)
 end
 
+function Utils.can_fast_replace(name, position, myplayer)
+	local prototype = game.entity_prototypes[name]
+	local blocking_entity = Utils.get_entity_from_pos(position, myplayer, prototype.type)
+	
+	if blocking_entity and game.entity_prototypes[blocking_entity.name].fast_replaceable_group == game.entity_prototypes[name].fast_replaceable_group and name ~= blocking_entity.name then
+		return blocking_entity
+	end
+end
+
 
 -- Check if a player can place entity.
 -- surface is the target surface.
 -- entity = {name=..., position=..., direction=..., force=...} is a table that describes the entity we wish to describe
-function Utils.can_player_place(surface, entity)
+function Utils.can_player_place(surface, entity, myplayer)
 	-- local name = entity.name
 	-- local position = entity.position
 	-- local direction = entity.direction
@@ -621,6 +630,13 @@ function Utils.can_player_place(surface, entity)
 			stack = {name = item.name, count = item.count}
 		}
 	end
+	
+	if not can_place then -- maybe we can fast-replace
+		if Utils.can_fast_replace(entity.name, entity.position, myplayer) then
+			can_place = true
+		end
+	end
+	
 	return can_place
 end
 

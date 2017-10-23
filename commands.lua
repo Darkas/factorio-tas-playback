@@ -102,7 +102,10 @@ TAScommands["build"] =
         direction = direction,
         force = "player"
     }
-    if not canplace then
+	
+	local fast_replace_entity = Utils.can_fast_replace(tokens[2], tokens[3], myplayer)
+	
+    if not canplace and not fast_replace_entity then
         Utils.errprint(
             "Building " .. item .. " failed: Something is in the way at {" .. position[1] .. ", " .. position[2] .. "}."
         )
@@ -115,10 +118,18 @@ TAScommands["build"] =
         end
         return
     end
+	
+	local replace
+	local return_item
 
+    if fast_replace_entity then
+		replace = true
+		return_item = fast_replace_entity.name
+	end
+	
     -- If no errors, proceed to actually building things
     -- Place the item
-    local tocreate = {name = item, position = position, direction = direction, force = "player"}
+    local tocreate = {name = item, position = position, direction = direction, force = "player", fast_replace = replace}
     if item == "underground-belt" and tokens[5] then
         tocreate.type = tokens[5]
     end
@@ -128,6 +139,9 @@ TAScommands["build"] =
         if command_list_parser then
             command_list_parser.add_entity_to_global(created)
         end
+		if return_item then
+			myplayer.insert{name = return_item, count = 1}
+		end
         myplayer.remove_item({name = item, count = 1})
 
         for _, _item in pairs(items_saved) do
