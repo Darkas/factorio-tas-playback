@@ -3,6 +3,8 @@ local TAScommands = require("commands")
 local Utils = require("utility_functions")
 local MvRec = require("record_movement")
 local Event = require("stdlib/event/event")
+local BPStorage
+pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
 
 -- luacheck: ignore 212
 
@@ -114,7 +116,9 @@ local function record_bp_order_save(event)
 	end
 	local filename = "Blueprints/" .. global.high_level_commands.bp_order_record.blueprint_data.name
 	if record_data.command_name then 
-		filename = filename .. "_" .. record_data.command_name .. "-movement_data"
+		filename = filename .. "_" .. record_data.command_name .. "-build_order"
+	else
+		filename = filename .. "-build_order"	
 	end
 
 	local data = "return " .. serpent.block(global.high_level_commands.bp_order_record.record)
@@ -162,6 +166,8 @@ high_level_commands = {
 			rotation = {"nil", "number"},
 			set_on_leaving_range = "boolean",
 			show_ghosts = "boolean",
+			record_order = "boolean",
+
 		},
 		default_priority = 100,
 
@@ -355,7 +361,10 @@ high_level_commands = {
 			local offset = command[3]
 			local area = command.area
 			local rotation = command.rotation or defines.direction.north
-			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area, command.build_order)
+
+			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
+			command.data.blueprint_data.build_order = BPStorage.get_build_order(command)
+			
 			command.data.area = area
 
 			if command.show_ghosts then

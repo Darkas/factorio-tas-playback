@@ -45,13 +45,6 @@ if movement_records then
 	MvRec.init(movement_records)
 end
 
-local BP = require("blueprint")
-local blueprint_data_raw = {}
-pcall( function() blueprint_data_raw = require("scenarios." .. global.system.tas_name .. ".blueprint_list") end )
-if global.blueprint_error then error("Failed to load blueprints: " .. serpent.block(global.blueprint_error)) end
-BP.init(blueprint_data_raw)
-
-
 -- Get the commands that the speedrun can use
 local TAScommands = require("commands")
 

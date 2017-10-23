@@ -1,20 +1,17 @@
 
 Blueprint = {} --luacheck: allow defined top
 local Utils = require("utility_functions")
-
-local blueprint_data_raw
-function Blueprint.init(blueprint_raw)
-    blueprint_data_raw = blueprint_raw or {}
-end
+local BPStorage
+pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
 
 
 function Blueprint.get_raw_data(name)
-    return blueprint_data_raw[name]
+    return BPStorage.get_blueprint(name)
 end
 
 
-function Blueprint.load(name, offset, rotation, chunk_size, area, build_order)
-    local blueprint_raw = blueprint_data_raw[name]
+function Blueprint.load(name, offset, rotation, chunk_size, area)
+    local blueprint_raw = Blueprint.get_raw_data(name)
     if not blueprint_raw then
         game.print(debug.traceback())
         error("Attempted to load not existing blueprint: " .. name)
@@ -47,8 +44,6 @@ function Blueprint.load(name, offset, rotation, chunk_size, area, build_order)
 			Utils.Chunked.create_entry(blueprint.chunked_entities, chunk_size, entity.position, entity)
         end
     end
-
-    if build_order then blueprint.build_order = copy(blueprint_data_raw.__build_orders[build_order]) end
 
     return blueprint
 end
