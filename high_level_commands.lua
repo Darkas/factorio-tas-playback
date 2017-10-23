@@ -1003,7 +1003,7 @@ high_level_commands = {
 			if #global.command_list_parser.entities_by_type[command[3]] > command.data.cached_amount then
 				local entity = global.command_list_parser.entities_by_type[command[3]][command.data.cached_amount + 1]
 				
-				while entity do
+				while entity and entity.valid do
 					Utils.Chunked.create_entry(command.data.entity_cache, 9, entity.position, {entity=entity, take_spawned = nil})
 					command.data.cached_amount = command.data.cached_amount + 1
 					entity = global.command_list_parser.entities_by_type[command[3]][command.data.cached_amount + 1]
@@ -1012,8 +1012,14 @@ high_level_commands = {
 
 			for i,entry in pairs(Utils.Chunked.get_entries_close(command.data.entity_cache, 9, myplayer.position)) do
 				if entry.entity.valid then
-					if entry.take_spawned and entry.take_spawned.finished then
-						entry.take_spawned = nil
+					if entry.take_spawned then
+						if entry.entity.type == "assembling-machine" and entry.entity.recipe and entry.entity.recipe.name ~= entry.take_spawned[3] then
+							command_list_parser.set_finished(entry.take_spawned)
+						end
+						
+						if entry.take_spawned.finished then
+							entry.take_spawned = nil
+						end
 					end
 					if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
 						local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
@@ -1024,7 +1030,8 @@ high_level_commands = {
 						end
 					end
 				else
-					Utils.Chunked.remove_entry(command.data.entity_cache, 9, entry)
+					-- TODO: this line makes passive-take incompatible with fast-replacing buildings, maybe there is a good way to do
+					--Utils.Chunked.remove_entry(command.data.entity_cache, 9, entry)
 				end
 			end
 
@@ -1080,10 +1087,10 @@ high_level_commands = {
 			return {command[1], command[2], command[3], command.data.count, command.data.inventory}
 		end,
 		executable = function(command, myplayer, tick)
-			if not command.data.entity then
+			if not command.data.entity or not command.data.entity.valid then
 				command.data.entity = Utils.get_entity_from_pos(command[2], myplayer, entities_with_inventory)
 				if not command.data.entity then
-					return "No entity found"
+					return "No valid entity found!"
 				else
 					if not command.rect then
 						command.rect = Utils.collision_box(command.data.entity)
