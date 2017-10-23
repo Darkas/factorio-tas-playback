@@ -3,8 +3,9 @@ Utils = {} --luacheck: allow defined top
 local LogUI = require("log_ui")
 
 
-if not global.utility_functions then global.utility_functions = {} end
-local our_global = global.utility_functions
+if not global.Utils then global.Utils = {} end
+if not global.Utils.floating_texts then global.Utils.floating_texts = {} end
+local our_global = global.Utils
 
 
 if not our_global.entity_recipe then our_global.entity_recipe = {} end
@@ -193,7 +194,7 @@ function Utils.sqdistance(pos1, pos2)
 end
 
 -- works for name or entity or table {name=..., position=..., direction=...}
-global.utility_functions.collision_box_cache = {}
+global.Utils.collision_box_cache = {}
 function Utils.collision_box(entity)
 	local cache_key
 	if type(entity) == "string" then 
@@ -202,8 +203,8 @@ function Utils.collision_box(entity)
 		local x, y = Utils.get_coordinates(entity.position)
 		cache_key = "_" .. entity.name .. "_" .. x .. "_" .. y .. "_" .. (entity.direction or "")
 	end
-	if global.utility_functions.collision_box_cache[cache_key] then
-		return global.utility_functions.collision_box_cache[cache_key]
+	if global.Utils.collision_box_cache[cache_key] then
+		return global.Utils.collision_box_cache[cache_key]
 	end
 
 	if not entity then game.print(debug.traceback()) error("Called collision_box with parameter nil!") end
@@ -211,7 +212,7 @@ function Utils.collision_box(entity)
 	local rect = nil
 	if type(entity) == "string" then
 		local ret_val = game.entity_prototypes[entity].collision_box
-		global.utility_functions.collision_box_cache[cache_key] = ret_val
+		global.Utils.collision_box_cache[cache_key] = ret_val
 		return ret_val
 	end
 	pcall(function()
@@ -225,7 +226,7 @@ function Utils.collision_box(entity)
 	rect = Utils.rotate_rect(rect, Utils.rotation_stringtoint(entity.direction))
 
 	local ret_val = {Utils.translate(rect[1], entity.position), Utils.translate(rect[2], entity.position)}
-	global.utility_functions.collision_box_cache[cache_key] = ret_val	
+	global.Utils.collision_box_cache[cache_key] = ret_val	
 	return ret_val
 end
 
@@ -509,8 +510,22 @@ end
 function Utils.display_floating_text(position, myplayer, text, color)
 	local pos = position.position or position
 	
-	myplayer.surface.create_entity{name="flying-text", position=pos, text=text, color=color}
+	local entity = myplayer.surface.create_entity{name="flying-text", position=pos, text=text, color=color}
+	
+	table.insert(global.Utils.floating_texts, {entity, position})
+	
+	return entity
 end
+
+Event.register(defines.events.on_tick, function ()
+	for i,text_data in pairs(global.Utils.floating_texts) do
+		if text_data[1].valid then
+			text_data[1].teleport(text_data[2])
+		else
+			table.remove(global.Utils.floating_texts, i)
+		end
+	end
+end)
 
 -- Returns true if the player can craft at least one. 
 -- craft is a table {name = <item_name>}
