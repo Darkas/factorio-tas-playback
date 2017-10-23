@@ -1524,8 +1524,7 @@ high_level_commands = {
 		end,
 		default_priority = 100,
 	},
-
-	-- TODO: Sequence just doesnt work currently.
+	
 	sequence = {
 		type_signature = {
 			[2] = "table",
@@ -1549,13 +1548,16 @@ high_level_commands = {
 		execute = empty,
 		spawn_commands = function(command, myplayer, tick)
 			command.data.index = command.data.index + 1
-			if command[command.data.index + 1] == nil then
+			if command[2][command.data.index] == nil then
 				command_list_parser.set_finished(command)
 			else
 				local cmd = Utils.copy(command[2][command.data.index])
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
 				end
+			
+				cmd.name = "command-" .. command.data.index
+				cmd.namespace = command.data.namespace
 
 				return { cmd }
 			end
