@@ -428,34 +428,64 @@ high_level_commands = {
 			for i, entity_cache in pairs(Utils.Chunked.get_entries_close(command.data.entity_cache, 9, myplayer.position)) do
 				local entity = entity_cache[1]
 				local collision_box = entity_cache[2]
-				
-				if not entity.valid then
-					game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
-				else
-					if entity.type == "mining-drill" then
-						priority = 4
-					end
+				local next_tick = entity_cache.autorefuel_next_tick
+				if not next_tick or tick >= next_tick then 
+					if not entity.valid then
+						game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
+					else
+						if entity.type == "mining-drill" then
+							priority = 4
+						end
 
-					if Utils.distance_from_rect(myplayer.position, collision_box) <= myplayer.reach_distance then
-						if command.min then
-							if entity.burner.inventory.get_item_count("coal") < command.min then
-								if not command.data.already_refueled[i] then
-									command.data.already_refueled[i] = true
-									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", command.data.target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
+						local energy_usages = {
+							boiler = 30000,
+							["burner-mining-drill"] = 5000,
+							["stone-furnace"] = 3000,
+							["steel-furnace"] = 6000,
+						}
+						local energy_usage = energy_usages[entity.name]
+						local remaining_burning_fuel = entity.burner.remaining_burning_fuel
+						local coal_count = entity.burner.inventory.get_item_count("coal")
+
+						if Utils.distance_from_rect(myplayer.position, collision_box) <= myplayer.reach_distance then
+							if command.min then
+								if coal_count < command.min then
+									if not command.data.already_refueled[i] then
+										command.data.already_refueled[i] = true
+										new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", command.data.target_fuel - entity.burner.inventory.get_item_count("coal"), priority=priority}
+									end
+								else
+									command.data.already_refueled[i] = false
 								end
 							else
-								command.data.already_refueled[i] = false
-							end
-						else
-							if entity.burner.remaining_burning_fuel < 20000 and entity.burner.inventory.get_item_count("coal") == 0 then
-								if not command.data.already_refueled[i] then
-									command.data.already_refueled[i] = true
-									new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", command.data.target_fuel, priority=priority}
+								if remaining_burning_fuel < 20000 and coal_count == 0 then
+									if not command.data.already_refueled[i] then
+										command.data.already_refueled[i] = true
+										new_commands[#new_commands + 1] = {"put", {entity.position.x, entity.position.y}, "coal", command.data.target_fuel, priority=priority}
+									end
+								else
+									command.data.already_refueled[i] = false
 								end
-							else
-								command.data.already_refueled[i] = false
 							end
 						end
+
+						-- local delta_tick
+						-- local out = Utils.printable(command.min) .. ", " 
+						-- if command.min then coal_count = coal_count - command.min - 1 end
+						
+						-- if coal_count > 0 then
+						-- 	delta_tick = 8000000 / energy_usage / 2
+						-- 	out = out .. ", count > 0, "
+						-- elseif remaining_burning_fuel >= 20000 then
+						-- 	delta_tick = (remaining_burning_fuel - 20000) / energy_usage / 2
+						-- 	out = out .. ", remaining_burning_fuel >= 20000"
+						-- end
+						-- if delta_tick then 
+						-- 	entity_cache.autorefuel_next_tick = tick + math.min(delta_tick, 5*60)
+						-- 	Utils.display_floating_text(entity, myplayer, out .. " " .. Utils.printable(Utils.roundn(delta_tick / 60, 1)))
+						-- else
+						-- 	entity_cache.autorefuel_next_tick = nil
+						-- end
 					end
 				end
 			end

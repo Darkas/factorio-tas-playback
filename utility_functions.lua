@@ -558,6 +558,7 @@ function Utils.can_craft(craft, player, need_intermediates)
 	return player.get_craftable_count(craft.name) >= 1
 end
 
+
 -- Chunk optimization
 ---------------------
 
