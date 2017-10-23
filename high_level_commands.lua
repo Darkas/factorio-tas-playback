@@ -64,27 +64,70 @@ end
 
 
 
-local function record_bp_order_pressed(event)
+-- Blueprint Order Record
+local function record_bp_order_entity(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
-	local record = global.high_level_commands.bp_order_record.record
+	local record_data = global.high_level_commands.bp_order_record.record
 	local player = game.players[event.player_index]
 	local entity = player.selected
 	
-	if not entity or entity.type ~= "entity-ghost" then return end
-
+	if not entity or entity.type ~= "entity-ghost" then 
+		game.print("No entity selected!")
+		return 
+	end
+	
 	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
-	table.insert(record[record], bp_entity.index)
+
+	local x, y = Utils.get_coordinates(entity.position)
+	if not record_data.stage_index then record_data.stage_index = 1 end
+	record_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = record_data.stage_index
+	if not global.high_level_commands.bp_order_record.current_group then global.high_level_commands.bp_order_record.current_group = {} end
+	table.insert(global.high_level_commands.bp_order_record.current_group, bp_entity)
 
 	bp_entity.build_command.disabled = false
 	entity.destroy()
 end
 
-local function record_bp_order_next(event)
+local function record_bp_order_group(event)
 	if not global.high_level_commands.bp_order_record then return end
-	local record = global.high_level_commands.bp_order_record.record
-	table.insert(record, {})
+	local record = global.high_level_commands.bp_order_record
+	local record_data = global.high_level_commands.bp_order_record.record
+	
+	if not record.stage_index then 
+		record.stage_index = 1
+	end
+	if #global.high_level_commands.bp_order_record.current_group == 0 then
+		record_data.default_stage = record.stage_index
+	end
+
+	record.stage_index = record.stage_index + 1
+
+	game.print("Blueprint record: Next group (" .. #record[#record_data] .. " entities saved in current).")
 end
+
+local function record_bp_order_save(event)
+	local record_data = global.high_level_commands.bp_order_record
+	if not record_data or #record_data.record < 2 then 
+		game.print("Attempting to save Blueprint build order while nothing is recorded!") 
+		return
+	end
+	local filename = "Blueprints/" .. global.high_level_commands.bp_order_record.blueprint_data.name
+	if record_data.command_name then 
+		filename = filename .. "_" .. record_data.command_name .. "-movement_data"
+	end
+
+	local data = "return " .. serpent.block(global.high_level_commands.bp_order_record.record)
+
+	game.print("Writing build order to file " .. filename)
+	game.write_file(filename, data, true)
+
+	global.high_level_commands.bp_order_record = nil
+end
+
+Event.register("bp_order_entity", record_bp_order_entity)
+Event.register("bp_order_group", record_bp_order_group)
+Event.register("bp_order_save", record_bp_order_save)
 
 
 
@@ -138,6 +181,7 @@ high_level_commands = {
 				
 				if command.record_order then
 					table.insert(added_commands, {"enable-manual-walking"})
+
 					if global.global.high_level_commands.bp_order_record then
 						error("Attempting to record a two blueprint orders simultaneously!")
 					end
@@ -196,20 +240,10 @@ high_level_commands = {
 							end
 							
 							if blueprint.build_order then
-								for stage_index, entity_indices in pairs(blueprint.build_order) do
-									local entity_stage_index
-									for _, entity_index in pairs(entity_indices) do
-										if entity_index == entity.index then
-											entity_stage_index = stage_index
-										end
-									end
-									
-									if not entity_stage_index then
-										entity_stage_index = command.data.default_stage
-									end
-									
-									table.insert(command.data.ordered_build_commands[entity_stage_index], build_command)
-									entity.stage = entity_stage_index
+								local stage_index = blueprint.build_order[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] or command.data.default_stage
+								if stage_index then
+									entity.stage = stage_index
+									table.insert(command.data.ordered_build_commands[stage_index], build_command)	
 								end
 							end
 
@@ -253,8 +287,7 @@ high_level_commands = {
 				local _, _, namespace, data = string.find(name, "(.*%.)bp_(.*)")
 				if not data then _, _, data = string.find(name, "bp_(.*)") end
 				if data and (not namespace or namespace == command.namespace or namespace == move_to_namespace) then
-					local _, _, x, y = string.find(data, "{(.*),(.*)}")
-					local position = {tonumber(x), tonumber(y)}
+					local position = Utils.string_to_position(data)
 					local entity = Utils.Chunked.get_entry_at(blueprint.chunked_entities, blueprint.chunk_size, position)
 					if entity then
 						entity.build_command.disabled = false
@@ -322,7 +355,7 @@ high_level_commands = {
 			local offset = command[3]
 			local area = command.area
 			local rotation = command.rotation or defines.direction.north
-			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
+			command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area, command.build_order)
 			command.data.area = area
 
 			if command.show_ghosts then
@@ -349,6 +382,10 @@ high_level_commands = {
 			end
 		end
 	},
+
+
+
+
 
 	["auto-refuel"] = {
 		type_signature = {
@@ -382,7 +419,7 @@ high_level_commands = {
 				local collision_box = entity_cache[2]
 				
 				if not entity.valid then
-					Utils.Chunked.remove_entry(command.data.entity_cache, 9, entity_cache)
+					game.print("Invalid entity in auto-refuel! This may occur if you mine a fuelable entity.")
 				else
 					if entity.type == "mining-drill" then
 						priority = 4
@@ -444,20 +481,29 @@ high_level_commands = {
 			local area = {{myplayer.position.x - 9, myplayer.position.y-9}, {myplayer.position.x + 9, myplayer.position.y + 9}}
 			local entities = {}
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="assembling-machine"}) do
-				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe(entity) == item) then
+				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe_name(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
 			for _, entity in pairs(myplayer.surface.find_entities_filtered{area=area, type="furnace"}) do
-				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe(entity) == item) then
+				if (Utils.in_range({rect = Utils.collision_box(entity), distance = myplayer.build_distance}, myplayer) and Utils.get_recipe_name(entity) == item) then
 					table.insert(entities, entity)
 				end
 			end
+
 
 			local count_to_craft = count
 			for _, entity in pairs(entities) do
 				count_to_craft = count_to_craft - entity.get_item_count(item)
 			end
+
+			if #entities == 0 then
+				command.data.next_tick = tick + 60
+				return
+			end
+
+			local recipe_prototype = game.recipe_prototypes[Utils.get_recipe_name(entities[1])]
+			
 
 			local count_crafts_all = math.floor(count_to_craft / #entities)
 			local remaining = count_to_craft % #entities
@@ -480,7 +526,7 @@ high_level_commands = {
 				command_list_parser.set_finished(command)
 			end
 
-			local ticks = (count_crafts_all - 1) * game.recipe_prototypes[Utils.get_recipe(entities[1])].energy * 60
+			local ticks = (count_crafts_all - 1) * recipe_prototype.energy * 60
 			command.data.next_tick = tick + math.max(math.min(ticks / 3, 40), 1)
 			return ret
 		end,
@@ -933,35 +979,9 @@ high_level_commands = {
 			[2] = "table",
 		},
 		execute = empty,
-		executable = function(command, myplayer, tick)
-			if command.data.all_commands then
-				local finished = true
-				local cmd = command.data.all_commands[1]
-				while cmd do
-					if cmd.finished then 
-						table.remove(command.data.all_commands, 1) 
-					else
-						finished = false
-						break
-					end
-					cmd = command.data.all_commands[1]
-				end
-				
-				if finished then
-					command_list_parser.set_finished(command)
-					return "finished"
-				else
-					return "Waiting for all commands to finish."
-				end
-			else
-				return ""
-			end
-		end,
 		initialize = empty,
 		spawn_commands = function(command, myplayer, tick)
 			local commands = {}
-			command.data.all_commands = {}
-			
 			local i = 1
 			if global.high_level_commands.parallel_name == command.data.parent_command_group.name then
 				global.high_level_commands.parallel_index = global.high_level_commands.parallel_index + 1
@@ -969,23 +989,20 @@ high_level_commands = {
 				global.high_level_commands.parallel_index = 1
 				global.high_level_commands.parallel_name = command.data.parent_command_group.name
 			end
-			for index, _cmd in ipairs(command[2]) do
-				local cmd = Utils.copy(_cmd)
-				
+			for index, cmd in ipairs(command[2]) do
 				if not cmd.name then
 					i = i + 1
 					cmd.name = i
 				end
-				
+				commands[#commands + 1] = Utils.copy(cmd)
 				if command.name then
-					cmd.namespace = command.namespace .. command.name .. "."
+					commands[#commands].namespace = command.namespace .. command.name .. "."
 				else
-					cmd.namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
+					commands[#commands].namespace = command.namespace .. "parallel-" .. global.high_level_commands.parallel_index .. "."
 				end
-				table.insert(commands, cmd)
-				table.insert(command.data.all_commands, cmd)
 			end
-			
+
+			command_list_parser.set_finished(command)
 			return commands
 		end,
 		default_priority = 100,
@@ -1024,10 +1041,9 @@ high_level_commands = {
 					if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
 						local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
 
-						if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
-							entry.take_spawned = cmd
-							table.insert(command.data.spawn_queue, cmd)
-						end
+					if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
+						entry.take_spawned = cmd
+						table.insert(command.data.spawn_queue, cmd)
 					end
 				else
 					-- TODO: this line makes passive-take incompatible with fast-replacing buildings, maybe there is a good way to do
@@ -1503,16 +1519,13 @@ high_level_commands = {
 		execute = empty,
 		spawn_commands = function(command, myplayer, tick)
 			command.data.index = command.data.index + 1
-			if command[2][command.data.index] == nil then
+			if command[command.data.index + 1] == nil then
 				command_list_parser.set_finished(command)
 			else
 				local cmd = Utils.copy(command[2][command.data.index])
 				for k, v in pairs(command.pass_arguments or {}) do
 					cmd[k] = v
 				end
-				
-				cmd.name = "command-" .. command.data.index
-				cmd.namespace = command.data.namespace
 
 				return { cmd }
 			end

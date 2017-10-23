@@ -13,7 +13,7 @@ function Blueprint.get_raw_data(name)
 end
 
 
-function Blueprint.load(name, offset, rotation, chunk_size, area)
+function Blueprint.load(name, offset, rotation, chunk_size, area, build_order)
     local blueprint_raw = blueprint_data_raw[name]
     if not blueprint_raw then
         game.print(debug.traceback())
@@ -47,6 +47,8 @@ function Blueprint.load(name, offset, rotation, chunk_size, area)
 			Utils.Chunked.create_entry(blueprint.chunked_entities, chunk_size, entity.position, entity)
         end
     end
+
+    if build_order then blueprint.build_order = copy(blueprint_data_raw.__build_orders[build_order]) end
 
     return blueprint
 end

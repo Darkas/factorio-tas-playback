@@ -460,12 +460,17 @@ end
 ------------------
 
 -- Note this should only be called for entities that are actually on a surface.
-function Utils.get_recipe(entity)
+function Utils.get_recipe_name(entity)
 	if not entity then game.print(debug.traceback()) error("Trying to access recipe of nil entity!") end
 	local x, y = Utils.get_coordinates(entity.position)
-	local recipe = nil
+	local recipe
 	pcall(function() recipe = entity.recipe end)
 	if entity.type == "furnace" then
+		if recipe then
+			our_global.entity_recipe[x .. "_" .. y] = recipe.name
+			return recipe.name
+		end
+		pcall(function() recipe = entity.previous_recipe end)
 		if recipe then
 			our_global.entity_recipe[x .. "_" .. y] = recipe.name
 			return recipe.name
@@ -479,7 +484,7 @@ function Utils.get_recipe(entity)
 			return nil
 		end
 	elseif entity.type == "assembling-machine" then
-		return recipe
+		return recipe.name
 	else
 		error("Called get_recipe for entity without recipe.")
 	end
@@ -487,7 +492,7 @@ end
 
 function Utils.craft_interpolate(entity, ticks)
 	local craft_speed = entity.prototype.crafting_speed
-	local recipe = Utils.get_recipe(entity)
+	local recipe = Utils.get_recipe_name(entity)
 	local energy = game.recipe_prototypes[recipe].energy
 	local progress = entity.crafting_progress
 
