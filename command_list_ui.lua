@@ -190,8 +190,21 @@ function CmdUI.update_command_list_ui(player, command_list)
 		if command then
 			local s = "[" .. index .. "] | "
 			for key, value in pairs(command) do
-				if not Utils.in_list(key, {"data", "action_type", "tested", "rect", "distance", "disabled", "spawned_by"}) then
-					s = s .. key .. "= " .. Utils.printable(value) .. " | "
+				if not Utils.in_list(key, {"data", "action_type", "tested", "rect", "distance", "disabled", "namespace"}) then
+					local expression
+					if key == "name" then
+						expression = command.namespace .. value
+					elseif key == "spawned_by" then
+						expression = value[1]
+						
+						if value.name then
+							expression = expression .. ": " .. value.namespace .. value.name
+						end
+					else
+						expression = Utils.printable(value)
+					end
+					
+					s = s .. key .. "= " .. expression .. " | "
 				end
 			end
 			local label = frame.scroll_pane.table["text_" .. index]
