@@ -506,6 +506,12 @@ function Utils.craft_interpolate(entity, ticks)
 	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end
 
+function Utils.display_floating_text(position, myplayer, text, color)
+	local pos = position.position or position
+	
+	myplayer.surface.create_entity{name="flying-text", position=pos, text=text, color=color}
+end
+
 -- Returns true if the player can craft at least one. 
 -- craft is a table {name = <item_name>}
 function Utils.can_craft(craft, player, need_intermediates)
