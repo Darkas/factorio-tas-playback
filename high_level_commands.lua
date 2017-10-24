@@ -376,10 +376,11 @@ high_level_commands = {
 				inv.insert{name="blueprint", count=1}
 				local bp = inv[1]
 				local bp_data = Blueprint.get_raw_data(name)
+				local x, y = Utils.get_coordinates(offset)
 				if command.data.area then
 					local entities = {}
-					for _, ent in pairs(entities) do
-						if Utils.inside_rect(ent.position, command.data.area) then
+					for _, ent in pairs(bp_data.entities) do
+						if Utils.inside_rect({ent.position.x + x - bp_data.anchor.x + 0.5, ent.position.y + y - bp_data.anchor.y + 0.5}, command.data.area) then
 							entities[#entities + 1] = ent
 						end
 					end
@@ -387,7 +388,6 @@ high_level_commands = {
 				else
 					bp.set_blueprint_entities(bp_data.entities)
 				end
-				local x, y = Utils.get_coordinates(offset)
 				local off = {x - bp_data.anchor.x + 0.5, y - bp_data.anchor.y + 0.5}
 				bp.build_blueprint{surface=myplayer.surface, force=myplayer.force, position=off, force_build=true, direction=rotation}
 				chest.destroy()
