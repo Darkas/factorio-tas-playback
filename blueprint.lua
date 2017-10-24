@@ -51,25 +51,6 @@ end
 
 function Blueprint.get_entities_in_build_range(blueprint_data, player)
     if not blueprint_data then game.print(debug.traceback()); error("Called Blueprint.get_entities_in_build_range with invalid blueprint_data!") end
-    -- local res = {}
-    -- local position = player.position
-
-    -- local entities = blueprint_data.chunked_entities
-    -- local x = math.floor((position.x or position[1]) / blueprint_data.chunk_size)
-    -- local y = math.floor((position.y or position[2]) / blueprint_data.chunk_size)
-
-    -- for X = x-1, x+1 do
-    --     for Y = y-1, y+1 do
-    --         for _, entity in pairs(entities[X .. "_" .. Y] or {}) do
-    --             if Utils.distance_from_rect(position, Utils.collision_box(entity)) <= player.build_distance + 0.1 then -- TODO: This should be done dynamically.
-    --                 table.insert(res, entity)
-    --             end
-    --         end
-    --     end
-    -- end
-
-    -- return res
-
     local res = {}
     
     for _, entity in pairs(Utils.Chunked.get_entries_close(blueprint_data.chunked_entities, blueprint_data.chunk_size, player.position)) do
