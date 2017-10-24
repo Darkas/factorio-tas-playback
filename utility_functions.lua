@@ -528,6 +528,7 @@ function Utils.update_floating_text(index, new_text)
 	text_data[1].destroy()
 	text_data[2].text = new_text
 	text_data[1] = game.surfaces.nauvis.create_entity(text_data[2])
+	text_data[1].teleport(text_data[2].position)
 end
 
 Event.register(defines.events.on_tick, function (event)

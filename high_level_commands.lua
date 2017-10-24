@@ -423,8 +423,6 @@ high_level_commands = {
 					command.data.cached_amount = command.data.cached_amount + 1
 					entity = global.command_list_parser.entities_with_burner[command.data.cached_amount + 1]
 				end
-				
-				
 			end
 
 			for i, entry in pairs(Utils.Chunked.get_entries_close(command.data.entity_cache, 9, myplayer.position)) do
@@ -724,9 +722,70 @@ high_level_commands = {
 		end,
 	},
 	
-	["enable-manual-walking"] = {
-		type_signature = {},
-		execute = return_self_finished,
+	["display-contents"] = {
+		type_signature = {
+			[2] = "string",
+			["inventory_type"] = {"number", "nil"},
+			["update_frequency"] = {"number", "nil"},
+			["verbose"] = {"boolean", "nil"},
+		},
+		default_priority = 100,
+		execute = function(command, myplayer, tick)
+			if tick % command.data.update_frequency ~= 0 then
+				return
+			end
+			
+			local entity = global.command_list_parser.entities_by_type[command.data.type][command.data.cached_entities + 1]
+			
+			while entity do
+				command.data.cached_entities = command.data.cached_entities + 1
+				
+				if entity.valid and entity.get_inventory(command.data.inventory) then
+					table.insert(command.data.entity_info, {entity, Utils.display_floating_text(entity, myplayer, "", true)})
+				end
+				
+				entity = global.command_list_parser.entities_by_type[command.data.type][command.data.cached_entities + 1]
+			end
+			
+			for _, entry in pairs(command.data.entity_info) do
+				local inventory = entry[1].get_inventory(command.data.inventory)
+				local new_text = ""
+				
+				if command.verbose then
+					for item, count in pairs(inventory.get_contents()) do
+						new_text = new_text .. item .. ": " .. Utils.printable(count) .. ", "
+					end
+				else
+					new_text = Utils.printable(inventory.get_item_count())
+				end
+				
+				Utils.update_floating_text(entry[2], new_text)
+			end
+		end,
+		initialize = function(command, myplayer, tick)
+			command.data.type = command[2]
+			
+			if command.inventory_type then
+				command.data.inventory = command.inventory_type
+			else
+				if command.data.type == "assembling-machine" then
+					command.data.inventory = defines.inventory.assembling_machine_output
+				elseif command.data.type == "furnace" then
+					command.data.inventory = defines.inventory.furnace_result
+				elseif command.data.type == "container" then
+					command.data.inventory = defines.inventory.chest
+				elseif command.data.type == "lab" then
+					command.data.inventory = defines.inventory.lab_input
+				else
+					error("Cannot guess inventory_type!")
+				end
+			end
+			
+			command.data.update_frequency = command.update_frequency or 10
+			
+			command.data.entity_info = {}
+			command.data.cached_entities = 0
+		end,
 	},
 
 	["drive-recorded"] = {
@@ -748,6 +807,11 @@ high_level_commands = {
 				MvRec.start_record(command.data.record_task)			
 			end
 		end,
+	},
+	
+	["enable-manual-walking"] = {
+		type_signature = {},
+		execute = return_self_finished,
 	},
 
 	["entity-interaction"] = {
@@ -1118,7 +1182,7 @@ high_level_commands = {
 						end
 					end
 				else
-					-- TODO: this line makes passive-take incompatible with fast-replacing buildings, maybe there is a good way to do
+					-- TODO: this line makes passive-take incompatible with fast-replacing buildings, maybe there is a good way to do this
 					--Utils.Chunked.remove_entry(command.data.entity_cache, 9, entry)
 				end
 			end

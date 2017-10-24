@@ -15,6 +15,7 @@
 - Passive-take should get a position param - if set, only consider that entity.
 - Simple-Sequence doesnt work with build-command
 - Desyncs in blueprint storage
+- Auto-refuel sometimes seems to ignore entities or something, but this is currently not critical.
 
 ## Caveats: 
 - Mining and deconstructing buildings is not compatible with blueprints

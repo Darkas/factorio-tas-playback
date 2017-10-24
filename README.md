@@ -168,6 +168,7 @@ Currently implemented commands:
 * `{"craft", <item>, <count>, need_intermediates}`
 * `{"craft", {{<item>, <count>, need_intermediates = <bool> or <table>}, {<item>, <count>}, ...}, need_intermediates = <bool> or <table>}`: Executes craft commands in order. If `need_intermediates` is set, the craft will only be started if all (or the given, if it is a table) necessary intermediate products in the recipe are already available.
 * `{"craft-build", <entity>, {<X>, <Y>}, <facing direction>}`: Add a craft command for the entity, when that command is finished, add a build command.
+* `{"display-contents", <type>, inventory_type=<inventory>, update_frequency=<ticks>, verbose=<bool>}`: Displays the contents of all entities of the given type as a floating text over them. Sometimes the inventory type can be guessed, otherwise it has to be specified. If verbose is true, contents are displayed for each item, otherwise the total number of items in the inventory is displayed.
 * `{"display-warning" "<string>"}`: Display a warning string.
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
 * `{"freeze-daytime"}`
