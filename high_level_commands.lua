@@ -88,6 +88,9 @@ local function record_bp_order_entity(event)
 	table.insert(global.high_level_commands.bp_order_record.current_group, bp_entity)
 
 	bp_entity.build_command.disabled = false
+	
+	Utils.display_floating_text(entity.position, Utils.printable(record.stage_index), true)
+	
 	entity.destroy()
 end
 
@@ -98,11 +101,12 @@ local function record_bp_order_group(event)
 	
 	if #global.high_level_commands.bp_order_record.current_group == 0 then
 		record_data.default_stage = record.stage_index
+		game.print("Blueprint record: Stage " .. record.stage_index .. " declared as default.")
+	else
+		game.print("Blueprint record: Stage " .. record.stage_index .. ": " .. #record.current_group .. " entities saved.")
 	end
 
 	record.stage_index = record.stage_index + 1
-
-	game.print("Blueprint record: Next group (" .. #record.current_group .. " entities saved in current, index is " .. record.stage_index - 1 .. ").")
 	
 	record.current_group = {}
 end
@@ -197,6 +201,7 @@ high_level_commands = {
 					end
 					
 					global.high_level_commands.bp_order_record = {
+						command_name = command.name,
 						blueprint_data = blueprint,
 						current_group = {},
 						stage_index = 1,
@@ -365,7 +370,7 @@ high_level_commands = {
 			
 			command.data.area = area
 
-			if command.show_ghosts then
+			if command.show_ghosts or command.record_order then
 				local chest = myplayer.surface.create_entity{name="iron-chest", position={0,0}, force="player"}
 				local inv = chest.get_inventory(defines.inventory.chest)
 				inv.insert{name="blueprint", count=1}
@@ -737,7 +742,7 @@ high_level_commands = {
 				command.data.cached_entities = command.data.cached_entities + 1
 				
 				if entity.valid and entity.get_inventory(command.data.inventory) then
-					table.insert(command.data.entity_info, {entity, Utils.display_floating_text(entity, myplayer, "", true)})
+					table.insert(command.data.entity_info, {entity, Utils.display_floating_text(entity, "", true)})
 				end
 				
 				entity = global.command_list_parser.entities_by_type[command.data.type][command.data.cached_entities + 1]
@@ -1249,9 +1254,11 @@ high_level_commands = {
 
 			local item = command[3]
 
-			if not command.data.count then
+			if not command[4] then
 				command.data.count = math.min(myplayer.get_item_count(item), game.item_prototypes[item].stack_size)
-			elseif myplayer.get_item_count(item) < command[4] then
+			end
+			
+			if myplayer.get_item_count(item) < command.data.count then
 				return "Not enough of " .. item .. " in inventory"
 			end
 

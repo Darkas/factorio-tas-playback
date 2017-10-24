@@ -507,11 +507,11 @@ function Utils.craft_interpolate(entity, ticks)
 	return math.floor((ticks / 60 * craft_speed) / energy + progress)
 end
 
-function Utils.display_floating_text(position, myplayer, text, stay, color)
+function Utils.display_floating_text(position, text, stay, color)
 	local pos = position.position or position
 	local entity_info = {name="flying-text", position=pos, text=text, color=color}
 	
-	local entity = myplayer.surface.create_entity(entity_info)
+	local entity = game.surfaces.nauvis.create_entity(entity_info)
 	
 	global.Utils.floating_texts[#global.Utils.floating_texts + 1] = {entity, entity_info, stay}
 	
