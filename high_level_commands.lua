@@ -214,7 +214,6 @@ high_level_commands = {
 
 				for _, l in pairs(command.data.blueprint_data.chunked_entities) do
 					for _, entity in pairs(l) do
-						entity.built = true
 						local command_already_spawned = false
 						for _, cmd in pairs(commands_by_type[entity.name] or {}) do
 							if Utils.sqdistance(cmd[3], entity.position) < 0.01 then
@@ -306,12 +305,9 @@ high_level_commands = {
 			end
 
 			for _, entity in pairs(entities) do
-				if not entity.build_command or entity.build_command.finished then
-					entity.built = true
-					if not entity.recipe then
-						command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
-					end
-				elseif entity.recipe and entity.built and not entity.set_recipe then
+				if not entity.build_command or entity.build_command.finished and not entity.recipe then
+					command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)
+				elseif entity.recipe and not entity.set_recipe and entity.build_command and entity.build_command.finished then
 					entity.set_recipe = true
 					local recipe_command = {
 						"recipe",
