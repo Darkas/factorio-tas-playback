@@ -171,7 +171,7 @@ TAScommands["put"] =
     function(tokens, myplayer)
     local position = tokens[2]
     local item = tokens[3]
-    local amount = tokens[4]
+    local toinsert = tokens[4]
     local slot = tokens[5]
 
     myplayer.update_selected_entity(position)
@@ -186,12 +186,15 @@ TAScommands["put"] =
     errprint("Put failed: You are trying to reach too far.")
     return
   end--]]
-    local amountininventory = myplayer.get_item_count(item)
     local otherinv = myplayer.selected.get_inventory(slot)
-    local toinsert = math.min(amountininventory, amount)
+	
+	if myplayer.get_item_count(item) < toinsert then
+        Utils.errprint("Put failed: Not enough items {" .. position[1] .. "," .. position[2] .. "}.")
+        return
+	end
 
     if toinsert == 0 then
-        Utils.errprint("Put failed: No items")
+        Utils.errprint("Put failed: Trying to insert 0 items at {" .. position[1] .. "," .. position[2] .. "}.")
         return
     end
     if not otherinv then
@@ -211,14 +214,14 @@ TAScommands["put"] =
 
     myplayer.remove_item {name = item, count = inserted}
 
-    if inserted < amount then
+    if inserted < toinsert then
         Utils.errprint(
             "Put sub-optimal: Only put " ..
                 inserted ..
                     "x " ..
                         item ..
                             " instead of " ..
-                                amount .. "x " .. item .. " at {" .. position[1] .. "," .. position[2] .. "}."
+                                toinsert .. "x " .. item .. " at {" .. position[1] .. "," .. position[2] .. "}."
         )
     end
     Utils.debugprint(
