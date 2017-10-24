@@ -515,12 +515,19 @@ function Utils.display_floating_text(position, myplayer, text, stay, color)
 	
 	global.Utils.floating_texts[#global.Utils.floating_texts + 1] = {entity, entity_info, stay}
 	
-	return entity,#global.Utils.floating_texts
+	return #global.Utils.floating_texts
 end
 
 function Utils.remove_floating_text(index)
 	global.Utils.floating_texts[index][1].destroy()
 	global.Utils.floating_texts[index] = nil
+end
+
+function Utils.update_floating_text(index, new_text)
+	local text_data = global.Utils.floating_texts[index]
+	text_data[1].destroy()
+	text_data[2].text = new_text
+	text_data[1] = game.surfaces.nauvis.create_entity(text_data[2])
 end
 
 Event.register(defines.events.on_tick, function (event)
@@ -557,7 +564,6 @@ function Utils.can_craft(craft, player, need_intermediates)
 
 	return player.get_craftable_count(craft.name) >= 1
 end
-
 
 -- Chunk optimization
 ---------------------
