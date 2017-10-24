@@ -579,7 +579,7 @@ function Utils.Chunked.get_entries_close(chunked_data, chunk_size, position)
 
     for X = x-1, x+1 do
         for Y = y-1, y+1 do
-            for _, entity in ipairs(chunked_data[X .. "_" .. Y] or {}) do
+            for _, entity in pairs(chunked_data[X .. "_" .. Y] or {}) do
                 table.insert(res, entity)
             end
         end
