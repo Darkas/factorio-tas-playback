@@ -132,9 +132,36 @@ local function record_bp_order_save(event)
 	global.high_level_commands.bp_order_record = nil
 end
 
+local function record_bp_area_trigger(event)
+	if not global.high_level_commands.bp_order_record then return end
+	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
+	local record = global.high_level_commands.bp_order_record
+	local record_data = global.high_level_commands.bp_order_record.record
+	local player = game.players[event.player_index]
+	local entity = player.selected
+	
+	if not entity or entity.type ~= "entity-ghost" then 
+		game.print("No entity selected!")
+		return
+	end
+	
+	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
+	
+	if not record_data.areas then record_data.areas = {} end
+	
+	local rect = Utils.copy(game.entity_prototypes[entity.ghost_name].collision_box)
+	rect = Utils.rotate_rect(rect, Utils.rotation_stringtoint(entity.direction))
+	rect = {Utils.translate(rect[1], entity.position), Utils.translate(rect[2], entity.position)}
+	
+	record_data.areas[record.stage_index] = rect
+	
+	Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, "Stage " .. Utils.printable(record.stage_index) .. " area trigger", true)
+end
+
 Event.register("bp_order_entity", record_bp_order_entity)
 Event.register("bp_order_group", record_bp_order_group)
 Event.register("bp_order_save", record_bp_order_save)
+Event.register("bp_area_trigger", record_bp_area_trigger)
 
 
 
@@ -191,6 +218,7 @@ high_level_commands = {
 				if command.record_order then
 					table.insert(added_commands, {"enable-manual-walking"})
 					
+					LogUI.log_to_ui("Press K to mark an entity hitbox as trigger for the group.", "run-output")
 					LogUI.log_to_ui("Press Ctrl+J to save the order and write it to a file.", "run-output")
 					LogUI.log_to_ui("Press Shift+J to start a new group of buildings.", "run-output")
 					LogUI.log_to_ui("Press J to mark a building for construction.", "run-output")
@@ -283,12 +311,15 @@ high_level_commands = {
 			end
 			
 			if stage_finished then
-				command.data.current_stage = command.data.current_stage + 1
+				if not blueprint.build_order or not blueprint.build_order.areas or not blueprint.build_order.areas[command.data.current_stage + 1]
+					or Utils.inside_rect(myplayer.position, blueprint.build_order.areas[command.data.current_stage + 1]) then
+					command.data.current_stage = command.data.current_stage + 1
+				end
 			end
 			
 			local entities = Blueprint.get_entities_in_build_range(blueprint, myplayer)
 			for _, entity in pairs(entities) do
-				if entity.build_command and entity.stage == command.data.current_stage and not command.record_order then
+				if entity.build_command and entity.stage <= command.data.current_stage and not command.record_order then
 					entity.build_command.disabled = false
 				end
 			end

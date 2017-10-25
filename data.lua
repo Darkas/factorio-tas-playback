@@ -24,6 +24,11 @@ data:extend{
 		type = "custom-input",
 		name = "bp_order_save",
 		key_sequence = "CONTROL + J",
+	},
+	{
+		type = "custom-input",
+		name = "bp_area_trigger",
+		key_sequence = "K",
 	}
 } 
 
