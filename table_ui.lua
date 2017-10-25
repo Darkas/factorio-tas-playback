@@ -66,6 +66,7 @@ end
 
 
 function TableUI.update(player)
+    if not global.TableUI.the_table then return end
     local flow = player.gui.center
     local player_ui_data = global.TableUI[player.index]
     
