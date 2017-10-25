@@ -10,6 +10,8 @@
 - New type of move command: give a direction and walk in that direction until condition is satisfied
 - Raise on_built_entity event when entities are built.
 - Build order filename does not contain cmd name currently
+- Underground belts, rotation and we're building them weirdly.
+- Work on style of Hide-Buttons
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.

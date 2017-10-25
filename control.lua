@@ -39,7 +39,9 @@ local LogUI = require("log_ui")
 local Event = require("stdlib/event/event")
 local Utils = require("utility_functions")
 local MvRec = require("record_movement")
+local TableUI = require("table_ui")
 local movement_records = {}
+
 pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
 if movement_records then
 	MvRec.init(movement_records)
@@ -343,6 +345,11 @@ commands.add_command("alert", "Alert when entering command group and set game sp
 	else
 		game.print("Can only use /wait_for if the command_list is set!")
 	end
+end)
+
+commands.add_command("inspectqueue", "Inspect the command queue via UI.", function(event)
+	local player = game.players[event.player_index]
+	TableUI.add_table("command queue", commandqueue.command_list)
 end)
 
 commands.add_command("exportqueue", "Export the command queue to file.", function(event)
