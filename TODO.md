@@ -12,6 +12,7 @@
 - Build order filename does not contain cmd name currently
 - Underground belts, rotation and we're building them weirdly.
 - Work on style of Hide-Buttons
+- For the build_order editor, make buttons for Next/Previous group and save and a toggle if the default group should be set to 0
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.

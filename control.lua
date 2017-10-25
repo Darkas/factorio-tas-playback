@@ -47,6 +47,8 @@ if movement_records then
 	MvRec.init(movement_records)
 end
 
+pcall(function() global.compare = require("queue_template") end)
+
 -- Get the commands that the speedrun can use
 local TAScommands = require("commands")
 
@@ -343,7 +345,7 @@ commands.add_command("alert", "Alert when entering command group and set game sp
 		end
 		if not found then game.print("Command group with name " .. arg.parameter .. " not found!") end
 	else
-		game.print("Can only use /wait_for if the command_list is set!")
+		game.print("Can only use /alert if the command_list is set!")
 	end
 end)
 
@@ -364,6 +366,24 @@ commands.add_command("exportqueue", "Export the command queue to file.", functio
 	local data = "return " .. serpent.block(commandqueue)
 	commandqueue.command_list = list
 	game.write_file(name, data, false, event.player_index)
+end)
+
+commands.add_command("diff_queue", "Show the differences of the current commandqueue with the one given.", function(event)
+	if not global.comare then
+		game.print("The file queue_template.lua has not been found.")
+		return
+	end
+	
+	local found = 0
+	
+	for i = 1,game.tick do
+		if found > 10 then break end
+		if serpent.block(global.compare[i]) ~= serpent.block(commandqueue[i]) then
+			found = found + 1
+			game.print("Found difference in tick " .. i .. ": Template: " .. serpent.block(global.compare[i]))
+			game.print("Found difference in tick " .. i .. ": Current: " .. serpent.block(commandqueue[i]))
+		end
+	end
 end)
 
 Event.register(defines.events.on_gui_click, function(event)
