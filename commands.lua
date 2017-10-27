@@ -1,5 +1,6 @@
-local LogUI = require("log_ui")
-local Utils = require("utility_functions")
+
+-- luacheck: globals Utils LogUI
+-- luacheck: ignore 212
 
 -- Initial definitions of shortcuts used by the TAScommands
 local directions = {}

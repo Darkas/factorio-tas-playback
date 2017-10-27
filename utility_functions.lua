@@ -1,5 +1,5 @@
 -- Utility functions
-Utils = {} --luacheck: allow defined top
+Utils = {} -- luacheck: allow defined top
 local mod_gui = require("mod-gui")
 local GuiEvent = require("stdlib.event.gui")
 
@@ -15,7 +15,6 @@ if not our_global.entity_recipe then our_global.entity_recipe = {} end
 
 -- Categories: 
 --   Tables
---   Printing
 --   Maths and Geometry
 --   String
 --   Chunked
@@ -274,7 +273,7 @@ function Utils.closest_point(square, circle_radius, position)
 		rx, ry = square_radius + circle_radius, py
 		--  then
 	elseif py <= square_radius + circle_radius * math.sin(3.14159 / 8) then
-		px, py = px - square_radius, py - square_radius
+		px, py = px - square_radius, py - square_radius --luacheck: ignore
 		rx, ry = math.sqrt(circle_radius^2 - py^2), py
 		rx, ry = rx + square_radius, ry + square_radius
 	elseif px - (square_radius + circle_radius * math.cos(3.14159 / 8)) >= py - (square_radius + circle_radius * math.sin(3.14159 / 8))  then
@@ -557,7 +556,7 @@ function Utils.update_floating_text(index, new_text)
 	text_data[1].teleport(text_data[2].position)
 end
 
-Event.register(defines.events.on_tick, function (event)
+Event.register(defines.events.on_tick, function ()
 	for i,text_data in pairs(global.Utils.floating_texts) do
 		if text_data[1] and text_data[1].valid then
 			text_data[1].teleport(text_data[2].position)

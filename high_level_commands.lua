@@ -1,13 +1,18 @@
-local Blueprint = require("blueprint")
-local TAScommands = require("commands")
-local Utils = require("utility_functions")
+
+-- luacheck: globals command_list_parser Utils high_level_commands
+-- luacheck: ignore 212
+
+
+local Blueprint = require("blueprint") 
+local TAScommands = require("commands") 
+-- local Utils = require("utility_functions")
 local MvRec = require("record_movement")
 local Event = require("stdlib/event/event")
 local LogUI = require("log_ui")
 local BPStorage
+
 pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
 
--- luacheck: ignore 212
 
 global.high_level_commands = global.high_level_commands or {
 	throw_cooldown = nil,

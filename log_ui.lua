@@ -1,5 +1,5 @@
 local mod_gui = require("mod-gui")
-local Utils = require("utility_functions")
+-- luacheck: globals Utils mod_gui
 
 LogUI = {} --luacheck: allow defined top
 --[[
@@ -121,8 +121,8 @@ function LogUI.update_log_ui(player)
 					visible_types[log_type] = true
 				end
 			else
-				local checkbox = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=not global.log_data.log_type_settings[log_type].default_hide}
-				checkbox.style.top_padding = 3
+				local box = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=not global.log_data.log_type_settings[log_type].default_hide}
+				box.style.top_padding = 3
 				type_flow.add{type="label", style="label_style", name=log_type .. "_text", caption=log_type}
 			end
 		end

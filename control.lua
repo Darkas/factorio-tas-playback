@@ -1,3 +1,5 @@
+-- luacheck: globals commandqueue command_list_parser silo_script
+
 if not settings.global["tas-playback-enabled"].value then
 	return
 end
@@ -34,12 +36,18 @@ end
 require("command_list_parser")
 
 require("silo-script")
+local Utils = require("utility_functions")
+local Event = require("stdlib/event/event")
+local GuiEvent = require("stdlib/event/gui") -- luacheck: ignore
+
 local CmdUI = require("command_list_ui")
 local LogUI = require("log_ui")
-local Event = require("stdlib/event/event")
-local Utils = require("utility_functions")
-local MvRec = require("record_movement")
 local TableUI = require("table_ui")
+
+local MvRec = require("record_movement")
+
+local TAScommands = require("commands")
+
 local movement_records = {}
 
 pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
@@ -49,11 +57,8 @@ end
 
 pcall(function() global.compare = require("queue_template") end)
 
--- Get the commands that the speedrun can use
-local TAScommands = require("commands")
 
-
-function set_run_logging_types()
+local function set_run_logging_types()
 	LogUI.configure_log_type(
 		"run-debug",
 		{font_color = {r=0.5, g=0.9, b=0.9}},
@@ -359,9 +364,13 @@ commands.add_command("alert", "Alert when entering command group and set game sp
 	end
 end)
 
-commands.add_command("inspectqueue", "Inspect the command queue via UI.", function(event)
-	local player = game.players[event.player_index]
+commands.add_command("inspectqueue", "Inspect the command queue via UI.", function()
+	--local player = game.players[event.player_index]
 	TableUI.add_table("command queue", commandqueue.command_list)
+end)
+
+commands.add_command("inspectcmds", "Inspect the command set via UI.", function()
+	TableUI.add_table("command queue", global.command_list_parser.current_command_set)
 end)
 
 commands.add_command("exportqueue", "Export the command queue to file.", function(event)
