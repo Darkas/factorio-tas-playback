@@ -384,7 +384,21 @@ high_level_commands = {
 			end
 			
 			if not command.data.ordered_build_commands[command.data.current_stage] then
-				command_list_parser.set_finished(command)
+				local finished = true
+				
+				if command.data.ordered_build_commands[0] then
+					for i, com in pairs(command.data.ordered_build_commands[0]) do
+						if com.finished then
+							command.data.ordered_build_commands[0][i] = nil
+						else
+							finished = false
+						end
+					end
+				end
+				
+				if finished then
+					command_list_parser.set_finished(command)
+				end
 			end
 
 			return added_commands
