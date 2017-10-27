@@ -4,13 +4,16 @@
 - Log Craft Inactivity, unoptimal movement (UI alert), dump inventory into file
 - UI Option: Number of commands to show.
 - Redo movement logic. It's super costly at the moment.
+- Smarter movement
 - Make high_level_commands a proper module.
 - Make the global table available in the run file.
-- Improve the warning given when a blueprint was added to the run but not to the blueprint_list.lua
+- require blueprints automatically if the command list needs them
 - New type of move command: give a direction and walk in that direction until condition is satisfied
 - Raise on_built_entity event when entities are built.
 - For the build_order editor, make buttons for Next/Previous group and save and a toggle if the default group should be set to 0
 - Mining adds 0.5 to both coordinates if they are integers. Remove that.
+- Typecheck for areas. And for entity positions
+- Fire build events
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.

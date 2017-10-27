@@ -826,15 +826,17 @@ end
 -- System 
 ----------
 
-function Utils.on_load(f)
-	global.Utils.on_load = global.Utils.on_load or {}
-	table.insert(global.Utils.on_load, f)
-	local function on_load()
-		for _, fc in pairs(Utils._on_load) do
-			fc()
-		end
-	end
-	script.on_load(on_load)
-end
+-- Nice idea, didnt work in practice. 
+
+-- function Utils.on_load(f)
+-- 	global.Utils.on_load = global.Utils.on_load or {}
+-- 	table.insert(global.Utils.on_load, f)
+-- 	local function on_load()
+-- 		for _, fc in pairs(Utils._on_load) do
+-- 			fc()
+-- 		end
+-- 	end
+-- 	script.on_load(on_load)
+-- end
 
 return Utils

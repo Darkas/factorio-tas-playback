@@ -1,8 +1,9 @@
+-- move
+
 -- luacheck: globals command_list_parser Utils high_level_commands LogUI Event TAScommands
 -- luacheck: ignore 212
 
-
-return {
+local move_cmd = {
     type_signature = {
         [2] = {"string", "position"},
     },
@@ -169,3 +170,5 @@ return {
         end
     end,
 }
+
+return {move = move_cmd}

@@ -69,6 +69,9 @@ TAScommands["build"] =
     local item = tokens[2]
     local position = tokens[3]
     local direction = tokens[4]
+    if type(direction) == "string" then 
+        direction = directions[direction].direction
+    end
 
     LogUI.debugprint("Building: " .. item .. " on tile (" .. position[1] .. "," .. position[2] .. ")")
 
@@ -135,6 +138,12 @@ TAScommands["build"] =
     if created and created.valid then
         if command_list_parser then
             command_list_parser.add_entity_to_global(created)
+            local event_table = {
+                created_entity = created,
+                player_index = myplayer.index,
+                item = created.name,
+            }
+            script.raise_event(defines.events.on_built_entity, event_table)
         end
         myplayer.remove_item({name = item, count = 1})
 
@@ -338,6 +347,10 @@ end
 TAScommands["rotate"] = function(tokens, myplayer)
     local position = tokens[2]
     local direction = tokens[3]
+    if type(direction) == "string" then 
+        direction = directions[direction].direction
+    end
+
 
     myplayer.update_selected_entity(position)
 
@@ -345,7 +358,7 @@ TAScommands["rotate"] = function(tokens, myplayer)
         LogUI.errprint("Rotate failed, no object at position {" .. position[1] .. "," .. position[2] .. "}")
     end
 
-    myplayer.selected.direction = directions[direction].direction
+    myplayer.selected.direction = direction
     LogUI.debugprint("Rotating " .. myplayer.selected.name .. " so that it faces " .. direction .. ".")
 end
 
