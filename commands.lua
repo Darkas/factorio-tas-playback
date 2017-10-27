@@ -126,6 +126,7 @@ TAScommands["build"] =
     -- Place the item
     entity.fast_replace = replace
     entity.force = "player"
+    entity.player = myplayer
     if item == "underground-belt" and tokens[5] then
         entity.type = tokens[5]
     end

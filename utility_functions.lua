@@ -21,6 +21,7 @@ if not our_global.entity_recipe then our_global.entity_recipe = {} end
 --   Chunked
 --   Entity
 --   Gui
+--   System
 
 
 
@@ -670,23 +671,23 @@ end
 -- Does not check for ghosts currently.
 function Utils.can_fast_replace_entities(entity, other_entity)
 	-- Can't fast replace buildings owned by someone else.
-	if entity.force ~= other_entity.force and entity.force ~= nil and other_entity.force ~= nil then
-		return false
-	end
+	-- if entity.force ~= other_entity.force and entity.force ~= nil and other_entity.force ~= nil then
+	-- 	return false
+	-- end
 
-	if game.entity_prototypes[other_entity.name].fast_replaceable_group ~= game.entity_prototypes[entity.name].fast_replaceable_group then 
+	if game.entity_prototypes[other_entity.name].fast_replaceable_group == nil or game.entity_prototypes[other_entity.name].fast_replaceable_group ~= game.entity_prototypes[entity.name].fast_replaceable_group then 
 		return false
 	end
 
 	-- If the entities aren't on the same position they can't fast-replace each other
-	if not Utils.tables_equal(entity.position, other_entity.position) then
+	if not (Utils.sqdistance(entity.position, other_entity.position) < 0.1) then
 		return false
 	end
-
+	
 	-- If the direction is same and id is same, the fast replace wouldn't change anything
 	if entity.name == other_entity.name and entity.direction == other_entity.direction then 
 		return false
-	end
+	end	
   
 	return true
 end
@@ -769,8 +770,24 @@ local function button_handler(event)
 	button_data.element.style.visible = not button_data.element.style.visible
 end
 
+-- local function reset_handlers()
+-- 	if global.Utils and global.Utils.hide_buttons then
+-- 		for _, buttons in pairs(global.Utils.hide_buttons) do
+-- 			for k, button_data in pairs(buttons) do
+-- 				local name = "hide_button_" .. button_data.button.name
+-- 				GuiEvent.on_click(name, button_handler)
+-- 			end
+-- 		end
+-- 	end
+-- end
+
+GuiEvent.on_click("hide_button_.*", button_handler)
+
 function Utils.make_hide_button(player, gui_element, is_sprite, text, parent, style)
-	global.Utils.hide_buttons = global.Utils.hide_buttons or {}
+	if not global.Utils.hide_buttons then 
+		global.Utils.hide_buttons = {}
+	end		
+
 	global.Utils.hide_buttons[player.index] = global.Utils.hide_buttons[player.index] or {}
 
 	if not parent then parent = mod_gui.get_button_flow(player) end
@@ -786,8 +803,6 @@ function Utils.make_hide_button(player, gui_element, is_sprite, text, parent, st
 		element = gui_element,
 		button = button,
 	}
-
-	GuiEvent.on_click(name, button_handler)
 end
 
 function Utils.remove_hide_button(player, gui_element)
@@ -804,6 +819,22 @@ function Utils.hide_button_info(player, gui_element)
 		return false
 	end
 	return global.Utils.hide_buttons[player.index][name]	
+end
+
+
+
+-- System 
+----------
+
+function Utils.on_load(f)
+	global.Utils.on_load = global.Utils.on_load or {}
+	table.insert(global.Utils.on_load, f)
+	local function on_load()
+		for _, fc in pairs(Utils._on_load) do
+			fc()
+		end
+	end
+	script.on_load(on_load)
 end
 
 return Utils
