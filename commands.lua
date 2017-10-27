@@ -100,7 +100,7 @@ TAScommands["build"] =
         name = item,
         position = position,
         direction = direction, 
-        --force = "player",
+        force = "player",
         surface = myplayer.surface,
     }
 

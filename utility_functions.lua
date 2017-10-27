@@ -699,13 +699,16 @@ function Utils.can_fast_replace_entities(entity, other_entity)
 	return true
 end
 
-function Utils.cannot_fast_replace(entity)
+function Utils.can_fast_replace(entity)
 	local prototype = game.entity_prototypes[entity.name]
 	local blocking_entity = Utils.get_entity_from_pos(entity.position, entity, prototype.type)
-	if blocking_entity and not Utils.can_fast_replace_entities(entity, blocking_entity) then
-		return blocking_entity
+	if not blocking_entity then
+		return false
+	elseif Utils.can_fast_replace_entities(entity, blocking_entity) then
+		return true
+	else
+		return false, blocking_entity
 	end
-	return false
 end
 
 
@@ -720,9 +723,9 @@ function Utils.can_player_place(myplayer, entity)
 
 	local target_collision_box = Utils.collision_box(entity)
 
-	-- if Utils.distance_from_rect(myplayer.position, target_collision_box) >= myplayer.build_distance + 0.1 then
-	-- 	return false
-	-- end
+	if Utils.distance_from_rect(myplayer.position, target_collision_box) >= myplayer.build_distance + 0.1 then
+		return false
+	end
 
 	-- Remove Items on ground
 
@@ -753,7 +756,7 @@ function Utils.can_player_place(myplayer, entity)
 	local replace = false
 
 	if not can_place then -- maybe we can fast-replace
-		if not Utils.cannot_fast_replace(entity) then
+		if Utils.can_fast_replace(entity) then
 			can_place = true
 			replace = true
 		end
