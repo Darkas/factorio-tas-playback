@@ -126,6 +126,12 @@ function Utils.inside_rect(point, rect)
 	local x, y = Utils.get_coordinates(point)
 	local lower_x, lower_y = Utils.get_coordinates(rect[1] or rect.left_top)
 	local upper_x, upper_y = Utils.get_coordinates(rect[2] or rect.right_bottom)
+	
+	if not x or not y or not lower_x or not lower_y or not upper_x or not upper_y then
+		game.print(debug.traceback());
+		error("inside_rect called with invalid parameters.")
+	end
+	
 	return lower_x < x and x < upper_x and lower_y < y and y < upper_y
 end
 
