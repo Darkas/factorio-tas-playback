@@ -347,7 +347,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	end
 
 	if auto_move_commands > 1 then
-		Utils.errprint("You are using more than one move command at once! Don't do this!")
+		LogUI.errprint("You are using more than one move command at once! Don't do this!")
 	end
 
 	-- Determine first out of range command
@@ -403,7 +403,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		end
 
 		if craft_action and ui_action then
-			Utils.errprint("You are executing a craft and a ui action in adjacent frames! This is impossible! The craft action is " .. serpent.block(craft_action) .. " and the ui action is " .. serpent.block(ui_action))
+			LogUI.errprint("You are executing a craft and a ui action in adjacent frames! This is impossible! The craft action is " .. serpent.block(craft_action) .. " and the ui action is " .. serpent.block(ui_action))
 		end
 	end
 
@@ -414,7 +414,7 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		if command[1] == "move" then
 			moves = moves .. command[2] .. ", "
 			if move_found then
-				Utils.errprint("You are executing more than one move action in the same frame! Moves: " .. moves)
+				LogUI.errprint("You are executing more than one move action in the same frame! Moves: " .. moves)
 				break
 			else
 				move_found = true
@@ -521,7 +521,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 			entity = Utils.get_entity_from_pos(pos, myplayer)
 
 			if not entity then
-				Utils.errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
+				LogUI.errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
 				return false
 			end
 		else
@@ -552,7 +552,7 @@ function command_list_parser.command_executable(command, myplayer, tick)
 			entity = Utils.get_entity_from_pos(pos, myplayer, command.type or command.items_total.type)
 
 			if not entity then
-				Utils.errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
+				LogUI.errprint("There is no entity at (" .. pos[1] .. "," .. pos[2] .. ")")
 				return false
 			end
 

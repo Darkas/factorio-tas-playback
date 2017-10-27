@@ -1,6 +1,5 @@
 -- Utility functions
 Utils = {} --luacheck: allow defined top
-local LogUI = require("log_ui")
 local mod_gui = require("mod-gui")
 local GuiEvent = require("stdlib.event.gui")
 
@@ -102,19 +101,6 @@ function Utils.concat_tables(table1, table2)
 		table1[#table1+1] = table2[i]
 	end
 	return table1
-end
-
-
-
--- Printing
-------------
-
-function Utils.debugprint(msg)
-	LogUI.log_to_ui(msg, "run-debug")
-end
-
-function Utils.errprint(msg)
-	LogUI.log_to_ui(msg, "tascommand-error")
 end
 
 
@@ -789,14 +775,14 @@ function Utils.make_hide_button(player, gui_element, show, is_sprite, text, pare
 	global.Utils.hide_buttons[player.index] = global.Utils.hide_buttons[player.index] or {}
 
 	if not parent then parent = mod_gui.get_button_flow(player) end
-	if not style then style = "button_style" end
 	local name = "hide_button_" .. gui_element.name
 	local button
 	if is_sprite then
-		button = parent.add{name=name, type="sprite-button", style=style, sprite=text}
+		button = parent.add{name=name, type="sprite-button", style=style or mod_gui.button_style, sprite=text,}
 	else
-		button = parent.add{name=name, type="button", style=style, caption=text}		
+		button = parent.add{name=name, type="button", style=style or "button_style", caption=text}		
 	end
+	button.style.visible = true
 	global.Utils.hide_buttons[player.index][name] = {
 		element = gui_element,
 		show = show,

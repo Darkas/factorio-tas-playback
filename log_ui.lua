@@ -1,4 +1,5 @@
 local mod_gui = require("mod-gui")
+local Utils = require("utility_functions")
 
 LogUI = {} --luacheck: allow defined top
 --[[
@@ -57,6 +58,15 @@ function LogUI.log_to_ui(text, type_name, data)
 	global.log_data.need_update = true
 end
 
+
+function LogUI.debugprint(msg)
+	LogUI.log_to_ui(msg, "run-debug")
+end
+
+function LogUI.errprint(msg)
+	LogUI.log_to_ui(msg, "tascommand-error")
+end
+
 -- configure_log_type
 -- type_name:
 -- style (optional): style arguments that are set for the display style of the log messages. For example {font_color = {r=1, g=0.2, b=0.2}, font = "default-bold"}. Right now only font_color and font is suggested.
@@ -92,14 +102,6 @@ function LogUI.update_log_ui(player)
 		frame = flow.log_frame
 	end
 
-	-- Visibility
-	local show = frame.top_flow.show_checkbox.state
-	if global.log_data.ui_hidden[player.index] ~= not show then
-		frame.scroll_pane.style.visible = show
-		frame.type_flow.style.visible = show
-		global.log_data.ui_hidden[player.index] = not show
-	end
-
 	-- Scheduling
 	if game.tick % math.floor(game.speed * 20 + 1) ~= 0 then return end
 	if not global.log_data.need_update then return end
@@ -107,7 +109,7 @@ function LogUI.update_log_ui(player)
 
 
 	-- Update
-	if show and not global.log_data.ui_paused[player.index] then
+	if frame.style.visible and not global.log_data.ui_paused[player.index] then
 		local type_flow = frame.type_flow
 
 		-- Determine which log-types the user wants to see.
@@ -160,7 +162,6 @@ function LogUI.init_logging()
 	-- UI
 	global.log_data = {}
 	global.log_data.ui_paused = {}
-	global.log_data.ui_hidden = {}
 
 	-- content
 	global.log_data.log_messages = {}
@@ -181,8 +182,6 @@ function LogUI.create_log_ui(player)
 	local top_flow = frame.add{type="flow", name="top_flow", style="flow_style", direction="horizontal"}
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Log"}
 	title.style.font = "default-frame"
-	top_flow.add{type="label", style="label_style", name = "title_show", caption="                    [Show]"}
-	top_flow.add{type="checkbox", name="show_checkbox", state=true}
 
 	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical"}
 	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
@@ -200,6 +199,8 @@ function LogUI.create_log_ui(player)
 
 	end
 	frame.add{type="flow", name="type_flow", style="flow_style", direction="horizontal"}
+
+	Utils.make_hide_button(player, frame, true, true, "virtual-signal/signal-L")
 end
 
 

@@ -18,21 +18,21 @@ local TAScommands = {}
 -- Definitions of the TAScommands
 
 TAScommands["move"] = function(tokens, myplayer)
-    Utils.debugprint("Moving: " .. tokens[2])
+    LogUI.debugprint("Moving: " .. tokens[2])
     global.walkstate = directions[tokens[2]]
     if tokens[2] == "STOP" then
-        Utils.debugprint("Stopped at: (" .. myplayer.position.x .. "," .. myplayer.position.y .. ")")
+        LogUI.debugprint("Stopped at: (" .. myplayer.position.x .. "," .. myplayer.position.y .. ")")
     end
 end
 
 TAScommands["craft"] = function(tokens, myplayer)
     myplayer.begin_crafting {recipe = tokens[2], count = tokens[3] or 1}
-    Utils.debugprint("Crafting: " .. tokens[2] .. " x" .. (tokens[3] or 1))
+    LogUI.debugprint("Crafting: " .. tokens[2] .. " x" .. (tokens[3] or 1))
 end
 
 TAScommands["stopcraft"] = function(tokens, myplayer)
     myplayer.cancel_crafting {index = tokens[2], count = tokens[3] or 1}
-    Utils.debugprint("Craft abort: Index " .. tokens[2] .. " x" .. (tokens[3] or 1))
+    LogUI.debugprint("Craft abort: Index " .. tokens[2] .. " x" .. (tokens[3] or 1))
 end
 
 TAScommands["mine"] = function(tokens, myplayer)
@@ -54,12 +54,12 @@ TAScommands["mine"] = function(tokens, myplayer)
 
     if position then
         if hasdecimals then
-            Utils.debugprint("Mining: Coordinates (" .. position[1] .. "," .. position[2] .. ")")
+            LogUI.debugprint("Mining: Coordinates (" .. position[1] .. "," .. position[2] .. ")")
         else
-            Utils.debugprint("Mining: Tile (" .. position[1] .. "," .. position[2] .. ")")
+            LogUI.debugprint("Mining: Tile (" .. position[1] .. "," .. position[2] .. ")")
         end
     else
-        Utils.debugprint("Mining: STOP")
+        LogUI.debugprint("Mining: STOP")
     end
 end
 
@@ -69,11 +69,11 @@ TAScommands["build"] =
     local position = tokens[3]
     local direction = tokens[4]
 
-    Utils.debugprint("Building: " .. item .. " on tile (" .. position[1] .. "," .. position[2] .. ")")
+    LogUI.debugprint("Building: " .. item .. " on tile (" .. position[1] .. "," .. position[2] .. ")")
 
     -- Check if we have the item
     if myplayer.get_item_count(item) == 0 then
-        Utils.errprint("Build failed: No item available")
+        LogUI.errprint("Build failed: No item available")
         return
     end
 
@@ -81,7 +81,7 @@ TAScommands["build"] =
     local target_collision_box = Utils.collision_box {name = item, position = position, direction = direction}
     local distance = Utils.distance_from_rect(myplayer.position, target_collision_box)
     if not (distance <= myplayer.build_distance) then
-        Utils.errprint("Build failed: You are trying to place beyond realistic reach")
+        LogUI.errprint("Build failed: You are trying to place beyond realistic reach")
         return
     end
 
@@ -107,7 +107,7 @@ TAScommands["build"] =
     local canplace, replace = Utils.can_player_place(myplayer, entity)
     	
     if not canplace then
-        Utils.errprint(
+        LogUI.errprint(
             "Building " .. item .. " failed: Something is in the way at {" .. position[1] .. ", " .. position[2] .. "}."
         )
         for _, _item in pairs(items_saved) do
@@ -140,14 +140,14 @@ TAScommands["build"] =
             myplayer.insert({name = _item.name, count = _item.count})
         end
     else
-        Utils.errprint("Build failed: Reason unknown.")
+        LogUI.errprint("Build failed: Reason unknown.")
     end
 end
 
 TAScommands["enter-vehicle"] = function(tokens, myplayer)
     myplayer.driving = true
     if not myplayer.driving then
-        Utils.errprint("Entering vehicle failed! Player at " .. serpent.block(myplayer.position))
+        LogUI.errprint("Entering vehicle failed! Player at " .. serpent.block(myplayer.position))
     end
 end
 
@@ -169,7 +169,7 @@ TAScommands["put"] =
     myplayer.update_selected_entity(position)
 
     if not myplayer.selected then
-        Utils.errprint("Put failed: No object at position {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Put failed: No object at position {" .. position[1] .. "," .. position[2] .. "}.")
         return
     end
 
@@ -181,16 +181,16 @@ TAScommands["put"] =
     local otherinv = myplayer.selected.get_inventory(slot)
 	
 	if myplayer.get_item_count(item) < toinsert then
-        Utils.errprint("Put failed: Not enough items {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Put failed: Not enough items {" .. position[1] .. "," .. position[2] .. "}.")
         return
 	end
 
     if toinsert == 0 then
-        Utils.errprint("Put failed: Trying to insert 0 items at {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Put failed: Trying to insert 0 items at {" .. position[1] .. "," .. position[2] .. "}.")
         return
     end
     if not otherinv then
-        Utils.errprint(
+        LogUI.errprint(
             "Put failed : Target doesn't have an inventory at {" .. position[1] .. "," .. position[2] .. "}."
         )
         return
@@ -200,14 +200,14 @@ TAScommands["put"] =
 
     --if we already failed for trying to insert no items, then if no items were inserted, it must be because it is full
     if inserted == 0 then
-        Utils.errprint("Put failed: No space at {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Put failed: No space at {" .. position[1] .. "," .. position[2] .. "}.")
         return
     end
 
     myplayer.remove_item {name = item, count = inserted}
 
     if inserted < toinsert then
-        Utils.errprint(
+        LogUI.errprint(
             "Put sub-optimal: Only put " ..
                 inserted ..
                     "x " ..
@@ -216,7 +216,7 @@ TAScommands["put"] =
                                 toinsert .. "x " .. item .. " at {" .. position[1] .. "," .. position[2] .. "}."
         )
     end
-    Utils.debugprint(
+    LogUI.debugprint(
         "Put " ..
             inserted ..
                 "x " ..
@@ -227,9 +227,9 @@ end
 TAScommands["speed"] = function(tokens, myplayer)
     if global.allowspeed then
         game.speed = tokens[2]
-        Utils.debugprint("Speed: " .. tokens[2])
+        LogUI.debugprint("Speed: " .. tokens[2])
     else
-        Utils.errprint("Speed failed : Changing the speed of the run is not allowed. ")
+        LogUI.errprint("Speed failed : Changing the speed of the run is not allowed. ")
     end
 end
 
@@ -242,7 +242,7 @@ TAScommands["take"] =
     myplayer.update_selected_entity(position)
 
     if not myplayer.selected then
-        Utils.errprint("Take failed: No object at position {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Take failed: No object at position {" .. position[1] .. "," .. position[2] .. "}.")
         return
     end
 
@@ -255,7 +255,7 @@ TAScommands["take"] =
     local otherinv = myplayer.selected.get_inventory(slot)
 
     if not otherinv then
-        Utils.errprint("Take failed: Unable to access inventories " .. slot)
+        LogUI.errprint("Take failed: Unable to access inventories " .. slot)
         return
     end
 
@@ -268,17 +268,17 @@ TAScommands["take"] =
     end
 
     if amountintarget == 0 then
-        Utils.errprint("Take failed: No items at {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Take failed: No items at {" .. position[1] .. "," .. position[2] .. "}.")
         return
     end
 
     if totake == 0 then
-        Utils.errprint("Taking 0 items is not allowed!")
+        LogUI.errprint("Taking 0 items is not allowed!")
         return
     end
 
     local taken = myplayer.insert {name = item, count = totake}
-    Utils.debugprint(
+    LogUI.debugprint(
         "Took " ..
             taken ..
                 "x " ..
@@ -286,20 +286,20 @@ TAScommands["take"] =
     )
 
     if taken == 0 then
-        Utils.errprint("Take failed: No space at {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Take failed: No space at {" .. position[1] .. "," .. position[2] .. "}.")
         return
     end
 
     otherinv.remove {name = item, count = taken}
 
     if amount ~= "all" and taken < amount then
-        Utils.errprint("Take sub-optimal: Only took " .. taken .. " at {" .. position[1] .. "," .. position[2] .. "}.")
+        LogUI.errprint("Take sub-optimal: Only took " .. taken .. " at {" .. position[1] .. "," .. position[2] .. "}.")
     end
 end
 
 TAScommands["tech"] = function(tokens, myplayer)
     myplayer.force.current_research = tokens[2]
-    Utils.debugprint("Research: " .. tokens[2])
+    LogUI.debugprint("Research: " .. tokens[2])
 end
 
 TAScommands["print"] = function(tokens, myplayer)
@@ -311,7 +311,7 @@ TAScommands["recipe"] =
     function(tokens, myplayer)
     myplayer.update_selected_entity(tokens[2])
     if not myplayer.selected then
-        Utils.errprint(
+        LogUI.errprint(
             "Setting recipe: Entity at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "} could not be selected."
         )
         return
@@ -330,7 +330,7 @@ TAScommands["recipe"] =
             myplayer.insert {name = name, count = count}
         end
     end
-    Utils.debugprint("Setting recipe: " .. tokens[3] .. " at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "}.")
+    LogUI.debugprint("Setting recipe: " .. tokens[3] .. " at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "}.")
 end
 
 TAScommands["rotate"] = function(tokens, myplayer)
@@ -340,11 +340,11 @@ TAScommands["rotate"] = function(tokens, myplayer)
     myplayer.update_selected_entity(position)
 
     if not myplayer.selected then
-        Utils.errprint("Rotate failed, no object at position {" .. position[1] .. "," .. position[2] .. "}")
+        LogUI.errprint("Rotate failed, no object at position {" .. position[1] .. "," .. position[2] .. "}")
     end
 
     myplayer.selected.direction = directions[direction].direction
-    Utils.debugprint("Rotating " .. myplayer.selected.name .. " so that it faces " .. direction .. ".")
+    LogUI.debugprint("Rotating " .. myplayer.selected.name .. " so that it faces " .. direction .. ".")
 end
 
 TAScommands["phantom"] = function(tokens, myplayer)
@@ -367,18 +367,18 @@ TAScommands["throw-grenade"] = function(tokens, myplayer)
     local target = tokens[2]
 
     if myplayer.get_item_count("grenade") < 1 then
-        Utils.errprint("Throw Grenade failed! No grenade item in inventory. ")
+        LogUI.errprint("Throw Grenade failed! No grenade item in inventory. ")
         return
     end
 
     -- TODO: Is this < or <=?
     if global.last_grenade_throw and game.tick - global.last_grenade_throw < 30 then
-        Utils.errprint("Throw Grenade failed! Grenade is not off cooldown yet. ")
+        LogUI.errprint("Throw Grenade failed! Grenade is not off cooldown yet. ")
         return
     end
 
     if Utils.sqdistance(target, myplayer.position) > 15 ^ 2 then
-        Utils.errprint("Throw Grenade failed! Not in throwing distance. ")
+        LogUI.errprint("Throw Grenade failed! Not in throwing distance. ")
     end
 
     -- Interpolate for projectile_creation_distance.
