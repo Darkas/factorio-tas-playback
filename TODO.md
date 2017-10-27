@@ -9,6 +9,9 @@
 - Improve the warning given when a blueprint was added to the run but not to the blueprint_list.lua
 - New type of move command: give a direction and walk in that direction until condition is satisfied
 - Raise on_built_entity event when entities are built.
+- Build order filename does not contain cmd name currently
+- Underground belts, rotation and we're building them weirdly.
+- Work on style of Hide-Buttons
 - For the build_order editor, make buttons for Next/Previous group and save and a toggle if the default group should be set to 0
 
 ## Low Priority:

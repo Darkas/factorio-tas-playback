@@ -1,6 +1,8 @@
 -- Utility functions
 Utils = {} --luacheck: allow defined top
 local LogUI = require("log_ui")
+local mod_gui = require("mod-gui")
+local GuiEvent = require("stdlib.event.gui")
 
 
 if not global.Utils then global.Utils = {} end
@@ -9,6 +11,19 @@ local our_global = global.Utils
 
 
 if not our_global.entity_recipe then our_global.entity_recipe = {} end
+
+
+
+-- Categories: 
+--   Tables
+--   Printing
+--   Maths and Geometry
+--   String
+--   Chunked
+--   Entity
+--   Gui
+
+
 
 -- Tables
 ----------
@@ -419,9 +434,27 @@ function Utils.printable(v)
 	if v == nil then return "nil"
 	elseif v == true then return "true"
 	elseif v == false then return "false"
+	elseif type(v) == "number" then return Utils.roundn(v, 1)
 	elseif type(v) == "table" then
-		if type(v[1] or v.x) == "number" and type(v[2] or v.y) == "number" and not v[3] then
-			return "{" .. Utils.roundn(v[1] or v.x, 1) .. ", " .. Utils.roundn(v[2] or v.y, 1) .. "}"
+		local pos_string = ", "
+		local one = false
+		local two = false
+		if v.__self then return "<Factorio Data>" end
+		for key, value in pairs(v) do
+			if (key == 1 or key == "x") and type(value) == "number" then
+				one = true
+				pos_string = "{" .. Utils.roundn(value) .. pos_string
+			elseif (key == 2 or key == "y") and type(value) == "number" then
+				two = true
+				pos_string = pos_string .. Utils.roundn(value) .. "}"
+			else
+				return "{…}"
+			end
+		end
+		if one and two then 
+			return pos_string
+		elseif not one and not two then
+			return "{}"
 		else
 			return "{…}"
 		end
@@ -695,6 +728,58 @@ function Utils.can_player_place(surface, entity, myplayer)
 	end
 	
 	return can_place
+end
+
+
+-- GUI related.
+---------------
+
+
+local function button_handler(event)
+	-- local player = game.players[event.player_index]
+	local element = event.element
+	local button_data = global.Utils.hide_buttons[event.player_index][element.name]
+	button_data.show = not button_data.show
+	button_data.element.style.visible = button_data.show
+end
+
+function Utils.make_hide_button(player, gui_element, show, is_sprite, text)
+	global.Utils.hide_buttons = global.Utils.hide_buttons or {}
+	global.Utils.hide_buttons[player.index] = global.Utils.hide_buttons[player.index] or {}
+
+	local flow = mod_gui.get_button_flow(player)
+	local name = "hide_button_" .. gui_element.name
+	local button
+	if is_sprite then
+		button = flow.add{name=name, type="sprite-button", style="button_style", sprite=text}
+	else
+		button = flow.add{name=name, type="button", style="button_style", caption=text}		
+	end
+	global.Utils.hide_buttons[player.index][name] = {
+		element = gui_element,
+		show = show,
+		button = button,
+	}
+
+	gui_element.style.visible = show
+
+	GuiEvent.on_click(name, button_handler)
+end
+
+function Utils.remove_hide_button(player, gui_element)
+	local name = "hide_button_" .. gui_element.name
+	local button_data = global.Utils.hide_buttons[player.index][name]
+	button_data.button.destroy()
+	global.Utils.hide_buttons[player.index][name] = nil
+	GuiEvent.remove(defines.events.on_gui_click, name)
+end
+
+function Utils.hide_button_info(player, gui_element)
+	local name = "hide_button_" .. gui_element.name
+	if not global.Utils.hide_buttons or not global.Utils.hide_buttons[player.index] then
+		return false
+	end
+	return global.Utils.hide_buttons[player.index][name]	
 end
 
 return Utils
