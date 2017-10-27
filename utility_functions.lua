@@ -468,6 +468,7 @@ function Utils.get_entity_from_pos(pos, myplayer, types, epsilon)
 		epsilon = 0.2
 	end
 
+	if not myplayer.surface then game.print(debug.traceback()) error("Called get_entity_from_pos with invalid myplayer param.") end
 	-- if type == "resource" and x == math.floor(x) then
 	-- 	x = x + 0.5
 	-- 	y = y + 0.5
@@ -673,20 +674,45 @@ function Utils.Chunked.remove_entry(chunked_data, chunk_size, entry)
     return (next(chunked_data) ~= nil)
 end
 
-function Utils.can_fast_replace(name, position, myplayer)
-	local prototype = game.entity_prototypes[name]
-	local blocking_entity = Utils.get_entity_from_pos(position, myplayer, prototype.type)
-	
-	if blocking_entity and game.entity_prototypes[blocking_entity.name].fast_replaceable_group == game.entity_prototypes[name].fast_replaceable_group and name ~= blocking_entity.name then
+
+-- Does not check for ghosts currently.
+function Utils.can_fast_replace_entities(entity, other_entity)
+	-- Can't fast replace buildings owned by someone else.
+	if entity.force ~= other_entity.force and entity.force ~= nil and other_entity.force ~= nil then
+		return false
+	end
+
+	if game.entity_prototypes[other_entity.name].fast_replaceable_group ~= game.entity_prototypes[entity.name].fast_replaceable_group then 
+		return false
+	end
+
+	-- If the entities aren't on the same position they can't fast-replace each other
+	if not Utils.tables_equal(entity.position, other_entity.position) then
+		return false
+	end
+
+	-- If the direction is same and id is same, the fast replace wouldn't change anything
+	if entity.name == other_entity.name and entity.direction == other_entity.direction then 
+		return false
+	end
+  
+	return true
+end
+
+function Utils.cannot_fast_replace(entity)
+	local prototype = game.entity_prototypes[entity.name]
+	local blocking_entity = Utils.get_entity_from_pos(entity.position, entity, prototype.type)
+	if blocking_entity and not Utils.can_fast_replace_entities(entity, blocking_entity) then
 		return blocking_entity
 	end
+	return false
 end
 
 
 -- Check if a player can place entity.
 -- surface is the target surface.
 -- entity = {name=..., position=..., direction=..., force=...} is a table that describes the entity we wish to describe
-function Utils.can_player_place(surface, entity, myplayer)
+function Utils.can_player_place(myplayer, entity)
 	-- local name = entity.name
 	-- local position = entity.position
 	-- local direction = entity.direction
@@ -694,9 +720,18 @@ function Utils.can_player_place(surface, entity, myplayer)
 
 	local target_collision_box = Utils.collision_box(entity)
 
+	-- if Utils.distance_from_rect(myplayer.position, target_collision_box) >= myplayer.build_distance + 0.1 then
+	-- 	return false
+	-- end
+
 	-- Remove Items on ground
-	local items = surface.find_entities_filtered {area = target_collision_box, type = "item-entity"}
+
+	if Utils.inside_rect(myplayer.position, target_collision_box) then 
+		return false 
+	end
+	local items = myplayer.surface.find_entities_filtered {area = target_collision_box, type = "item-entity"}
 	local items_saved = {}
+	if not entity.surface then entity.surface = myplayer.surface end
 
 	for _, item in pairs(items) do
 		table.insert(items_saved, {name = item.stack.name, position = item.position, count = item.stack.count})
@@ -704,24 +739,27 @@ function Utils.can_player_place(surface, entity, myplayer)
 	end
 
 	-- Check if we can actually place the entity at this tile
-	local can_place = surface.can_place_entity(entity)
+	local can_place = myplayer.surface.can_place_entity(entity)
 
 	-- Put items back.
 	for _, item in pairs(items_saved) do
-		surface.create_entity {
+		myplayer.surface.create_entity {
 			name = "item-on-ground",
 			position = item.position,
 			stack = {name = item.name, count = item.count}
 		}
 	end
 	
+	local replace = false
+
 	if not can_place then -- maybe we can fast-replace
-		if Utils.can_fast_replace(entity.name, entity.position, myplayer) then
+		if not Utils.cannot_fast_replace(entity) then
 			can_place = true
+			replace = true
 		end
 	end
 	
-	return can_place
+	return can_place, replace
 end
 
 
@@ -737,17 +775,18 @@ local function button_handler(event)
 	button_data.element.style.visible = button_data.show
 end
 
-function Utils.make_hide_button(player, gui_element, show, is_sprite, text)
+function Utils.make_hide_button(player, gui_element, show, is_sprite, text, parent, style)
 	global.Utils.hide_buttons = global.Utils.hide_buttons or {}
 	global.Utils.hide_buttons[player.index] = global.Utils.hide_buttons[player.index] or {}
 
-	local flow = mod_gui.get_button_flow(player)
+	if not parent then parent = mod_gui.get_button_flow(player) end
+	if not style then style = "button_style" end
 	local name = "hide_button_" .. gui_element.name
 	local button
 	if is_sprite then
-		button = flow.add{name=name, type="sprite-button", style="button_style", sprite=text}
+		button = parent.add{name=name, type="sprite-button", style=style, sprite=text}
 	else
-		button = flow.add{name=name, type="button", style="button_style", caption=text}		
+		button = parent.add{name=name, type="button", style=style, caption=text}		
 	end
 	global.Utils.hide_buttons[player.index][name] = {
 		element = gui_element,

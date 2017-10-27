@@ -216,10 +216,20 @@ Event.register(defines.events.on_tick, function()
 			error("The runner left.")
 		end
 		if commandqueue[tick] then
-			for _, command in pairs(commandqueue[tick]) do
-				if not TAScommands[command[1]] then error("TAS-Command does not exist: " .. command[1]) end
-				if not command.already_executed then
-					TAScommands[command[1]](command, myplayer)
+			local current_commands = commandqueue[tick]
+			if current_commands then
+				if type(current_commands[1]) == "string" then
+					local command = commandqueue[tick]
+					if not command.already_executed then
+						TAScommands[command[1]](command, myplayer)
+					end
+				else
+					for k, command in pairs(current_commands) do
+						if not TAScommands[command[1]] then error("TAS-Command does not exist: " .. command[1]) end
+						if not command.already_executed then
+							TAScommands[command[1]](command, myplayer)
+						end
+					end
 				end
 			end
 		end
