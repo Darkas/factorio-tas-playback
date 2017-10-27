@@ -1,4 +1,6 @@
 -- luacheck: globals commandqueue command_list_parser silo_script
+-- luacheck: globals Utils CmdUI LogUI TableUI MvRec TAScommands 
+-- luacheck: globals init_run
 
 if not settings.global["tas-playback-enabled"].value then
 	return
@@ -33,20 +35,22 @@ else
 	return
 end
 
-require("command_list_parser")
 
 require("silo-script")
-local Utils = require("utility_functions")
-local Event = require("stdlib/event/event")
-local GuiEvent = require("stdlib/event/gui") -- luacheck: ignore
+Event = require("stdlib/event/event")
+GuiEvent = require("stdlib/event/gui") -- luacheck: ignore
 
-local CmdUI = require("command_list_ui")
-local LogUI = require("log_ui")
-local TableUI = require("table_ui")
+Utils = require("utility_functions") 
 
-local MvRec = require("record_movement")
+CmdUI = require("gui/command_list_ui")
+LogUI = require("gui/log_ui")
+TableUI = require("gui/table_ui")
 
-local TAScommands = require("commands")
+MvRec = require("record_movement")
+
+TAScommands = require("commands")
+
+require("command_list_parser")
 
 local movement_records = {}
 
@@ -387,7 +391,7 @@ commands.add_command("exportqueue", "Export the command queue to file.", functio
 	game.write_file(name, data, false, event.player_index)
 end)
 
-commands.add_command("diff_queue", "Show the differences of the current commandqueue with the one given.", function(event)
+commands.add_command("diff_queue", "Show the differences of the current commandqueue with the one given.", function()
 	if not global.comare then
 		game.print("The file queue_template.lua has not been found.")
 		return

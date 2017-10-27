@@ -1,5 +1,5 @@
 local mod_gui = require("mod-gui")
--- luacheck: globals Utils mod_gui
+-- luacheck: globals Utils GuiEvent
 
 LogUI = {} --luacheck: allow defined top
 --[[

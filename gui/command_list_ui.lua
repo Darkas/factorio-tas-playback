@@ -1,7 +1,7 @@
 local mod_gui = require("mod-gui")
 
-local Utils = require("utility_functions")
-local GuiEvent = require("stdlib/event/gui")
+-- luacheck: globals Utils GuiEvent
+
 local NUM_LINES = 40
 
 local passive_commands = {
@@ -19,7 +19,7 @@ CmdUI.categories = {
 			return command.disabled
 		end,
 		show_default = false,
-		color = {r=0.2, g=0.2, b=0.2}
+		color = {r=0.03, g=0.03, b=0.03, a=1}
 	},
 	spawned = {
 		check = function(command)

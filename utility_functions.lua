@@ -1,8 +1,9 @@
 -- Utility functions
-Utils = {} -- luacheck: allow defined top
-local mod_gui = require("mod-gui")
-local GuiEvent = require("stdlib.event.gui")
+-- luacheck: globals GuiEvent Event
 
+Utils = {} -- luacheck: allow defined top
+
+local mod_gui = require("mod-gui")
 
 if not global.Utils then global.Utils = {} end
 if not global.Utils.floating_texts then global.Utils.floating_texts = {} end

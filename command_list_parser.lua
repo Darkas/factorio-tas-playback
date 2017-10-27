@@ -1,7 +1,4 @@
-local Event = require("stdlib/event/event")
-local LogUI = require("log_ui")
-local Utils = require("utility_functions")
-
+-- luacheck: globals LogUI Utils Event
 command_list_parser = {} --luacheck: allow defined top
 
 global.command_list_parser = global.command_list_parser or {}

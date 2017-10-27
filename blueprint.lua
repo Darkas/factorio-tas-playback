@@ -1,6 +1,6 @@
+-- luacheck: globals Utils
 
 Blueprint = {} --luacheck: allow defined top
-local Utils = require("utility_functions")
 local BPStorage
 pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
 

@@ -1,6 +1,4 @@
-local GuiEvent = require("stdlib/event/gui")
-local Event = require("stdlib/event/event")
-local Utils = require("utility_functions")
+-- luacheck: globals Utils GuiEvent Event
 
 
 local TableUI = {}
