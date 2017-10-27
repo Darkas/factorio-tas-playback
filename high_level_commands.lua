@@ -300,12 +300,16 @@ high_level_commands = {
 			
 			local stage_finished = true
 			
-			if command.data.ordered_build_commands[command.data.current_stage] then
-				for i, com in pairs(command.data.ordered_build_commands[command.data.current_stage]) do
-					if com.finished then
-						command.data.ordered_build_commands[command.data.current_stage][i] = nil
-					else
-						stage_finished = false
+			if command.data.current_stage == 0 then
+				stage_finished = true
+			else
+				if command.data.ordered_build_commands[command.data.current_stage] then
+					for i, com in pairs(command.data.ordered_build_commands[command.data.current_stage]) do
+						if com.finished then
+							command.data.ordered_build_commands[command.data.current_stage][i] = nil
+						else
+							stage_finished = false
+						end
 					end
 				end
 			end
@@ -397,7 +401,7 @@ high_level_commands = {
 			end
 			
 			command.data.ordered_build_commands = {}
-			command.data.current_stage = 1
+			command.data.current_stage = 0
 			
 			command.data.area = area
 
@@ -1465,7 +1469,7 @@ high_level_commands = {
 			[2] = "position",
 			[3] = {"nil", "string"},
 			[4] = {"nil", "number"},
-			[5] = {"nil", "number"},
+			inventory = {"nil", "number"},
 			type = {"nil", "string"},
 		},
 		execute = function(command, myplayer, tick)
@@ -1604,6 +1608,7 @@ high_level_commands = {
 			[3] = {"table", "string"},
 			[4] = {"table", "string", "nil"},
 			pass_arguments = {"nil", "table"},
+			table_arg = {"nil", "boolean"},
 		},
 		initialize = function(command, myplayer, tick)
 			if global.high_level_commands.simple_sequence_name == command.data.parent_command_group.name then
@@ -1626,9 +1631,17 @@ high_level_commands = {
 			if command.data.index + 2 > #command then
 				command_list_parser.set_finished(command)
 			else
+				local cmd_arg
+				
+				if command.table_arg then
+					cmd_arg = command[3][command.data.index]
+				else
+					cmd_arg = command[command.data.index + 2]
+				end
+				
 				local cmd = {
 					command[2],
-					command[command.data.index + 2],
+					cmd_arg,
 					name= "command-" .. command.data.index,
 					namespace=command.data.namespace,
 					parent_namespace=command.namespace,
