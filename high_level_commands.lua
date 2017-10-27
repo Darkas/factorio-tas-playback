@@ -3,6 +3,7 @@ local TAScommands = require("commands")
 local Utils = require("utility_functions")
 local MvRec = require("record_movement")
 local Event = require("stdlib/event/event")
+local LogUI = require("log_ui")
 local BPStorage
 pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
 
@@ -601,7 +602,7 @@ high_level_commands = {
 			local ret = {}
 			if count_crafts_all <= 0 then
 				if count_crafts_all < 0 then
-					Utils.errprint("Auto-take was not optimal: there were more resources in the entities than needed.")
+					LogUI.errprint("Auto-take was not optimal: there were more resources in the entities than needed.")
 				end
 
 				table.sort(entities, function(a, b) return a.crafting_progress > b.crafting_progress end)
@@ -651,7 +652,7 @@ high_level_commands = {
 			end
 			
 			local entity = {name=command[2], position=command[3], direction=command[4] or 0}
-			if not Utils.can_player_place(myplayer.surface, entity, myplayer) then
+			if not Utils.can_player_place(myplayer, entity) then
 				return "Something is in the way at " .. serpent.block(command[3]) .. " for " .. command[2] .. "."
 			end
 			
@@ -725,7 +726,7 @@ high_level_commands = {
 					command.data.crafts[#command.data.crafts + 1] = {name = name, count = count, need_intermediates = need_intermediates}
 				end
 			else
-				Utils.errprint("Craft: Wrong parameter type")
+				LogUI.errprint("Craft: Wrong parameter type")
 			end
 
 			command.data.craft_index = 1
@@ -767,7 +768,7 @@ high_level_commands = {
 		execute = empty,
 		default_priority = 100,
 		initialize = function (command, myplayer)
-			Utils.errprint(command[2])
+			LogUI.errprint(command[2])
 			command_list_parser.set_finished(command)
 		end,
 	},
@@ -955,7 +956,7 @@ high_level_commands = {
 				command.rect = Utils.collision_box(entity)
 				command[2] = {entity.position.x, entity.position.y}
 			else
-				Utils.errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
+				LogUI.errprint("There is no mineable thing at (" .. serpent.block(position) .. ")")
 				command.rect = {Utils.copy(position), Utils.copy(position)}
 			end
 		end,
@@ -982,7 +983,7 @@ high_level_commands = {
 			end
 
 			if not command.data.move_started then
-				Utils.debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
+				LogUI.debugprint("Auto move to: " .. serpent.block(command.data.target_pos))
 				command.data.move_started = true
 			end
 
@@ -1014,7 +1015,7 @@ high_level_commands = {
 				end
 
 				if not command.data.target_command then
-					Utils.errprint("move: There is no command named: " .. command[2])
+					LogUI.errprint("move: There is no command named: " .. command[2])
 					return "There is no command named: " .. command[2]
 				end
 
@@ -1458,7 +1459,7 @@ high_level_commands = {
 		initialize = function (command, myplayer)
 			if global.command_list_parser.finished_named_commands[command[2]]
 			or global.command_list_parser.finished_named_commands[command.namespace .. command[2]] then
-				Utils.errprint("Attempting to stop command that is already finished: " .. command[2])
+				LogUI.errprint("Attempting to stop command that is already finished: " .. command[2])
 				command_list_parser.set_finished(command)
 				return
 			end
@@ -1474,7 +1475,7 @@ high_level_commands = {
 				end
 			end
 
-			Utils.errprint("No command with the name " .. command[2] .. " found!")
+			LogUI.errprint("No command with the name " .. command[2] .. " found!")
 		end,
 	},
 
@@ -1528,7 +1529,7 @@ high_level_commands = {
 					command.data.inventory = invs[command.data.entity.type]
 
 					if not command.data.inventory then
-						Utils.errprint("No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type)
+						LogUI.errprint("No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type)
 						return "No inventory given and automatically determining the inventory failed! Entity type: " .. command.data.entity.type
 					end
 				end

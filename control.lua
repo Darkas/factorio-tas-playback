@@ -118,13 +118,13 @@ end
 -- This function initializes the run's clock and a few properties
 function init_run(myplayer_index)
 	set_run_logging_types()
-	Utils.debugprint("Initializing the run")
+	LogUI.debugprint("Initializing the run")
 	-- Examine the command queue for errors.
 	if not commandqueue then
-		Utils.errprint("The command queue is empty! No point in starting.")
+		LogUI.errprint("The command queue is empty! No point in starting.")
 		return
 	end
-	Utils.debugprint("Command queue size is " .. table_size(commandqueue)) --includes settings "field"
+	LogUI.debugprint("Command queue size is " .. table_size(commandqueue)) --includes settings "field"
 
 	if not commandqueue.settings then
 		Utils.errmessage("The settings for of the command queue don't exist.")
@@ -132,7 +132,7 @@ function init_run(myplayer_index)
 	end
 	-- Applying command queue settings
 	global.allowspeed = commandqueue.settings.allowspeed
-	Utils.debugprint("Changing the speed of the run through commands is " .. ((global.allowspeed and "allowed") or "forbidden") .. ".")
+	LogUI.debugprint("Changing the speed of the run through commands is " .. ((global.allowspeed and "allowed") or "forbidden") .. ".")
 	-- Initiating the game:
 	-- Prepare the players:
 	-- Prepare the runner
@@ -177,7 +177,7 @@ function init_run(myplayer_index)
 	end
 
 	global.start_tick = game.tick
-	Utils.debugprint("Starting tick is " .. global.start_tick)
+	LogUI.debugprint("Starting tick is " .. global.start_tick)
 
 	global.running = true
 end
@@ -216,10 +216,20 @@ Event.register(defines.events.on_tick, function()
 			error("The runner left.")
 		end
 		if commandqueue[tick] then
-			for _, command in pairs(commandqueue[tick]) do
-				if not TAScommands[command[1]] then error("TAS-Command does not exist: " .. command[1]) end
-				if not command.already_executed then
-					TAScommands[command[1]](command, myplayer)
+			local current_commands = commandqueue[tick]
+			if current_commands then
+				if type(current_commands[1]) == "string" then
+					local command = commandqueue[tick]
+					if not command.already_executed then
+						TAScommands[command[1]](command, myplayer)
+					end
+				else
+					for k, command in pairs(current_commands) do
+						if not TAScommands[command[1]] then error("TAS-Command does not exist: " .. command[1]) end
+						if not command.already_executed then
+							TAScommands[command[1]](command, myplayer)
+						end
+					end
 				end
 			end
 		end

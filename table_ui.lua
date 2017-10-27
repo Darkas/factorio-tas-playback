@@ -14,7 +14,7 @@ Event.register(defines.events.on_tick, function()
     end
 end)
 
-
+-- The table will be saved in the global table! 
 function TableUI.add_table(name, t)
     global.TableUI.the_table = global.TableUI.the_table or {}
     global.TableUI.the_table[name] = t
@@ -38,7 +38,8 @@ function TableUI.create(player)
 	scroll_pane.style.minimal_height = 800
     scroll_pane.style.minimal_width = 800
     
-    Utils.make_hide_button(player, frame, false, false, "Table Dbg")
+    Utils.make_hide_button(player, frame, true, "item/iron-plate")
+    frame.style.visible = false
 end
 
 function TableUI.get_line(player, line_index)
