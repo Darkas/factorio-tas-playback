@@ -47,7 +47,7 @@ TAScommands["mine"] = function(tokens, myplayer)
     end
 
     if not position or hasdecimals then
-        global.minestate = position
+        global.minestate = Utils.copy(position)
     else
         global.minestate = {position[1] + 0.5, position[2] + 0.5}
     end

@@ -766,11 +766,10 @@ local function button_handler(event)
 	-- local player = game.players[event.player_index]
 	local element = event.element
 	local button_data = global.Utils.hide_buttons[event.player_index][element.name]
-	button_data.show = not button_data.show
-	button_data.element.style.visible = button_data.show
+	button_data.element.style.visible = not button_data.element.style.visible
 end
 
-function Utils.make_hide_button(player, gui_element, show, is_sprite, text, parent, style)
+function Utils.make_hide_button(player, gui_element, is_sprite, text, parent, style)
 	global.Utils.hide_buttons = global.Utils.hide_buttons or {}
 	global.Utils.hide_buttons[player.index] = global.Utils.hide_buttons[player.index] or {}
 
@@ -785,11 +784,8 @@ function Utils.make_hide_button(player, gui_element, show, is_sprite, text, pare
 	button.style.visible = true
 	global.Utils.hide_buttons[player.index][name] = {
 		element = gui_element,
-		show = show,
 		button = button,
 	}
-
-	gui_element.style.visible = show
 
 	GuiEvent.on_click(name, button_handler)
 end

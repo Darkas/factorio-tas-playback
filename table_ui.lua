@@ -38,7 +38,8 @@ function TableUI.create(player)
 	scroll_pane.style.minimal_height = 800
     scroll_pane.style.minimal_width = 800
     
-    Utils.make_hide_button(player, frame, false, true, "item/iron-plate")
+    Utils.make_hide_button(player, frame, true, "item/iron-plate")
+    frame.style.visible = false
 end
 
 function TableUI.get_line(player, line_index)

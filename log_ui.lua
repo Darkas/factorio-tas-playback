@@ -121,7 +121,8 @@ function LogUI.update_log_ui(player)
 					visible_types[log_type] = true
 				end
 			else
-				type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=not global.log_data.log_type_settings[log_type].default_hide}
+				local checkbox = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=not global.log_data.log_type_settings[log_type].default_hide}
+				checkbox.style.top_padding = 3
 				type_flow.add{type="label", style="label_style", name=log_type .. "_text", caption=log_type}
 			end
 		end
@@ -200,7 +201,8 @@ function LogUI.create_log_ui(player)
 	end
 	frame.add{type="flow", name="type_flow", style="flow_style", direction="horizontal"}
 
-	Utils.make_hide_button(player, frame, true, true, "virtual-signal/signal-L")
+	Utils.make_hide_button(player, frame, true, "virtual-signal/signal-L")
+	frame.style.visible = true
 end
 
 

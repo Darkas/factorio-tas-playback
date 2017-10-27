@@ -116,7 +116,7 @@ function CmdUI.create(player)
 		label.style.bottom_padding = 0
 	end
 
-	Utils.make_hide_button(player, frame, true, true, "virtual-signal/signal-C")
+	Utils.make_hide_button(player, frame, true, "virtual-signal/signal-C")
 end
 
 
