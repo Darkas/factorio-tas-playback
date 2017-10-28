@@ -86,7 +86,7 @@ high_level_commands = {
 			min = {"nil", "number"},
 			skip_coal_drills = "boolean",
 			type = {"nil", "string"},
-			pos = {"nil", "position"}
+			pos = {"nil", "position", "entity-position"}
 		},
 		execute = HLC_Utils.empty,
 		spawn_commands = function(command, myplayer, tick)
@@ -259,28 +259,25 @@ high_level_commands = {
 	["craft-build"] = {
 		type_signature = {
 			[2] = "string",
-			[3] = "position",
+			[3] = {"position", "entity-position"},
 			[4] = {"nil", "number"},
 		},
-		default_priority = 5,
+		default_priority = 100,
 		execute = HLC_Utils.empty,
-		executable = function (command)
-			if command.data.build_command then
-				if command.data.build_command.finished then
+		spawn_commands = function (command, myplayer, tick)
+			if not command.data.spawned then
+				local x, y = Utils.get_coordinates(command[3])
+				local name = "craftbuild_build_{" .. x .. ", " .. y .. "}"
+				command.data.build_command = {"build", command[2], command[3], command[4], name=name}
+				command.data.spawned = true
+
+				return {{"craft", command[2], 1}, command.data.build_command}
+			else
+				if not command.data.build_command or command.data.build_command.finished then
 					command_list_parser.set_finished(command)
 				end
-
-				return "craft-build is never executable"
+				return
 			end
-
-			return ""
-		end,
-		spawn_commands = function (command, myplayer, tick)
-			local x, y = Utils.get_coordinates(command[3])
-			local name = "craftbuild_build_{" .. x .. ", " .. y .. "}"
-			command.data.build_command = {"build", command[2], command[3], command[4], name=name}
-
-			return {{"craft", command[2], 1}, command.data.build_command}
 		end,
 	},
 
@@ -309,7 +306,7 @@ high_level_commands = {
 
 	["entity-interaction"] = {
 		type_signature = {
-			[2] = "position",
+			[2] = {"position", "entity-position"},
 		},
 		execute = HLC_Utils.empty,
 		executable = function (command, myplayer)
@@ -440,7 +437,9 @@ for _, command in pairs(high_level_commands) do
 	if command.type_signature then
 		setmetatable(command.type_signature, {__index = command_list_parser.generic_cmd_signature})
 	end
-	setmetatable(command, {__index = defaults})
+	if not getmetatable(command) then
+		setmetatable(command, {__index = defaults})
+	end
 end
 
 return high_level_commands

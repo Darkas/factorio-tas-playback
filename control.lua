@@ -374,7 +374,7 @@ commands.add_command("inspectqueue", "Inspect the command queue via UI.", functi
 end)
 
 commands.add_command("inspectcmds", "Inspect the command set via UI.", function()
-	TableUI.add_table("command queue", global.command_list_parser.current_command_set)
+	TableUI.add_table("cmd set", global.command_list_parser.current_command_set)
 end)
 
 commands.add_command("exportqueue", "Export the command queue to file.", function(event)

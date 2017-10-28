@@ -122,6 +122,10 @@ function command_list_parser.check_type(command)
 		for _, t in pairs(types) do
 			if t == "position" and Utils.is_position(value) then
 				return true
+			elseif t == "entity-position" and Utils.is_entity_position(value) then
+				return true
+			elseif t == "rect" and Utils.is_rect(value) then
+				return true
 			elseif t == "boolean" then
 				return value == true or value == false or value == nil
 			elseif type(value) == t then

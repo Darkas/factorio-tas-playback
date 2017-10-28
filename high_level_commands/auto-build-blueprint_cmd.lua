@@ -106,7 +106,7 @@ return { ["auto-build-blueprint"] = {
         {
             [2] = "string",
             [3] = {"nil", "position"},
-            area = {"nil", "table"},
+            area = {"nil", "rect"},
             rotation = {"nil", "number"},
             set_on_leaving_range = "boolean",
             show_ghosts = "boolean",

@@ -41,9 +41,44 @@ function Utils.table_keys(t)
 	return keys
 end
 
-function Utils.is_position(v)
-	return type(v) == "table" and type(v[1] or v.x) == "number" and type(v[2] or v.y) == "number" and not v[3]
+function Utils.is_position(arg)
+	if not type(arg) == "table" then return false end
+	local x = false 
+	local y = false
+	for k, v in pairs(arg) do
+		if (k == 1 or k == "x") and type(v) == "number" then x = true
+		elseif (k == 2 or k == "y") and type(v) == "number" then y = true
+		else return false end
+	end
+	return x and y
 end
+
+function Utils.is_entity_position(arg)
+	if not type(arg) == "table" then return false end
+	local x = false 
+	local y = false
+	for k, v in pairs(arg) do
+		if (k == 1 or k == "x") and type(v) == "number" then x = true
+		elseif (k == 2 or k == "y") and type(v) == "number" then y = true
+		elseif not k == "entity" then return false
+		end
+	end
+	return x and y
+end
+
+function Utils.is_rect(arg)
+	if not type(arg) == "table" then return false end
+	local l_t = false
+	local r_b = false
+	for k, v in pairs(arg) do
+		if (k == 1 or k == "left_top") and Utils.is_position(v) then l_t = true
+		elseif (k == 2 or k == "right_top") and Utils.is_position(v) then r_b = true
+		else return false
+		end
+	end
+	return l_t and r_b
+end
+
 
 -- Taken from https://stackoverflow.com/questions/640642/how-do-you-copy-a-lua-table-by-value
 function Utils.copy(obj, seen)

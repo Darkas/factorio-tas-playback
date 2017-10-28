@@ -5,7 +5,7 @@
 
 local move_cmd = {
     type_signature = {
-        [2] = {"string", "position"},
+        [2] = {"string", "position", "entity-position"},
     },
     execute = function (command, myplayer, tick)
         if (command.data.move_to_command and Utils.in_range(command.data.target_command, myplayer)) or (command.data.move_to_entity and Utils.in_range(command, myplayer)) then
