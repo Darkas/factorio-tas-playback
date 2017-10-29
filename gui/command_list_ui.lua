@@ -2,6 +2,8 @@ local mod_gui = require("mod-gui")
 
 -- luacheck: globals Utils GuiEvent
 
+if not global.system.enable_high_level_commands then return end
+
 local NUM_LINES = 40
 
 local passive_commands = {

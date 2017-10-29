@@ -66,7 +66,7 @@ end
 
 function HLC_Utils.strip_command(command)
 	if command[6] then error("Command " .. command[1] .. " has more arguments than expected: !") end
-	return {command[1], command[2], command[3], command[4], command[5], already_executed = command.already_executed}
+	return {command[1], Utils.copy(command[2]), Utils.copy(command[3]), Utils.copy(command[4]), Utils.copy(command[5]), already_executed = command.already_executed}
 end
 
 function HLC_Utils.return_self_finished(command, myplayer, tick)
@@ -372,7 +372,6 @@ high_level_commands = {
 					end
 					if (not entry.take_spawned) and entry.entity.get_item_count(command[2]) > 0 then
 						local cmd = {"take", {entry.entity.position.x, entry.entity.position.y}, command[2], data={}, namespace=command.namespace}
-						
 						if high_level_commands["take"].executable(cmd, myplayer, tick) == "" then
 							entry.take_spawned = cmd
 							table.insert(command.data.spawn_queue, cmd)

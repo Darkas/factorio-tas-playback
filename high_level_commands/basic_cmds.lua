@@ -319,7 +319,7 @@ return {
 		default_priority = 5,
 		default_action_type = action_types.ui,
 		initialize = function (command, myplayer)
-			command.data.ui = command[2]
+			command.data.ui = Utils.copy(command[2])
 			command.distance = myplayer.build_distance
 			--command.rect = collision_box{name=command[2], position=copy(command[3])}
 		end,
@@ -384,7 +384,7 @@ return {
 		execute = function(command, myplayer, tick)
 			command_list_parser.set_finished(command)
 			
-			return {command[1], command[2], command.data.item, command.data.amount, command.data.inventory, action_type = command.action_type}
+			return {command[1], Utils.copy(command[2]), command.data.item, command.data.amount, command.data.inventory, action_type = command.action_type}
 		end,
 		executable = function(command, myplayer, tick)
 			if not command.data.entity then
@@ -451,7 +451,7 @@ return {
 				command.action_type = action_types.selection
 			else
 				command.action_type = action_types.ui
-				command.data.ui = command[2]
+				command.data.ui = Utils.copy(command[2])
 			end
 
 			if command.data.amount == 0 then

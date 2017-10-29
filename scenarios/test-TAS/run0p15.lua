@@ -25,13 +25,11 @@ commandqueue[3] = {{"move", "SW"}}
 commandqueue[209] = {{"move", "STOP"}}
 --Presently at: (-22.02343750,21.72656250)
 commandqueue[210] = {{"mine", {-23.3, 23}}}
-commandqueue[210] = {{"print", "Sensible run output!"}}
 commandqueue[260] = {{"mine", nil}}
 commandqueue[2] = {{"craft", "iron-axe", 1}}
 commandqueue[4] = {{"craft", "iron-gear-wheel", 2}}
 commandqueue[261] = {{"move", "W"}}
 commandqueue[299] = {{"move", "SW"}}
-commandqueue[300] = {{"print", "Sensible run output!"}}
 commandqueue[378] = {{"move", "STOP"}}
 --Presently at: (-35.99609375,30.05859375)
 commandqueue[340] = {{"build", "burner-mining-drill", {-35, 31}, defines.direction.west}}

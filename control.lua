@@ -36,26 +36,30 @@ else
 end
 
 
+global.system.enable_high_level_commands = commandqueue.settings.enable_high_level_commands
+
+
 require("silo-script")
 Event = require("stdlib/event/event")
 GuiEvent = require("stdlib/event/gui") -- luacheck: ignore
 
 Utils = require("utility_functions") 
 
-CmdUI = require("gui/command_list_ui")
 LogUI = require("gui/log_ui")
 TableUI = require("gui/table_ui")
 
-MvRec = require("record_movement")
-
 TAScommands = require("commands")
 
-require("command_list_parser")
+if global.system.enable_high_level_commands then 
+	CmdUI = require("gui/command_list_ui")
+	MvRec = require("record_movement")
+	require("command_list_parser")
+end
 
 local movement_records = {}
 
 pcall(function() movement_records = require("scenarios." .. global.system.tas_name .. ".movement_records") end)
-if movement_records then
+if global.system.enable_high_level_commands and movement_records then
 	MvRec.init(movement_records)
 end
 
@@ -88,15 +92,18 @@ local function set_run_logging_types()
 			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
 		end
 	)
-	LogUI.configure_log_type(
-		"command-not-executable",
-		{font_color = {r=1, g=0.5, b=0.5}, font = "default"},
-		50,
-		function(message)
-			return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
-		end,
-		true
-	)
+
+	if global.system.enable_high_level_commands then
+		LogUI.configure_log_type(
+			"command-not-executable",
+			{font_color = {r=1, g=0.5, b=0.5}, font = "default"},
+			50,
+			function(message)
+				return "[" .. message.tick - (global.start_tick or 0) .. "] " .. message.text
+			end,
+			true
+		)
+	end
 end
 
 
@@ -201,7 +208,7 @@ Event.register(defines.events.on_tick, function()
 	for _, player in pairs(game.players) do
 		if player.connected then
 			LogUI.update_log_ui(player)
-			if commandqueue then
+			if global.system.enable_high_level_commands then
 				CmdUI.update_command_list_ui(player, commandqueue.command_list)
 			end
 		end
@@ -212,10 +219,12 @@ Event.register(defines.events.on_tick, function()
 		local myplayer = global.myplayer
 
 		-- Check what commands are to be executed next
-		if commandqueue.settings.enable_high_level_commands then
+		if commandqueue.settings.enable_high_level_commands or commandqueue.settings.continuous_move_commands then
 			global.minestate = nil
 			global.walkstate = {walking = false}
+		end
 
+		if commandqueue.settings.enable_high_level_commands then
 			if not command_list_parser.evaluate_command_list(commandqueue["command_list"], commandqueue, myplayer, tick) then
 				end_of_input(myplayer)
 			end
@@ -227,17 +236,32 @@ Event.register(defines.events.on_tick, function()
 		if commandqueue[tick] then
 			local current_commands = commandqueue[tick]
 			if current_commands then
+				-- Check if this is a single command.
 				if type(current_commands[1]) == "string" then
 					local command = commandqueue[tick]
-					if not command.already_executed then
+					-- If a command is executed prematurely we dont want to execute it again. E.g. high-level-commands craft depends on this
+					-- But we need to clean up the flag because we want to be able to export the command queue.
+					if command.already_executed then
+						command.already_executed = nil
+					else
 						TAScommands[command[1]](command, myplayer)
 					end
 				else
-					for k, command in pairs(current_commands) do
+					local j = 1
+					local k = 1
+					local command = current_commands[k]
+					while command do
 						if not TAScommands[command[1]] then error("TAS-Command does not exist: " .. command[1]) end
-						if not command.already_executed then
+						if command.already_executed then
+							command.already_executed = nil
+							table.remove(current_commands, k)
+							table.insert(current_commands, j, command)
+							j = j + 1
+						else
 							TAScommands[command[1]](command, myplayer)
 						end
+						k = k + 1
+						command = current_commands[k]
 					end
 				end
 			end
@@ -303,8 +327,9 @@ script.on_init(function()
 	-- Global variables initialization
 	global.walkstate = {walking = false}
 	silo_script.init()
-	command_list_parser.init()
-	--init_logging()
+	if global.system.enable_high_level_commands then
+		command_list_parser.init()
+	end
 end)
 
 
@@ -368,13 +393,17 @@ commands.add_command("alert", "Alert when entering command group and set game sp
 	end
 end)
 
-commands.add_command("inspectqueue", "Inspect the command queue via UI.", function()
+commands.add_command("inspectlist", "Inspect the command list via UI.", function()
 	--local player = game.players[event.player_index]
-	TableUI.add_table("command queue", commandqueue.command_list)
+	TableUI.add_table("command list", commandqueue.command_list)
 end)
 
-commands.add_command("inspectcmds", "Inspect the command set via UI.", function()
+commands.add_command("inspectset", "Inspect the command set via UI.", function()
 	TableUI.add_table("cmd set", global.command_list_parser.current_command_set)
+end)
+
+commands.add_command("inspectqueue", "Inspect the command queue via UI.", function()
+	TableUI.add_table("command queue", commandqueue)
 end)
 
 commands.add_command("exportqueue", "Export the command queue to file.", function(event)
@@ -384,15 +413,26 @@ commands.add_command("exportqueue", "Export the command queue to file.", functio
 	else
 		name = name .. "_queue.lua"
 	end
+
+	-- Prepare command queue for export
 	local list = commandqueue.command_list
 	commandqueue.command_list= nil
+	local enable_high_level_commands = commandqueue.settings.enable_high_level_commands
+	commandqueue.settings.enable_high_level_commands = false
+
+	-- Serialize
 	local data = "return " .. serpent.block(commandqueue)
+
+	-- Return queue to original state
 	commandqueue.command_list = list
+	commandqueue.settings.enable_high_level_commands = enable_high_level_commands
+
+	-- Output.
 	game.write_file(name, data, false, event.player_index)
 end)
 
 commands.add_command("diff_queue", "Show the differences of the current commandqueue with the one given.", function()
-	if not global.comare then
+	if not global.compare then
 		game.print("The file queue_template.lua has not been found.")
 		return
 	end
