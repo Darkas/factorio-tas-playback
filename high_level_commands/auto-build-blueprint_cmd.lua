@@ -1,7 +1,12 @@
 -- auto-build-blueprint
 
--- luacheck: globals command_list_parser Utils high_level_commands LogUI Event TAScommands Blueprint BPStorage HLC_Utils
+-- luacheck: globals command_list_parser Utils high_level_commands LogUI Event TAScommands HLC_Utils
 -- luacheck: ignore 212
+
+local Blueprint = require("blueprint") 
+local BPStorage = nil 
+pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
+
 
 -- Blueprint Order Record
 local function record_bp_order_entity(event)

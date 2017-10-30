@@ -11,6 +11,7 @@
 - Mining adds 0.5 to both coordinates if they are integers. Remove that.
 - We really need a better naming scheme: queue, set, list - sounds like cs students in first year.
 - Move run control code out of control.lua
+- Make sure the commandqueue contains only changes to movement state, remove flag continuous_move_commands. Should halve the filesize of the cmdqueue.
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.

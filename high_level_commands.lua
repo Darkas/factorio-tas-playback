@@ -3,11 +3,7 @@
 -- luacheck: ignore 212
 
 
-Blueprint = require("blueprint") 
 local MvRec = require("record_movement")
-
-BPStorage = nil
-pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
 
 
 global.high_level_commands = global.high_level_commands or {
@@ -15,6 +11,7 @@ global.high_level_commands = global.high_level_commands or {
 	simple_sequence_index = 1,
 	move_sequence_index = 1,
 	command_requests = {},
+	variables = {},
 }
 
 if global.MvRec and global.MvRec.initialized then

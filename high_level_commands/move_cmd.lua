@@ -29,7 +29,51 @@ local move_cmd = {
 
         command.data.last_dir = command.data.move_dir
 
-        return {"move", command.data.move_dir}
+        local return_dir
+        
+        if global.high_level_commands.variables.move_opt_near_buildings and #command.data.move_dir == 2 then
+            local position = myplayer.position
+     
+            myplayer.teleport{position.x + 2, position.y + 2}
+
+            local delta = {0.1, 0.1}
+            local delta_horizontal = {0.14, 0}
+            local delta_vertical = {0, 0.14}
+
+            local dir2 = string.sub(command.data.move_dir, 2, 2)
+            if dir2 == "W" then
+                delta[1] = delta[1] * (-1)
+                delta_horizontal[1] = delta_horizontal[1] * (-1)
+            end
+            local dir1 = string.sub(command.data.move_dir, 1, 1)
+            if dir1 == "N" then
+                delta[2] = delta[2] * (-1)
+                delta_vertical[2] = delta_vertical[2] * (-1)
+            end
+
+            local targets = {{command.data.move_dir, delta}}
+            if Utils.sqdistance(Utils.translate(position, delta_horizontal), command.data.target_pos) < Utils.sqdistance(Utils.translate(position, delta_vertical), command.data.target_pos) then 
+                table.insert(targets, {dir2, delta_horizontal})
+                table.insert(targets, {dir1, delta_vertical})
+            else
+                table.insert(targets, {dir1, delta_vertical})
+                table.insert(targets, {dir2, delta_horizontal})
+            end
+
+            for _, v in pairs(targets) do
+                local direction, vector = table.unpack(v)
+                if myplayer.surface.can_place_entity{name="player", position=Utils.translate(position, vector), force="player"} then
+                    return_dir = direction
+                    break
+                end
+            end
+
+            if not return_dir then game.print("ERR") end
+
+            myplayer.teleport(position)
+        end
+
+        return {"move", return_dir or command.data.move_dir}
     end,
     executable = function(command, myplayer, tick)
         if command.data.move_to_entity then

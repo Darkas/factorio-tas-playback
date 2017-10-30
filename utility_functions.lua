@@ -221,6 +221,9 @@ end
 
 
 
+-- Geometry
+------------
+
 function Utils.translate(position, offset)
 	if not offset then return position end
 	local x, y = Utils.get_coordinates(position)
@@ -234,6 +237,12 @@ function Utils.sqdistance(pos1, pos2)
 	local x2, y2 = Utils.get_coordinates(pos2)
 
 	return (x1 - x2)^2 + (y1 - y2)^2
+end
+
+
+function Utils.square(center, radius)
+	local x, y = Utils.get_coordinates(center)
+	return {{x - radius, y - radius}, {x + radius, y + radius}}
 end
 
 -- works for name or entity or table {name=..., position=..., direction=...}
@@ -273,11 +282,13 @@ function Utils.collision_box(entity)
 	return ret_val
 end
 
+
 function Utils.in_range(command, myplayer)
 	return Utils.distance_from_rect(myplayer.position, command.rect) <= command.distance
 end
 
--- Say we wish to get within a certain distance of a square. This function Utils.outputs the closest point to the given position which is within range.
+
+-- Outputs the closest point we need to if we want to build e.g. an assembler
 -- Closest here is not quite according to euclidean distance since we can only walk axis-aligned or diagonally.
 function Utils.closest_point(square, circle_radius, position)
 	local ax, ay = Utils.get_coordinates(square[1] or square.left_top)

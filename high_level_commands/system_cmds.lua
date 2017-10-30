@@ -314,6 +314,18 @@ return {
 		end,
 		default_priority = 100,
 	},
+
+	["set-variable"] = {
+		type_signature = {
+			[2] = "string",
+			[3] = {"nil", "string", "number", "boolean", "position", "rect"},
+		},
+		execute = HLC_Utils.set_finished,
+		default_priority = 100,
+		spawn_commands = function(command, myplayer, tick)
+			global.high_level_commands.variables[command[2]] = Utils.copy(command[3])
+		end,
+	},
 	speed = {
 		type_signature = {
 			[2] = "number",
