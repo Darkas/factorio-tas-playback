@@ -100,10 +100,10 @@ local function record_bp_area_trigger(event)
 	Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, "Stage " .. Utils.printable(record.stage_index) .. " area trigger", true)
 end
 
-Event.register("bp_order_entity", record_bp_order_entity)
-Event.register("bp_order_group", record_bp_order_group)
-Event.register("bp_order_save", record_bp_order_save)
-Event.register("bp_area_trigger", record_bp_area_trigger)
+-- Event.register("bp_order_entity", record_bp_order_entity)
+-- Event.register("bp_order_group", record_bp_order_group)
+-- Event.register("bp_order_save", record_bp_order_save)
+-- Event.register("bp_area_trigger", record_bp_area_trigger)
 
 
 return { ["auto-build-blueprint"] = {
