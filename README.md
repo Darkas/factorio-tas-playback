@@ -186,7 +186,7 @@ Currently implemented commands:
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
 * `{"setvariable", "<name>", <value>}`: Set a variable that is used in another place in the run. See section variables.
 * `{"sequence", {cmd1, cmd2}, pass_arguments={...}}`: Add the commands to the current command set, in order, only adding one after the previous is completed.
-* `{"simple-sequence", "<command>", {<x1>, <y1>}, ... , pass_arguments={k1=v1, k2=v2 ...}`: Execute the given command at the locations in the order as given and walk to those locations in between executions. All arguments in the pass_arguments table will be added to each command. Example: `{"simple-sequence", "mine", {0, 1}, {5, -4}, pass_arguments={[3]="tree"}}` mines two trees. Does currently not work with "build".
+* `{"simple-sequence", "<command>", {<x1>, <y1>}, ... , pass_arguments={k1=v1, k2=v2 ...}`: Execute the given command at the locations in the order as given and walk to those locations in between executions. All arguments in the pass_arguments table will be added to each command. Example: `{"simple-sequence", "mine", {0, 1}, {5, -4}, pass_arguments={[3]="tree"}}` mines two trees. Does currently not work with "build". If the sequence consists of tables, every table may give a name parameter, to set the name of its command (instead of a generic number), for example {0, 0, name="test"}.
 * `{"speed", <speed>}`: Sets the game speed.
 * `{"stop"}`: Does nothing.
 * `{"stop-command", "<name>"}`: Remove the named command from the working set. Name can be of the form "name" or "group_name.name", if no group name is specified it refers only to the current group.
