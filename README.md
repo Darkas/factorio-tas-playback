@@ -168,9 +168,11 @@ Currently implemented commands:
 * `{"craft", <item>, <count>, need_intermediates}`
 * `{"craft", {{<item>, <count>, need_intermediates = <bool> or <table>}, {<item>, <count>}, ...}, need_intermediates = <bool> or <table>}`: Executes craft commands in order. If `need_intermediates` is set, the craft will only be started if all (or the given, if it is a table) necessary intermediate products in the recipe are already available.
 * `{"craft-build", <entity>, {<X>, <Y>}, <facing direction>}`: Add a craft command for the entity, when that command is finished, add a build command.
+* `{"disable-cmd", "name"}`: Set a cmd to disabled.
 * `{"display-contents", <type>, inventory_type=<inventory>, update_frequency=<ticks>, verbose=<bool>}`: Displays the contents of all entities of the given type as a floating text over them. Sometimes the inventory type can be guessed, otherwise it has to be specified. If verbose is true, contents are displayed for each item, otherwise the total number of items in the inventory is displayed.
 * `{"display-warning" "<string>"}`: Display a warning string.
 * `{"entity-interaction", {<X>,<Y>}}`: This is just a pointer to an entity that can be used as a target for other commands, for example "auto-move-to-command"
+* `{"enable-cmd", "name"}`: Set a cmd to enabled.
 * `{"freeze-daytime"}`
 * `{"mine", {<X>,<Y>}, amount=<int>, type=<string>}`: The `type` param is the entity type of the mined entity - typically "resource", "tree"; instead of "simple-entity" the string "rock" can also be used here.
 * `{"move", {<X>,<Y>,entity=<bool>}}`: move to a position, walking diagonal first, without smart path-finding around entities. If entity is set to true, move in range of the entity at the given position.
@@ -182,6 +184,7 @@ Currently implemented commands:
 * `{"put", {<X>,<Y>}, "<item>", <amount>, <inventory>}`: Can infer amount and inventory from position and item.
 * `{"recipe", {<X>,<Y>}, <recipe>}`
 * `{"rotate", {<X>, <Y>}, "<direction>"}`
+* `{"setvariable", "<name>", <value>}`: Set a variable that is used in another place in the run. See section variables.
 * `{"sequence", {cmd1, cmd2}, pass_arguments={...}}`: Add the commands to the current command set, in order, only adding one after the previous is completed.
 * `{"simple-sequence", "<command>", {<x1>, <y1>}, ... , pass_arguments={k1=v1, k2=v2 ...}`: Execute the given command at the locations in the order as given and walk to those locations in between executions. All arguments in the pass_arguments table will be added to each command. Example: `{"simple-sequence", "mine", {0, 1}, {5, -4}, pass_arguments={[3]="tree"}}` mines two trees. Does currently not work with "build".
 * `{"speed", <speed>}`: Sets the game speed.
@@ -209,6 +212,7 @@ Currently implemented conditions:
 * `items_available = {"<name>", <count>}`: Execute only when the specified amount of items is in inventory.
 * `items_total = {"<name>", <count>, pos={<x>, <y>}}`: Execute only when the specified amount of items is in player inventory plus optionally the entity at the given position if `pos` is set, or plus the other entity's inventory if the command is "take").
 * `command_finished = "<name>"`: Name of command that needs to terminate before this one is executable.
+* `toggle = "<name>"`: can be set enabled or disabled with a corresponding set-variable command.
 
 
 To be implemented:

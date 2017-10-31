@@ -132,11 +132,26 @@ function Utils.get_minimum_index(list, lessthan_func)
 	return index, min_value
 end
 
-function Utils.concat_tables(table1, table2)
+function Utils.concat_lists(table1, table2)
 	for i = 1, #table2 do
-		table1[#table1+1] = table2[i]
+		table1[#table1+i] = table2[i]
 	end
 	return table1
+end
+
+function Utils.merge_tables_inplace(table1, table2)
+	for k, v in pairs(table2) do
+		table1[k] = v
+	end
+	return table1
+end
+
+function Utils.merge_tables(table1, table2)
+	local t = Utils.copy(table1)
+	for k, v in pairs(table2) do
+		t[k] = Utils.copy(v)
+	end
+	return t
 end
 
 

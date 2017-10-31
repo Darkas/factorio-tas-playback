@@ -4,6 +4,30 @@
 -- luacheck: globals strip_command return_self_finished action_types entities_with_inventory
 -- luacheck: ignore 212
 
+local function simple_set_command(name, key, value)
+	return {
+		type_signature = {
+			[2] = "string",
+			_no_conditions = true
+		},
+		execute = HLC_Utils.empty,
+		default_priority = 100,
+		initialize = function(command, myplayer)
+			local found
+			for _, cmd in pairs(global.command_list_parser.current_command_set) do
+				if cmd.name == command[2] or cmd.namespace .. cmd.name == command[2] then
+					cmd[key] = value
+					found = true
+					break
+				end
+			end
+
+			if not found then LogUI.errprint(name .. ": command " .. command[2] .. "not found.") end
+			command_list_parser.set_finished(command)
+		end
+	}
+end
+
 return {
 	alert = {
 		type_signature = {
@@ -18,6 +42,8 @@ return {
 			command_list_parser.set_finished(command)
 		end
 	},
+	["disable-cmd"] = simple_set_command("disable-cmd", "disabled", true),
+
 	["display-warning"] = {
 		type_signature = {
 			[2] = "string",
@@ -96,6 +122,8 @@ return {
 		end,
 	},
 
+	["enable-cmd"] = simple_set_command("enable-cmd", "disabled", false),
+
 	["enable-manual-walking"] = {
 		type_signature = {},
 		execute = return_self_finished,
@@ -167,6 +195,7 @@ return {
 	["stop-command"] = {
 		type_signature = {
 			[2] = "string",
+			_no_conditions = true,
 		},
 		execute = HLC_Utils.empty,
 		default_priority = 100,
@@ -319,10 +348,11 @@ return {
 		type_signature = {
 			[2] = "string",
 			[3] = {"nil", "string", "number", "boolean", "position", "rect"},
+			_no_conditions = true,
 		},
 		execute = HLC_Utils.set_finished,
 		default_priority = 100,
-		spawn_commands = function(command, myplayer, tick)
+		initialize = function(command, myplayer, tick)
 			global.high_level_commands.variables[command[2]] = Utils.copy(command[3])
 		end,
 	},

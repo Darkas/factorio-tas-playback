@@ -431,7 +431,13 @@ local defaults = {
 
 for _, command in pairs(high_level_commands) do
 	if command.type_signature then
-		setmetatable(command.type_signature, {__index = command_list_parser.generic_cmd_signature})
+		if command.type_signature._no_conditions then
+			command.type_signature._no_conditions = nil
+			setmetatable(command.type_signature, {__index = command_list_parser.no_cond_cmd_signature})
+		else
+			setmetatable(command.type_signature, {__index = command_list_parser.generic_cmd_signature})
+
+		end
 	end
 	if not getmetatable(command) then
 		setmetatable(command, {__index = defaults})
