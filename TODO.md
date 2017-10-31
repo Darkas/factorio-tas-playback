@@ -15,7 +15,6 @@
 - Typecheck for areas and for entity positions
 - Add the after_passed conditition, which allows a command to be executed after the collision box of the command has been entered (useful for build, almost the same as on_enting_area)
 - Implement the "set-variable" (also add, remove for tables) command to blacklist things from passive-take, auto-refuel etc. and other things.
-- When enable-manual-walking is set, also don't override the mining state.
 - Add a warning when recipe changes the recipe of an assembler that is currently crafting
 - Use the area of a blueprint as a way to refer to the blueprint order file instead of the name (maybe hash the area).
 - Mark non-passive commands that have started over 5 command groups ago as red and display its namespace.

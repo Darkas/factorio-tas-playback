@@ -268,14 +268,16 @@ Event.register(defines.events.on_tick, function()
 		end
 		if not global.enable_manual_walking then
 			myplayer.walking_state = global.walkstate
+			
+			myplayer.picking_state = myplayer.picking_state or global.pickstate
+			if not global.minestate then
+				myplayer.mining_state = {mining = false}
+			else
+				myplayer.update_selected_entity(global.minestate)
+				myplayer.mining_state = {mining = true, position = global.minestate}
+			end
 		end
-		myplayer.picking_state = myplayer.picking_state or global.pickstate
-		if not global.minestate then
-			myplayer.mining_state = {mining = false}
-		else
-			myplayer.update_selected_entity(global.minestate)
-			myplayer.mining_state = {mining = true, position = global.minestate}
-		end
+		
 		if tick == max_tick then
 			end_of_input(myplayer)
 		end
