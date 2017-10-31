@@ -68,8 +68,6 @@ local move_cmd = {
                 end
             end
 
-            if not return_dir then game.print("ERR") end
-
             myplayer.teleport(position)
         end
 

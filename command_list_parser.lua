@@ -1,4 +1,4 @@
--- luacheck: globals LogUI Utils Event
+-- luacheck: globals LogUI Utils Event high_level_commands
 command_list_parser = {} --luacheck: allow defined top
 
 global.command_list_parser = global.command_list_parser or {}
@@ -18,24 +18,31 @@ local max_ranges = {
 	["throw-grenade"] = 15,
 }
 
-command_list_parser.generic_cmd_signature = {
-	[1] = "string",
-	finished = "boolean",
+local generic_cmd_signature = {
+	-- Fields a command can have. The ones you'd set in a run file are:
+	-- [1], name, priority and any of the conditions
+	[1] = "string",  -- command type, e.g. "build", "mine", ...
+
+	finished = "boolean", 
 	disabled = "boolean",
 	tested = "boolean",
 
-	name = {"string", "nil"},
+	name = {"string", "nil"},  -- Used to refer to this command from other commands
 	namespace = "string",
 	data = "table",
 	action_type = "string",
 	spawned_by = "table",
 	parent_namespace = {"string", "nil"},
-	priority = {"number", "nil"},
+	toggle = {"string", "nil"},
+	priority = {"number", "nil"},  -- Used to control order of execution. Lower priority gets executed first because we're weird
 
 	rect = {"nil", "table"},
 	distance = {"nil", "number"},
+}
 
-	command_finished = {"string", "nil"},
+local condition_signatures = {
+	-- Conditions
+	command_finished = {"string", "nil"}, 
 	on_leaving_range = "boolean",
 	on_entering_range = "boolean",
 	on_entering_area = {"table", "nil"},
@@ -43,8 +50,10 @@ command_list_parser.generic_cmd_signature = {
 	on_relative_tick = {"table", "nil"},
 	items_available = {"table", "nil"},
 	items_total = {"table", "nil"},
-
 }
+
+command_list_parser.generic_cmd_signature = Utils.merge_tables(generic_cmd_signature, condition_signatures)
+command_list_parser.no_cond_cmd_signature = Utils.copy(generic_cmd_signature)
 
 require("high_level_commands")
 
@@ -458,6 +467,10 @@ end
 
 function command_list_parser.command_executable(command, myplayer, tick)
 	if command.finished or command.disabled then
+		return false
+	end
+
+	if command.toggle and not global.high_level_commands.variables[command.toggle] then
 		return false
 	end
 
