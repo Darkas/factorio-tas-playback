@@ -11,7 +11,12 @@
 - Mining adds 0.5 to both coordinates if they are integers. Remove that.
 - We really need a better naming scheme: queue, set, list - sounds like cs students in first year.
 - Move run control code out of control.lua
-- Make sure the commandqueue contains only changes to movement state, remove flag continuous_move_commands. Should halve the filesize of the cmdqueue.
+- Make sure the commandqueue contains only changes to movement state, mining state and picking state, remove flag continuous_move_commands. Should halve the filesize of the cmdqueue.
+- Typecheck for areas and for entity positions
+- Add the after_passed conditition, which allows a command to be executed after the collision box of the command has been entered (useful for build)
+- Implement the "set-variable" (also add, remove for tables) command to blacklist things from passive-take, auto-refuel etc. and other things.
+- When enable-manual-walking is set, also don't override the mining state.
+- Add a name parameter to simple-sequence (a.k.a. {"simple-sequence", "move", {0,0, name="a"}, {1,1, name="b"}, name="walk"}, to access these commands as walk.a and so on).
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.
@@ -28,3 +33,4 @@
 
 ## Fix-Later:
 - Sequence has a 1-tick delay
+- Move has a 1-tick delay
