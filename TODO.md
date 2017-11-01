@@ -11,7 +11,13 @@
 - Mining adds 0.5 to both coordinates if they are integers. Remove that.
 - We really need a better naming scheme: queue, set, list - sounds like cs students in first year.
 - Move run control code out of control.lua
-- Make sure the commandqueue contains only changes to movement state, remove flag continuous_move_commands. Should halve the filesize of the cmdqueue.
+- Make sure the commandqueue contains only changes to movement state, mining state and picking state, remove flag continuous_move_commands. Should halve the filesize of the cmdqueue.
+- Typecheck for areas and for entity positions
+- Add the after_passed conditition, which allows a command to be executed after the collision box of the command has been entered (useful for build, almost the same as on_enting_area)
+- Implement the "set-variable" (also add, remove for tables) command to blacklist things from passive-take, auto-refuel etc. and other things.
+- Add a warning when recipe changes the recipe of an assembler that is currently crafting
+- Use the area of a blueprint as a way to refer to the blueprint order file instead of the name (maybe hash the area).
+- Mark non-passive commands that have started over 5 command groups ago as red and display its namespace.
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.
@@ -28,3 +34,4 @@
 
 ## Fix-Later:
 - Sequence has a 1-tick delay
+- Move has a 1-tick delay

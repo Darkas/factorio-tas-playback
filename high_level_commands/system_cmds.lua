@@ -258,10 +258,21 @@ return {
 					cmd_arg = command[command.data.index + 2]
 				end
 				
+				local cmd_name
+				
+				if type(cmd_arg) == type({}) and cmd_arg.name then
+					cmd_name = cmd_arg.name
+					cmd_arg.name = nil
+				else
+					cmd_name = "command-" .. command.data.index
+				end
+				
+				command.data.prev_command = cmd_name
+				
 				local cmd = {
 					command[2],
 					cmd_arg,
-					name= "command-" .. command.data.index,
+					name=cmd_name,
 					namespace=command.data.namespace,
 					parent_namespace=command.namespace,
 				}
@@ -280,7 +291,7 @@ return {
 						cmd,
 						{
 							"move",
-							"command-" .. command.data.index,
+							cmd_name,
 							namespace = command.data.namespace,
 						}
 					}
@@ -288,10 +299,10 @@ return {
 			end
 		end,
 		executable = function(command, myplayer, tick)
-			if command.data.index == 0 or global.command_list_parser.finished_named_commands[command.data.namespace .. "command-" .. command.data.index] then
+			if not command.data.prev_command or global.command_list_parser.finished_named_commands[command.data.namespace .. command.data.prev_command] then
 				return ""
 			else
-				return "Waiting for command: command-" .. command.data.index
+				return "Waiting for command: " .. command.data.prev_command
 			end
 		end,
 		default_priority = 100,
