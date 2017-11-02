@@ -106,11 +106,15 @@ end
 
 local function blueprint_build_order_name(command)
 	local filename = command[2]
-	if command.name then 
-		filename = filename .. "_" .. command.name
+	if command.area then 
+		local function convert(n)
+			return string.gsub(Utils.printable(Utils.roundn(n, 1)), "%.", ",")
+		end
+		
+		filename = filename .. "_(" .. convert(command.area[1][1]) .. "_" .. convert(command.area[1][2]) .. ")_(" .. convert(command.area[2][1]) .. "_" .. convert(command.area[2][2]) .. ")"
 	end
 	
-	return "bp." .. filename .. "-build_order"
+	return "bp." .. filename .. "_build_order"
 end
 
 Event.register("bp_order_entity", record_bp_order_entity)
