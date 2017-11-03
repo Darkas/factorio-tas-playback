@@ -52,6 +52,8 @@ local condition_signatures = {
 	items_total = {"table", "nil"},
 }
 
+local required_files = {}
+
 command_list_parser.generic_cmd_signature = Utils.merge_tables(generic_cmd_signature, condition_signatures)
 command_list_parser.no_cond_cmd_signature = Utils.copy(generic_cmd_signature)
 
@@ -76,6 +78,38 @@ function command_list_parser.init()
 
 	global.command_list_parser.current_command_group_index = 0
 	global.command_list_parser.current_command_group_tick = nil
+end
+
+local function pre_parse_command(command, dir)
+	if high_level_commands[command[1]].get_children then
+		for _,cmd in pairs(high_level_commands[command[1]].get_children(command)) do
+			pre_parse_command(cmd, dir)
+		end
+	end
+	
+	if high_level_commands[command[1]].require then
+		for _,name in pairs(high_level_commands[command[1]].require(command)) do
+			pcall(function() required_files[name] = require(dir .. name) end)
+		end
+	end
+end
+
+function command_list_parser.pre_parse(command_list, dir)
+	required_files = {}
+	
+	local loading_point = global.command_list_parser.current_command_group_index or 1
+	
+	for i,group in pairs(command_list) do
+		if i >= loading_point then
+			for _,cmd in pairs(group.commands) do
+				pre_parse_command(cmd, dir)
+			end
+		end
+	end
+end
+
+function command_list_parser.get_file(name)
+	return required_files[name]
 end
 
 Event.register(defines.events.on_player_mined_entity, function(event)

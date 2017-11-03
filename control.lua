@@ -54,6 +54,8 @@ if global.system.enable_high_level_commands then
 	CmdUI = require("gui/command_list_ui")
 	MvRec = require("record_movement")
 	require("command_list_parser")
+	
+	command_list_parser.pre_parse(commandqueue.command_list, "scenarios." .. global.system.tas_name .. ".")
 end
 
 local movement_records = {}

@@ -119,6 +119,23 @@ local function record_bp_area_trigger(event)
 	Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, "Stage " .. Utils.printable(record.stage_index) .. " area trigger", true)
 end
 
+local function blueprint_name(command)
+	return "bp." .. command[2]
+end
+
+local function blueprint_build_order_name(command)
+	local filename = command[2]
+	if command.area then 
+		local function convert(n)
+			return string.gsub(Utils.printable(Utils.roundn(n, 1)), "%.", ",")
+		end
+		
+		filename = filename .. "_(" .. convert(command.area[1][1]) .. "_" .. convert(command.area[1][2]) .. ")_(" .. convert(command.area[2][1]) .. "_" .. convert(command.area[2][2]) .. ")"
+	end
+	
+	return "bp." .. filename .. "_build_order"
+end
+
 Event.register("bp_order_entity", record_bp_order_entity)
 -- Event.register("bp_order_group", record_bp_order_group)
 -- Event.register("bp_order_save", record_bp_order_save)
@@ -345,10 +362,10 @@ return { ["auto-build-blueprint"] = {
             local area = command.area
             local rotation = command.rotation or defines.direction.north
 
-            command.data.blueprint_data = Blueprint.load(name, offset, rotation, 9, area)
+            command.data.blueprint_data = Blueprint.load(blueprint_name(command), offset, rotation, 9, area)
             
             if not command.record_order then
-                command.data.blueprint_data.build_order = BPStorage.get_build_order(command)
+                command.data.blueprint_data.build_order = command_list_parser.get_file(blueprint_build_order_name(command))
             
                 if command.data.blueprint_data.build_order then
                     command.data.default_stage = command.data.blueprint_data.build_order.default_stage
@@ -365,7 +382,7 @@ return { ["auto-build-blueprint"] = {
                 local inv = chest.get_inventory(defines.inventory.chest)
                 inv.insert{name="blueprint", count=1}
                 local bp = inv[1]
-                local bp_data = Blueprint.get_raw_data(name)
+                local bp_data = Blueprint.get_raw_data(blueprint_name(command))
                 local x, y = Utils.get_coordinates(offset)
                 if command.data.area then
                     local entities = {}
@@ -382,6 +399,9 @@ return { ["auto-build-blueprint"] = {
                 bp.build_blueprint{surface=myplayer.surface, force=myplayer.force, position=off, force_build=true, direction=rotation}
                 chest.destroy()
             end
-        end
+        end,
+		require = function(command)
+			return {blueprint_name(command), blueprint_build_order_name(command)}
+		end
     }
 }

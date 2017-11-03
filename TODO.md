@@ -5,7 +5,6 @@
 - Redo movement logic. It's super costly at the moment.
 - Smarter movement
 - Make the global table available in the run file.
-- require blueprints automatically if the command list needs them
 - New type of move command: give a direction and walk in that direction until condition is satisfied
 - For the build_order editor, make buttons for Next/Previous group and save and a toggle if the default group should be set to 0
 - Mining adds 0.5 to both coordinates if they are integers. Remove that.
@@ -18,6 +17,7 @@
 - Add a warning when recipe changes the recipe of an assembler that is currently crafting
 - Use the area of a blueprint as a way to refer to the blueprint order file instead of the name (maybe hash the area).
 - Mark non-passive commands that have started over 5 command groups ago as red and display its namespace.
+- Passive take needs the runtime optimizations that auto-refuel already has.
 
 ## Low Priority:
 - Passive-take should get a position param - if set, only consider that entity.

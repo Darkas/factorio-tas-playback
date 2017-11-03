@@ -6,7 +6,7 @@ pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. 
 
 
 function Blueprint.get_raw_data(name)
-    return BPStorage.get_blueprint(name)
+    return command_list_parser.get_file(name)
 end
 
 

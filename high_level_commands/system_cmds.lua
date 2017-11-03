@@ -190,6 +190,9 @@ return {
 			return commands
 		end,
 		default_priority = 100,
+		get_children = function(command)
+			return command[2]
+		end
 	},
 
 	["stop-command"] = {
@@ -353,6 +356,9 @@ return {
 			end
 		end,
 		default_priority = 100,
+		get_children = function(command)
+			return command[2]
+		end
 	},
 
 	["set-variable"] = {
