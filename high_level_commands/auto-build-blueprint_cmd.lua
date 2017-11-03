@@ -43,13 +43,19 @@ local function record_bp_order_entity(event)
     local cmd = {
         bp_entity.build_command[1], bp_entity.build_command[2], bp_entity.build_command[3], bp_entity.build_command[4], bp_entity.build_command[5]
     }
-
-    record.entity_restore_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = { 
-        command = cmd, 
-        text_index = index, 
-        command_group = commandqueue.command_list[global.command_list_parser.current_command_group_index], 
-        recipe = bp_entity.recipe
-    }
+	
+    local key_str = Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)
+	
+	if not record.entity_restore_data[key_str] then
+		record.entity_restore_data[key_str] = {}
+	end
+	
+	local restore_data = record.entity_restore_data[key_str]
+	
+    restore_data.command = cmd
+	restore_data.text_index = index
+	restore_data.command_group = commandqueue.command_list[global.command_list_parser.current_command_group_index]
+	restore_data.recipe = bp_entity.recipe
 	
 	entity.destroy()
 end
@@ -91,6 +97,11 @@ local function record_bp_order_entity_remove(event)
     command_list_parser.add_command_to_current_set(cmd, player, restore_data.command_group)
     local ent = {name=cmd[2], position=cmd[3], direction=cmd[4], type=cmd[5], recipe=restore_data.recipe, build_command = cmd}
     Utils.Chunked.create_entry(bp_data.chunked_entities, bp_data.chunk_size, cmd[3], ent)
+	
+	if restore_data.area_group then
+		output_data.areas[restore_data.area_group] = nil
+		Utils.remove_floating_text(restore_data.area_text_index)
+	end
         
     record.entity_restore_data[key_str] = nil
 end
@@ -170,7 +181,18 @@ local function record_bp_area_trigger(event)
 	
 	output_data.areas[record.stage_index] = rect
 	
-	Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, "Stage " .. Utils.printable(record.stage_index) .. " area trigger", true)
+	local text_index = Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, "Stage " .. Utils.printable(record.stage_index) .. " area trigger", true)
+	
+    local key_str = Utils.roundn(entity.position.x, 1) .. "_" .. Utils.roundn(entity.position.y, 1)
+	
+	if not record.entity_restore_data[key_str] then
+		record.entity_restore_data[key_str] = {}
+	end
+	
+	local restore_data = record.entity_restore_data[key_str]
+	
+	restore_data.area_group = record.stage_index
+	restore_data.area_text_index = text_index
 end
 
 local function blueprint_name(command)
