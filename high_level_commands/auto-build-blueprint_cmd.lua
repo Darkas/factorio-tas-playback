@@ -174,7 +174,7 @@ local function record_bp_area_trigger(event)
 end
 
 local function blueprint_name(command)
-	return "bp." .. command[2]
+	return command[2]
 end
 
 local function blueprint_build_order_name(command)
@@ -187,7 +187,7 @@ local function blueprint_build_order_name(command)
 		filename = filename .. "_(" .. convert(command.area[1][1]) .. "_" .. convert(command.area[1][2]) .. ")_(" .. convert(command.area[2][1]) .. "_" .. convert(command.area[2][2]) .. ")"
 	end
 	
-	return "bp." .. filename .. "_build_order"
+	return filename .. "_build_order"
 end
 
 
@@ -422,7 +422,7 @@ return { ["auto-build-blueprint"] = {
             command.data.blueprint_data = Blueprint.load(blueprint_name(command), offset, rotation, 9, area)
             
             if not command.record_order then
-                command.data.blueprint_data.build_order = command_list_parser.get_file(blueprint_build_order_name(command))
+                command.data.blueprint_data.build_order = command_list_parser.get_file("bp." .. blueprint_build_order_name(command))
             
                 if command.data.blueprint_data.build_order then
                     command.data.default_stage = command.data.blueprint_data.build_order.default_stage
@@ -458,7 +458,7 @@ return { ["auto-build-blueprint"] = {
             end
         end,
 		require = function(command)
-			return {blueprint_name(command), blueprint_build_order_name(command)}
+			return {"bp." .. blueprint_name(command), "bp." .. blueprint_build_order_name(command)}
 		end
     }
 }
