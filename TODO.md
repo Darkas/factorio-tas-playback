@@ -13,6 +13,8 @@
 - Passive take needs the runtime optimizations that auto-refuel already has.
 - Passive-take should get a position param - if set, only consider that entity.
 - If the first parameter of a command is a table of valid commands, interpret that as a "parallel" command.
+- The build order ui can only save once.
+- If a build order already exists, load it into the build order ui.
 
 ## Debug features:
 - Log Craft Inactivity, unoptimal movement (UI alert), dump inventory into file
@@ -23,6 +25,7 @@
 - Simple-Sequence doesnt work with build-command
 - Desyncs in blueprint storage
 - Auto-refuel sometimes seems to ignore entities or something, but this is currently not critical.
+- Allow setting of the trigger area in the build order ui if the entity has been already built.
 
 ## Bugs & Caveats: 
 - Two auto-take cmds that take the same item are problematic!
