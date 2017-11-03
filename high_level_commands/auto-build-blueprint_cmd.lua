@@ -125,7 +125,7 @@ end
 
 local function record_bp_order_save(event)
 	local record = global.high_level_commands.bp_order_record
-	if not record or not record.stage_index or record.stage_index < 2 then 
+	if not record or not record.stage_index then 
 		game.print("Attempting to save Blueprint build order while nothing is recorded!") 
 		return
 	end
@@ -139,7 +139,7 @@ local function record_bp_order_save(event)
 	local data = "return " .. serpent.block(record.output_data)
 
 	game.print("Writing build order to file " .. filename .. ".lua")
-	game.write_file(filename .. ".lua", data, true)
+	game.write_file(filename .. ".lua", data, false)
 
 	global.high_level_commands.bp_order_record = nil
 end
