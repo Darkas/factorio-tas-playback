@@ -24,6 +24,8 @@ if not our_global.entity_recipe then our_global.entity_recipe = {} end
 --   System
 
 
+-- Some of these are taken from lualib.util
+
 
 -- Tables
 ----------
@@ -80,16 +82,57 @@ function Utils.is_rect(arg)
 end
 
 
--- Taken from https://stackoverflow.com/questions/640642/how-do-you-copy-a-lua-table-by-value
-function Utils.copy(obj, seen)
-  if type(obj) ~= 'table' then return obj end
-  if seen and seen[obj] then return seen[obj] end
-  local s = seen or {}
-  local res = setmetatable({}, getmetatable(obj))
-  s[obj] = res
-  for k, v in pairs(obj) do res[Utils.copy(k, s)] = Utils.copy(v, s) end
-  return res
+-- -- Taken from https://stackoverflow.com/questions/640642/how-do-you-copy-a-lua-table-by-value
+-- function Utils.copy(obj, seen)
+-- 	if type(obj) ~= 'table' then return obj end
+-- 	if seen and seen[obj] then return seen[obj] end
+-- 	local s = seen or {}
+-- 	local res = setmetatable({}, getmetatable(obj))
+-- 	s[obj] = res
+-- 	for k, v in pairs(obj) do res[Utils.copy(k, s)] = Utils.copy(v, s) end
+-- 	return res
+-- end
+
+-- Taken from lualib.util
+function Utils.copy(object)
+    local lookup_table = {}
+    local function _copy(object)
+        if type(object) ~= "table" then
+            return object
+        -- don't copy factorio rich objects
+        elseif object.__self then
+          return object
+        elseif lookup_table[object] then
+            return lookup_table[object]
+        end
+        local new_table = {}
+        lookup_table[object] = new_table
+        for index, value in pairs(object) do
+            new_table[_copy(index)] = _copy(value)
+        end
+        return setmetatable(new_table, getmetatable(object))
+    end
+    return _copy(object)
 end
+
+function Utils.compare_tables( tbl1, tbl2 )
+    for k, v in pairs( tbl1 ) do
+        if  type(v) == "table" and type(tbl2[k]) == "table" then
+            if not table.compare( v, tbl2[k] )  then return false end
+        else
+            if ( v ~= tbl2[k] ) then return false end
+        end
+    end
+    for k, v in pairs( tbl2 ) do
+        if type(v) == "table" and type(tbl1[k]) == "table" then
+            if not table.compare( v, tbl1[k] ) then return false end
+        else 
+            if v ~= tbl1[k] then return false end
+        end
+    end
+    return true
+end
+
 
 function Utils.has_value(table, element)
 	for _,v in pairs(table) do
@@ -158,6 +201,7 @@ end
 
 -- Maths and Geometry
 ----------------------
+
 
 function Utils.roundn(x, prec)
 	if not x then game.print(debug.traceback()); error("roundn called without valid parameter.") end
@@ -462,6 +506,36 @@ function Utils.namespace_prefix(name, command_group)
 	end
 end
 
+
+function format_number(amount, append_suffix)
+	local suffix = ""
+	if append_suffix then
+		local suffix_list = 
+		{
+			["T"] = 1000000000000,
+			["B"] = 1000000000,
+			["M"] = 1000000,
+			["k"] = 1000
+		}
+		for letter, limit in pairs (suffix_list) do
+			if math.abs(amount) >= limit then
+				amount = math.floor(amount/(limit/10))/10
+				suffix = letter
+				break
+			end
+		end
+	end
+	local formatted = amount
+	local k
+	while true do  
+		formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+		if (k==0) then
+			break
+		end
+	end
+	return formatted..suffix
+end
+  
 
 function Utils.string_to_position(data)
 	local _, _, x, y = string.find(data, "{(.*),(.*)}")
@@ -887,8 +961,23 @@ end
 -- System 
 ----------
 
--- Nice idea, didnt work in practice. 
+function is_module_available(name)
+	if package.loaded[name] then
+		return true
+	else
+		for _, searcher in ipairs(package.searchers or package.loaders) do
+			local loader = searcher(name)
+			if type(loader) == 'function' then
+				return true
+			end
+		end
+		return false
+	end
+end
 
+  
+
+-- Nice idea, didnt work in practice. 
 -- function Utils.on_load(f)
 -- 	global.Utils.on_load = global.Utils.on_load or {}
 -- 	table.insert(global.Utils.on_load, f)

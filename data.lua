@@ -17,13 +17,8 @@ data:extend{
 	},
 	{
 		type = "custom-input",
-		name = "bp_order_group",
+		name = "bp_order_entity_remove",
 		key_sequence = "SHIFT + J",
-	},
-	{
-		type = "custom-input",
-		name = "bp_order_save",
-		key_sequence = "CONTROL + J",
 	},
 	{
 		type = "custom-input",
