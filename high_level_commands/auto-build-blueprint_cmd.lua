@@ -442,7 +442,7 @@ return { ["auto-build-blueprint"] = {
                 command.data.blueprint_data.build_order = command_list_parser.get_file("bp." .. blueprint_build_order_name(command))
             
                 if command.data.blueprint_data.build_order then
-                    command.data.default_stage = command.data.blueprint_data.build_order.default_stage
+                    command.data.default_stage = command.data.blueprint_data.build_order.default_stage or 0
                 end
             end
             

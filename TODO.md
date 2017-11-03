@@ -9,7 +9,6 @@
 - Passive take needs the runtime optimizations that auto-refuel already has.
 - Passive-take should get a position param - if set, only consider that entity.
 - If the first parameter of a command is a table of valid commands, interpret that as a "parallel" command.
-- The build order ui needs a way of setting the default group.
 - If a build order already exists, load it into the build order ui.
 
 ## Debug features:
@@ -24,6 +23,7 @@
 - Allow setting of the trigger area in the build order ui if the entity has been already built.
 - The build order ui can only save once.
 - Make the global table available in the run file.
+- The build order ui needs a better way of setting the default group.
 
 ## Bugs & Caveats: 
 - Two auto-take cmds that take the same item are problematic!
