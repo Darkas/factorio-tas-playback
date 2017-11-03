@@ -1,6 +1,6 @@
 -- auto-build-blueprint
 
--- luacheck: globals command_list_parser Utils high_level_commands LogUI Event TAScommands HLC_Utils
+-- luacheck: globals command_list_parser Utils high_level_commands LogUI Event TAScommands HLC_Utils GuiEvent
 -- luacheck: ignore 212
 
 local Blueprint = require("blueprint") 
@@ -13,7 +13,7 @@ local function record_bp_order_entity(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
 	local record = global.high_level_commands.bp_order_record
-	local record_data = global.high_level_commands.bp_order_record.record
+	local output_data = global.high_level_commands.bp_order_record.output_data
 	local player = game.players[event.player_index]
 	local entity = player.selected
 	
@@ -25,8 +25,8 @@ local function record_bp_order_entity(event)
 	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
 
 	local x, y = Utils.get_coordinates(entity.position)
-	record_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = record.stage_index
-	if not global.high_level_commands.bp_order_record.current_group then global.high_level_commands.bp_order_record.current_group = {} end
+    output_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = record.stage_index
+    record.stage_lengths[record.current_stage] = record.stage_lengths[record.current_stage] + 1
 	table.insert(global.high_level_commands.bp_order_record.current_group, bp_entity)
 
 	bp_entity.build_command.disabled = false
@@ -36,37 +36,56 @@ local function record_bp_order_entity(event)
 	entity.destroy()
 end
 
-local function record_bp_order_group(event)
+local function record_bp_order_entity_remove(event)
+    if not global.high_level_commands.bp_order_record then return end
+	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
+	local record = global.high_level_commands.bp_order_record
+	local output_data = global.high_level_commands.bp_order_record.output_data
+	local player = game.players[event.player_index]
+	local entity = player.selected
+end
+
+local function record_bp_order_next(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local record = global.high_level_commands.bp_order_record
-	local record_data = global.high_level_commands.bp_order_record.record
+    local output_data = global.high_level_commands.bp_order_record.output_data
+    local current_count = #record.stage_lengths[record.current_stage]
 	
 	if #global.high_level_commands.bp_order_record.current_group == 0 then
-		record_data.default_stage = record.stage_index
+		output_data.default_stage = record.stage_index
 		game.print("Blueprint record: Stage " .. record.stage_index .. " declared as default.")
 	else
-		game.print("Blueprint record: Stage " .. record.stage_index .. ": " .. #record.current_group .. " entities saved.")
+		game.print("Blueprint record: Stage " .. record.stage_index .. ": " .. current_count .. " entities saved.")
 	end
 
 	record.stage_index = record.stage_index + 1
+end
+
+local function record_bp_order_prev(event)
+	if not global.high_level_commands.bp_order_record then return end
+	local record = global.high_level_commands.bp_order_record
 	
-	record.current_group = {}
+	if #global.high_level_commands.bp_order_record.current_group ~= 0 then
+		game.print("Blueprint record: Stage " .. record.stage_index .. ": " .. #record.current_group .. " entities saved.")
+	end
+
+	record.stage_index = record.stage_index - 1
 end
 
 local function record_bp_order_save(event)
-	local record_data = global.high_level_commands.bp_order_record
-	if not record_data or not record_data.stage_index or record_data.stage_index < 2 then 
+	local record = global.high_level_commands.bp_order_record
+	if not record or not record.stage_index or record.stage_index < 2 then 
 		game.print("Attempting to save Blueprint build order while nothing is recorded!") 
 		return
 	end
 	local filename = "Blueprints/" .. global.high_level_commands.bp_order_record.blueprint_data.name
-	if record_data.command_name then 
-		filename = filename .. "_" .. record_data.command_name .. "-build_order"
+	if record.command_name then 
+		filename = filename .. "_" .. record.command_name .. "-build_order"
 	else
 		filename = filename .. "-build_order"	
 	end
 
-	local data = "return " .. serpent.block(global.high_level_commands.bp_order_record.record)
+	local data = "return " .. serpent.block(record.output_data)
 
 	game.print("Writing build order to file " .. filename .. ".lua")
 	game.write_file(filename .. ".lua", data, true)
@@ -78,7 +97,7 @@ local function record_bp_area_trigger(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
 	local record = global.high_level_commands.bp_order_record
-	local record_data = global.high_level_commands.bp_order_record.record
+	local output_data = global.high_level_commands.bp_order_record.output_data
 	local player = game.players[event.player_index]
 	local entity = player.selected
 	
@@ -89,21 +108,23 @@ local function record_bp_area_trigger(event)
 	
 	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
 	
-	if not record_data.areas then record_data.areas = {} end
+	if not output_data.areas then output_data.areas = {} end
 	
 	local rect = Utils.copy(game.entity_prototypes[entity.ghost_name].collision_box)
 	rect = Utils.rotate_rect(rect, Utils.rotation_stringtoint(entity.direction))
 	rect = {Utils.translate(rect[1], entity.position), Utils.translate(rect[2], entity.position)}
 	
-	record_data.areas[record.stage_index] = rect
+	output_data.areas[record.stage_index] = rect
 	
 	Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, "Stage " .. Utils.printable(record.stage_index) .. " area trigger", true)
 end
 
--- Event.register("bp_order_entity", record_bp_order_entity)
+Event.register("bp_order_entity", record_bp_order_entity)
 -- Event.register("bp_order_group", record_bp_order_group)
 -- Event.register("bp_order_save", record_bp_order_save)
--- Event.register("bp_area_trigger", record_bp_area_trigger)
+Event.register("bp_area_trigger", record_bp_area_trigger)
+GuiEvent.on_click("tas_playback_prev", record_bp_order_prev)
+GuiEvent.on_click("tas_playback_next", record_bp_order_next)
 
 
 return { ["auto-build-blueprint"] = {
@@ -150,9 +171,10 @@ return { ["auto-build-blueprint"] = {
                     global.high_level_commands.bp_order_record = {
                         command_name = command.name,
                         blueprint_data = blueprint,
-                        current_group = {},
                         stage_index = 1,
-                        record = {}
+                        output_data = {},
+                        stage_lengths = {},
+                        entity_data = {},
                     }
                 end
 
