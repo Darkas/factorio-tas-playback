@@ -8,6 +8,23 @@ local BPUI = require("gui.bp_order_ui")
 -- local BPStorage = nil 
 -- pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
 
+local function blueprint_name(command)
+	return command[2]
+end
+
+local function blueprint_build_order_name(command)
+	local filename = command[2]
+	if command.area then 
+		local function convert(n)
+			return string.gsub(Utils.printable(Utils.roundn(n, 1)), "%.", ",")
+		end
+		
+		filename = filename .. "_(" .. convert(command.area[1][1]) .. "_" .. convert(command.area[1][2]) .. ")_(" .. convert(command.area[2][1]) .. "_" .. convert(command.area[2][2]) .. ")"
+	end
+	
+	return filename .. "_build_order"
+end
+
 
 -- Blueprint Order Record
 local function record_bp_order_entity(event)
@@ -140,12 +157,7 @@ local function record_bp_order_save(event)
 		game.print("Attempting to save Blueprint build order while nothing is recorded!") 
 		return
 	end
-	local filename = "Blueprints/" .. global.high_level_commands.bp_order_record.blueprint_data.name
-	if record.command_name then 
-		filename = filename .. "_" .. record.command_name .. "-build_order"
-	else
-		filename = filename .. "-build_order"	
-	end
+	local filename = "Blueprints/" .. blueprint_build_order_name(global.high_level_commands.bp_order_record.command)
 
 	local data = "return " .. serpent.block(record.output_data)
 
@@ -193,23 +205,6 @@ local function record_bp_area_trigger(event)
 	
 	restore_data.area_group = record.stage_index
 	restore_data.area_text_index = text_index
-end
-
-local function blueprint_name(command)
-	return command[2]
-end
-
-local function blueprint_build_order_name(command)
-	local filename = command[2]
-	if command.area then 
-		local function convert(n)
-			return string.gsub(Utils.printable(Utils.roundn(n, 1)), "%.", ",")
-		end
-		
-		filename = filename .. "_(" .. convert(command.area[1][1]) .. "_" .. convert(command.area[1][2]) .. ")_(" .. convert(command.area[2][1]) .. "_" .. convert(command.area[2][2]) .. ")"
-	end
-	
-	return filename .. "_build_order"
 end
 
 
@@ -264,7 +259,7 @@ return { ["auto-build-blueprint"] = {
                     end
                     
                     global.high_level_commands.bp_order_record = {
-                        command_name = command.name,
+                        command = command,
                         blueprint_data = blueprint,
                         stage_index = 1,
                         output_data = {},

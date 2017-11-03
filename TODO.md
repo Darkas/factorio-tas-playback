@@ -1,10 +1,6 @@
-## TODO:
+## High Priority:
 - UI Option: Number of commands to show.
-- Redo movement logic. It's super costly at the moment.
-- Smarter movement
-- Make the global table available in the run file.
 - New type of move command: give a direction and walk in that direction until condition is satisfied
-- For the build_order editor, make buttons for Next/Previous group and save and a toggle if the default group should be set to 0
 - We really need a better naming scheme: queue, set, list - sounds like cs students in first year.
 - Move run control code out of control.lua
 - Make sure the commandqueue contains only changes to movement state, mining state and picking state, remove flag continuous_move_commands. Should halve the filesize of the cmdqueue.
@@ -13,7 +9,7 @@
 - Passive take needs the runtime optimizations that auto-refuel already has.
 - Passive-take should get a position param - if set, only consider that entity.
 - If the first parameter of a command is a table of valid commands, interpret that as a "parallel" command.
-- The build order ui can only save once.
+- The build order ui needs a way of setting the default group.
 - If a build order already exists, load it into the build order ui.
 
 ## Debug features:
@@ -26,6 +22,8 @@
 - Desyncs in blueprint storage
 - Auto-refuel sometimes seems to ignore entities or something, but this is currently not critical.
 - Allow setting of the trigger area in the build order ui if the entity has been already built.
+- The build order ui can only save once.
+- Make the global table available in the run file.
 
 ## Bugs & Caveats: 
 - Two auto-take cmds that take the same item are problematic!
@@ -39,3 +37,5 @@
 - Move has a 1-tick delay
 - Mining adds 0.5 to both coordinates if they are integers. Remove that.
 - Mining currently doesn't always prevent moving.
+- Redo movement logic. It's super costly at the moment.
+- Smarter movement
