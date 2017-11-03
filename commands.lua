@@ -326,7 +326,16 @@ TAScommands["recipe"] =
             "Setting recipe: Entity at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "} could not be selected."
         )
         return
-    end
+	end
+	if myplayer.selected.recipe and myplayer.selected.recipe.name == tokens[3] then
+		LogUI.errprint("Setting recipe: Entity at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "} already has the given recipe.")
+		return
+	end
+	if myplayer.selected.crafting_progress then
+		if myplayer.selected.crafting_progress > 0 then
+			LogUI.errprint("Setting recipe: Entity at position {" .. tokens[2][1] .. "," .. tokens[2][2] .. "} was still crafting something. Items have been lost.")
+		end
+	end
     local ent =
         myplayer.surface.create_entity {
         name = myplayer.selected.name,
