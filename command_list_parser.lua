@@ -78,6 +78,12 @@ function command_list_parser.init()
 
 	global.command_list_parser.current_command_group_index = 0
 	global.command_list_parser.current_command_group_tick = nil
+	
+	global.command_list_parser.current_move_state = {"move", "STOP"}
+	global.command_list_parser.current_mine_state = {"mine", nil}
+	global.command_list_parser.current_pick_state = {"pickup", false}
+	
+	global.command_list_parser.generated_queue = {}
 end
 
 local function pre_parse_command(command, dir)
@@ -452,9 +458,15 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 	end
 
 	local move_found = false
+	local mine_found = false
+	local pick_found = false
 	local moves = ""
+	
+	local i = 1
+	local command = commandqueue[tick][1]
+	local remove = false
 
-	for _,command in pairs(commandqueue[tick]) do
+	while command do
 		if command[1] == "move" then
 			moves = moves .. command[2] .. ", "
 			if move_found then
@@ -462,9 +474,59 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 				break
 			else
 				move_found = true
+				
+				if global.command_list_parser.current_move_state[2] == command[2] then
+					remove = true
+				else
+					global.command_list_parser.current_move_state[2] = command[2]
+				end
 			end
 		end
+		if command[1] == "mine" then
+			mine_found = true
+			
+			if serpent.block(global.command_list_parser.current_mine_state[2]) == serpent.block(command[2]) then
+				remove = true
+			else
+				global.command_list_parser.current_mine_state[2] = command[2]
+			end
+		end
+		if command[1] == "pickup" then
+			pick_found = true
+			
+			if global.command_list_parser.current_pick_state[2] == command[2] then
+				remove = true
+			else
+				global.command_list_parser.current_pick_state[2] = command[2]
+			end
+		end
+		
+		if remove then
+			table.remove(commandqueue[tick], i)
+		else
+			i = i + 1
+		end
+		
+		command = commandqueue[tick][i]
+		remove = false
 	end
+	
+	if not move_found and global.command_list_parser.current_move_state[2] ~= "STOP" then
+		table.insert(commandqueue[tick], {"move", "STOP"})
+		global.command_list_parser.current_move_state[2] = "STOP"
+	end
+	
+	if not mine_found and global.command_list_parser.current_mine_state[2] ~= nil then
+		table.insert(commandqueue[tick], {"mine", nil})
+		global.command_list_parser.current_mine_state[2] = nil
+	end
+	
+	if not pick_found and global.command_list_parser.current_pick_state[2] ~= false then
+		table.insert(commandqueue[tick], {"pickup", false})
+		global.command_list_parser.current_pick_state[2] = false
+	end
+	
+	global.command_list_parser.generated_queue[tick] = Utils.copy(commandqueue[tick])
 
 	return true
 end

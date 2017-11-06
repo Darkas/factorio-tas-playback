@@ -221,11 +221,6 @@ Event.register(defines.events.on_tick, function()
 		local myplayer = global.myplayer
 
 		-- Check what commands are to be executed next
-		if commandqueue.settings.enable_high_level_commands or commandqueue.settings.continuous_move_commands then
-			global.minestate = nil
-			global.walkstate = {walking = false}
-		end
-
 		if commandqueue.settings.enable_high_level_commands then
 			if not command_list_parser.evaluate_command_list(commandqueue["command_list"], commandqueue, myplayer, tick) then
 				end_of_input(myplayer)
@@ -425,7 +420,13 @@ commands.add_command("exportqueue", "Export the command queue to file.", functio
 	commandqueue.settings.enable_high_level_commands = false
 
 	-- Serialize
-	local data = "return " .. serpent.block(commandqueue)
+	local data
+	
+	if global.command_list_parser.generated_queue then
+		data = "return " .. serpent.block(global.command_list_parser.generated_queue)
+	else
+		data = "return " .. serpent.block(commandqueue)
+	end
 
 	-- Return queue to original state
 	commandqueue.command_list = list

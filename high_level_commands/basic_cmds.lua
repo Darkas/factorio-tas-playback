@@ -56,6 +56,11 @@ return {
         execute = function(command, myplayer)
             local craft = command.data.crafts[command.data.craft_index]
             local return_commands = {}
+			
+			if not craft.count then
+				craft.count = 1
+				LogUI.errprint("Craft: Amount not set!")
+			end
 
             while Utils.can_craft(craft, myplayer, craft.need_intermediates) do
                 local cmd = {"craft", craft.name, 1, already_executed = true}
@@ -189,7 +194,7 @@ return {
 				command_list_parser.set_finished(command)
 			end
 			
-			return HLC_Utils.strip_command(command)
+			return {"pickup", true}
 		end,
 		default_priority = 100,
 	},

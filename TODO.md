@@ -3,7 +3,6 @@
 - New type of move command: give a direction and walk in that direction until condition is satisfied
 - We really need a better naming scheme: queue, set, list - sounds like cs students in first year.
 - Move run control code out of control.lua
-- Make sure the commandqueue contains only changes to movement state, mining state and picking state, remove flag continuous_move_commands. Should halve the filesize of the cmdqueue.
 - Add the after_passed conditition, which allows a command to be executed after the collision box of the command has been entered (useful for build, almost the same as on_enting_area)
 - Implement the "set-variable" (also add, remove for tables) command to blacklist things from passive-take, auto-refuel etc. and other things.
 - Passive take needs the runtime optimizations that auto-refuel already has.
