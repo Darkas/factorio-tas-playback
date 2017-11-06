@@ -83,7 +83,7 @@ function command_list_parser.init()
 	global.command_list_parser.current_mine_state = {"mine", nil}
 	global.command_list_parser.current_pick_state = {"pickup", false}
 	
-	global.command_list_parser.generated_queue = {}
+	global.command_list_parser.generated_queue = ""
 end
 
 local function pre_parse_command(command, dir)
@@ -526,7 +526,9 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		global.command_list_parser.current_pick_state[2] = false
 	end
 	
-	global.command_list_parser.generated_queue[tick] = Utils.copy(commandqueue[tick])
+	if commandqueue[tick][1] then
+		global.command_list_parser.generated_queue = global.command_list_parser.generated_queue .. "[" .. tick .. "]=" .. serpent.block(commandqueue[tick]) .. ","
+	end
 
 	return true
 end

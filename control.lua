@@ -420,12 +420,12 @@ commands.add_command("exportqueue", "Export the command queue to file.", functio
 	commandqueue.settings.enable_high_level_commands = false
 
 	-- Serialize
-	local data
+	local data = "return "
 	
 	if global.command_list_parser.generated_queue then
-		data = "return " .. serpent.block(global.command_list_parser.generated_queue)
+		data = data .. "{" .. global.command_list_parser.generated_queue .. "}"
 	else
-		data = "return " .. serpent.block(commandqueue)
+		data = data .. serpent.block(commandqueue)
 	end
 
 	-- Return queue to original state
