@@ -61,9 +61,14 @@ end
 function HLC_Utils.empty()
 end
 
-function HLC_Utils.strip_command(command)
+function HLC_Utils.strip_command(command, remove_executed_flag)
 	if command[6] then error("Command " .. command[1] .. " has more arguments than expected: !") end
-	return {command[1], Utils.copy(command[2]), Utils.copy(command[3]), Utils.copy(command[4]), Utils.copy(command[5]), already_executed = command.already_executed}
+	
+	if remove_executed_flag then
+		return {command[1], Utils.copy(command[2]), Utils.copy(command[3]), Utils.copy(command[4]), Utils.copy(command[5])}
+	else
+		return {command[1], Utils.copy(command[2]), Utils.copy(command[3]), Utils.copy(command[4]), Utils.copy(command[5]), already_executed = command.already_executed}
+	end
 end
 
 function HLC_Utils.return_self_finished(command, myplayer, tick)

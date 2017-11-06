@@ -526,8 +526,14 @@ function command_list_parser.evaluate_command_list(command_list, commandqueue, m
 		global.command_list_parser.current_pick_state[2] = false
 	end
 	
-	if commandqueue[tick][1] then
-		global.command_list_parser.generated_queue = global.command_list_parser.generated_queue .. "[" .. tick .. "]=" .. serpent.block(commandqueue[tick]) .. ","
+	local command_string = ""
+	
+	for _,cmd in pairs(commandqueue[tick]) do
+		command_string = command_string .. serpent.line(HLC_Utils.strip_command(cmd, true)) .. ","
+	end
+	
+	if command_string ~= "" then
+		global.command_list_parser.generated_queue = global.command_list_parser.generated_queue .. "[" .. tick .. "]={" .. string.sub(command_string, 1, -2) .. "},\n"
 	end
 
 	return true

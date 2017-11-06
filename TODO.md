@@ -23,6 +23,7 @@
 - The build order ui can only save once.
 - Make the global table available in the run file.
 - The build order ui needs a better way of setting the default group.
+- Remove the phantom commands.
 
 ## Bugs & Caveats: 
 - Two auto-take cmds that take the same item are problematic!
