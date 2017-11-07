@@ -31,11 +31,14 @@ function BPUI.update(player)
     local frame = flow.bp_order_ui_frame
     if not frame.style.visible then return end
 
-    local bp_order_data = global.high_level_commands.bp_order_record
-    if not bp_order_data then frame.style.visible = false return end
-
     local label = flow.bp_order_ui_frame.label
-    local output = "Stage: " .. bp_order_data.stage_index .. ", Saved Entities: " .. bp_order_data.stage_lengths[bp_order_data.stage_index]
+    local bp_order_data = global.high_level_commands.bp_order_record
+    local output
+    if bp_order_data then 
+        output = "Stage: " .. bp_order_data.stage_index .. ", Saved Entities: " .. bp_order_data.stage_lengths[bp_order_data.stage_index]
+    else
+        output = "No build order data available!"
+    end
     label.caption = output
 end
 

@@ -304,6 +304,14 @@ function Utils.square(center, radius)
 	return {{x - radius, y - radius}, {x + radius, y + radius}}
 end
 
+function Utils.center(rect)
+	local l_u = rect[1] or rect.left_top
+	local r_l = rect[2] or rect.right_bottom
+	local x1, y1 = Utils.get_coordinates(l_u)
+	local x2, y2 = Utils.get_coordinates(r_l)
+	return {(x1 + x2) / 2, (y1 + y2) / 2}
+end
+
 -- works for name or entity or table {name=..., position=..., direction=...}
 global.Utils.collision_box_cache = {}
 function Utils.collision_box(entity)
@@ -751,7 +759,8 @@ function Utils.Chunked.get_entries_close(chunked_data, chunk_size, position)
 end
 
 function Utils.Chunked.key_from_position(position, chunk_size)
-    if not position then game.print(debug.traceback()) end
+	if not position or not chunk_size then game.print(debug.traceback()) end
+	if not position.x and not position[1] then game.print(debug.traceback()) end
     return math.floor((position.x or position[1]) / chunk_size) .. "_" .. math.floor((position.y or position[2]) / chunk_size)
 end
 

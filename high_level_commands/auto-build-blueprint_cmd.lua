@@ -26,37 +26,31 @@ local function blueprint_build_order_name(command)
 end
 
 
--- Blueprint Order Record
-local function record_bp_order_entity(event)
-	if not global.high_level_commands.bp_order_record then return end
+local function add_entity_to_build_order(player, position, stage_index)
+    if not global.high_level_commands.bp_order_record then return end
 	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
 	local record = global.high_level_commands.bp_order_record
+    if not stage_index then stage_index = record.stage_index end
 	local output_data = global.high_level_commands.bp_order_record.output_data
-	local player = game.players[event.player_index]
-	local entity = player.selected
 	
-	if not entity or entity.type ~= "entity-ghost" then 
-		game.print("Add: No entity selected!")
-		return 
-	end
 	
-    local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
+    local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, position)
     if not bp_entity then
         game.print("Add: Entity not part of current blueprint!")
         return
     end
 
-	local x, y = Utils.get_coordinates(entity.position)
-    output_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = record.stage_index
-    if not record.stage_lengths[record.stage_index] then 
-        record.stage_lengths[record.stage_index] = 1 
+	local x, y = Utils.get_coordinates(position)
+    output_data[Utils.roundn(x, 1) .. "_" .. Utils.roundn(y, 1)] = stage_index
+    if not record.stage_lengths[stage_index] then 
+        record.stage_lengths[stage_index] = 1 
     else
-        record.stage_lengths[record.stage_index] = record.stage_lengths[record.stage_index] + 1
+        record.stage_lengths[stage_index] = record.stage_lengths[stage_index] + 1
     end
 
 	bp_entity.build_command.disabled = false
 	
-    local index = Utils.display_floating_text(entity.position, Utils.printable(record.stage_index), true)
+    local index = Utils.display_floating_text(position, Utils.printable(stage_index), true)
     local cmd = {
         bp_entity.build_command[1], bp_entity.build_command[2], bp_entity.build_command[3], bp_entity.build_command[4], bp_entity.build_command[5]
     }
@@ -73,9 +67,22 @@ local function record_bp_order_entity(event)
 	restore_data.text_index = index
 	restore_data.command_group = commandqueue.command_list[global.command_list_parser.current_command_group_index]
 	restore_data.recipe = bp_entity.recipe
-	
+end
+
+
+-- Blueprint Order Record
+local function record_bp_order_entity(event)
+    local player = game.players[event.player_index]
+    local entity = player.selected
+	if not entity or entity.type ~= "entity-ghost" then 
+		game.print("Add: No entity selected!")
+		return 
+    end
+    local position = entity.position
+    add_entity_to_build_order(player, position)
 	entity.destroy()
 end
+
 
 local function record_bp_order_entity_remove(event)
     if not global.high_level_commands.bp_order_record then return end
@@ -127,7 +134,7 @@ local function record_bp_order_next(event)
 	if not global.high_level_commands.bp_order_record then return end
 	local record = global.high_level_commands.bp_order_record
     local output_data = global.high_level_commands.bp_order_record.output_data
-    local current_count = record.stage_lengths[record.stage_index]
+    -- local current_count = record.stage_lengths[record.stage_index]
 	
 	if record.stage_lengths[record.stage_index] == 0 or not record.stage_lengths[record.stage_index] then
 		output_data.default_stage = record.stage_index
@@ -163,50 +170,95 @@ local function record_bp_order_save(event)
 
 	game.print("Writing build order to file " .. filename .. ".lua")
 	game.write_file(filename .. ".lua", data, false)
-
-	global.high_level_commands.bp_order_record = nil
 end
 
-local function record_bp_area_trigger(event)
+local function add_area_to_build_order(player, entity, rect, stage)
 	if not global.high_level_commands.bp_order_record then return end
-	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
 	local record = global.high_level_commands.bp_order_record
 	local output_data = global.high_level_commands.bp_order_record.output_data
+	if not output_data.areas then output_data.areas = {} end
+
+    if not rect then
+        rect = Utils.copy(game.entity_prototypes[entity.ghost_name].collision_box)
+        rect = Utils.rotate_rect(rect, Utils.rotation_stringtoint(entity.direction))
+        rect = {Utils.translate(rect[1], entity.position), Utils.translate(rect[2], entity.position)}
+    end
+
+	output_data.areas[stage or record.stage_index] = rect
+
+    local text_index
+    local key_str
+    local display_text = "Stage " .. Utils.printable(record.stage_index) .. " area trigger"
+    if not entity then
+        local center = Utils.center(rect)
+        text_index = Utils.display_floating_text({center[1], center[2] + 0.4}, display_text, true)
+        key_str = Utils.roundn(center[1], 1) .. "_" .. Utils.roundn(center[2], 1)
+    else
+        text_index = Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, display_text, true)
+        key_str = Utils.roundn(entity.position.x, 1) .. "_" .. Utils.roundn(entity.position.y, 1)
+    end
+
+	if not record.entity_restore_data[key_str] then
+		record.entity_restore_data[key_str] = {}
+	end
+
+	local restore_data = record.entity_restore_data[key_str]
+
+	restore_data.area_group = record.stage_index
+	restore_data.area_text_index = text_index
+end
+
+
+local function record_bp_area_trigger(event)
 	local player = game.players[event.player_index]
-	local entity = player.selected
+    local entity = player.selected
+    
 	
 	if not entity or entity.type ~= "entity-ghost" then 
 		game.print("No entity selected!")
 		return
 	end
 	
+	local bp_data = global.high_level_commands.bp_order_record.blueprint_data
 	local bp_entity = Utils.Chunked.get_entry_at(bp_data.chunked_entities, bp_data.chunk_size, entity.position)
     if not bp_entity then 
         game.print("Entity not part of blueprint!")
         return
     end
-	if not output_data.areas then output_data.areas = {} end
-	
-	local rect = Utils.copy(game.entity_prototypes[entity.ghost_name].collision_box)
-	rect = Utils.rotate_rect(rect, Utils.rotation_stringtoint(entity.direction))
-	rect = {Utils.translate(rect[1], entity.position), Utils.translate(rect[2], entity.position)}
-	
-	output_data.areas[record.stage_index] = rect
-	
-	local text_index = Utils.display_floating_text({entity.position.x, entity.position.y + 0.4}, "Stage " .. Utils.printable(record.stage_index) .. " area trigger", true)
-	
-    local key_str = Utils.roundn(entity.position.x, 1) .. "_" .. Utils.roundn(entity.position.y, 1)
-	
-	if not record.entity_restore_data[key_str] then
-		record.entity_restore_data[key_str] = {}
-	end
-	
-	local restore_data = record.entity_restore_data[key_str]
-	
-	restore_data.area_group = record.stage_index
-	restore_data.area_text_index = text_index
+
+    add_area_to_build_order(player, entity)
 end
 
+
+local function load_buildorder(player)
+	--local bp_data = global.high_level_commands.bp_order_record.blueprint_data
+	local record = global.high_level_commands.bp_order_record
+	local output_data = global.high_level_commands.bp_order_record.output_data
+    local build_order = record.blueprint_data.build_order
+
+    if not build_order then return end
+    game.print("Loading existing build order.")
+    
+    for k, v in pairs(build_order) do
+        if k == "areas" then
+            for stage, rect in pairs(v) do
+                add_area_to_build_order(player, nil, rect, stage)
+            end
+        elseif k == "default_stage" then
+            output_data.default_group = v
+        else
+            output_data[k] = v
+            local _, _, x, y = string.find(k, "(.*)_(.*)")
+            local position = {tonumber(x), tonumber(y)}
+            if next(position) then 
+                game.print(serpent.block(position))
+                add_entity_to_build_order(player, position, v)
+            else
+                game.print(k)
+            end
+        end          
+    end
+end
 
 
 Event.register("bp_order_entity", record_bp_order_entity)
@@ -266,7 +318,7 @@ return { ["auto-build-blueprint"] = {
                         stage_lengths = {0},
                         entity_restore_data = {}
                     }
-                    BPUI.create(myplayer)                    
+                    BPUI.create(myplayer)         
                 end
 
                 local commands_by_type = {}
@@ -320,13 +372,15 @@ return { ["auto-build-blueprint"] = {
                                 entity.stage = stage_index
                                 table.insert(command.data.ordered_build_commands[stage_index], build_command)	
                                 table.insert(added_commands, build_command)
-                                
-                                entity.build_command = build_command
                             end
+                            entity.build_command = build_command
                         else
                             command.data.added_all_entities = not Utils.Chunked.remove_entry(blueprint.chunked_entities, blueprint.chunk_size, entity)							
                         end
                     end
+                end
+                if command.record_order and global.high_level_commands.bp_order_record then 
+                    load_buildorder(myplayer)
                 end
             end
             
@@ -348,7 +402,7 @@ return { ["auto-build-blueprint"] = {
             
             if stage_finished then
                 if not blueprint.build_order or not blueprint.build_order.areas or not blueprint.build_order.areas[command.data.current_stage + 1]
-                    or Utils.inside_rect(myplayer.position, blueprint.build_order.areas[command.data.current_stage + 1]) then
+                or Utils.inside_rect(myplayer.position, blueprint.build_order.areas[command.data.current_stage + 1]) then
                     command.data.current_stage = command.data.current_stage + 1
                 end
             end
@@ -438,13 +492,13 @@ return { ["auto-build-blueprint"] = {
 
             command.data.blueprint_data = Blueprint.load(blueprint_name(command), offset, rotation, 9, area)
             
-            if not command.record_order then
+            -- if not command.record_order then
                 command.data.blueprint_data.build_order = command_list_parser.get_file("bp." .. blueprint_build_order_name(command))
             
                 if command.data.blueprint_data.build_order then
                     command.data.default_stage = command.data.blueprint_data.build_order.default_stage or 0
                 end
-            end
+            -- end
             
             command.data.ordered_build_commands = {}
             command.data.current_stage = 0
