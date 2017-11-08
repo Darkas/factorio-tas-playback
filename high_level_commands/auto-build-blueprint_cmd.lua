@@ -5,8 +5,7 @@
 
 local Blueprint = require("blueprint") 
 local BPUI = require("gui.bp_order_ui")
--- local BPStorage = nil 
--- pcall( function() BPStorage = require("scenarios." .. global.system.tas_name .. ".BPStorage") end )
+
 
 local function blueprint_name(command)
 	return command[2]
@@ -251,10 +250,9 @@ local function load_buildorder(player)
             local _, _, x, y = string.find(k, "(.*)_(.*)")
             local position = {tonumber(x), tonumber(y)}
             if next(position) then 
-                game.print(serpent.block(position))
                 add_entity_to_build_order(player, position, v)
             else
-                game.print(k)
+                game.print("Not handled for build order import: " .. k)
             end
         end          
     end
