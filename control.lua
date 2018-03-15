@@ -39,7 +39,6 @@ end
 global.system.enable_high_level_commands = commandqueue.settings.enable_high_level_commands
 
 
-require("silo-script")
 Event = require("stdlib/event/event")
 GuiEvent = require("stdlib/event/gui") -- luacheck: ignore
 
@@ -302,7 +301,6 @@ local function init_world(player_index) --does what the freeplay scenario usuall
 	-- Reveal the map around the player
 	local pos = myplayer.position
 	myplayer.force.chart(myplayer.surface, {{pos.x - 200, pos.y - 200}, {pos.x + 200, pos.y + 200}})
-	silo_script.gui_init(myplayer)
 end
 
 Event.register(defines.events.on_player_created, function(event)
@@ -321,11 +319,14 @@ Event.register(defines.events.on_player_joined_game, function(event)
 	end
 end)
 
+script.on_event(defines.events.on_research_finished, function (event)
+	debugprint("Researched " .. event.research.name)
+end)
+
 -- Create the interface and command that allow to launch a run
 script.on_init(function()
 	-- Global variables initialization
 	global.walkstate = {walking = false}
-	silo_script.init()
 	if global.system.enable_high_level_commands then
 		command_list_parser.init()
 	end
@@ -472,9 +473,3 @@ Event.register(defines.events.on_gui_click, function(event)
 		init_run(event.player_index)
 	end
 end)
-
-Event.register(defines.events.on_rocket_launched, function(event)
-	silo_script.on_rocket_launched(event)
-end)
-
-silo_script.add_remote_interface()

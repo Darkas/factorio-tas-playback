@@ -177,10 +177,10 @@ function LogUI.create_log_ui(player)
 	local flow = mod_gui.get_frame_flow(player)
 	local frame = flow.log_frame
 	if frame and frame.valid then frame.destroy() end
-	frame = flow.add{type="frame", name="log_frame", style="frame_style", direction="vertical"}
-	if flow.direction ~= "vertical" then flow.direction = "vertical" end
+	frame = flow.add{type="frame", name="log_frame", style="frame", direction="vertical"}
+	--if flow.direction ~= "vertical" then flow.direction = "vertical" end
 
-	local top_flow = frame.add{type="flow", name="top_flow", style="flow_style", direction="horizontal"}
+	local top_flow = frame.add{type="flow", name="top_flow", style="flow", direction="horizontal"}
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Log"}
 	title.style.font = "default-frame"
 
@@ -199,7 +199,7 @@ function LogUI.create_log_ui(player)
 		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
 
 	end
-	frame.add{type="flow", name="type_flow", style="flow_style", direction="horizontal"}
+	frame.add{type="flow", name="type_flow", style="flow", direction="horizontal"}
 
 	Utils.make_hide_button(player, frame, true, "virtual-signal/signal-L")
 	frame.style.visible = true

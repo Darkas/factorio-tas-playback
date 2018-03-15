@@ -68,9 +68,9 @@ function CmdUI.create(player)
 	if not flow.direction == "vertical" then flow.direction = "vertical" end
 	local frame = flow.command_list_frame
 	if frame and frame.valid then frame.destroy() end
-	frame = flow.add{type="frame", name="command_list_frame", style="frame_style", direction="vertical"}
+	frame = flow.add{type="frame", name="command_list_frame", style="frame", direction="vertical"}
 
-	local top_flow = frame.add{type="flow", name="top_flow", style="flow_style", direction="horizontal"}
+	local top_flow = frame.add{type="flow", name="top_flow", style="flow", direction="horizontal"}
 	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Command List"}
 	title.style.font = "default-frame"
 
@@ -82,7 +82,7 @@ function CmdUI.create(player)
 	box.style.right_padding = 8
 
 	--  Checkboxes to show/hide categories
-	local category_flow = frame.add{type="flow", name="category_flow", style="flow_style", direction="horizontal"}
+	local category_flow = frame.add{type="flow", name="category_flow", style="flow", direction="horizontal"}
 	for name, cfg in pairs(global.CmdUI.categories) do
 		if cfg.show[player.index] == nil then cfg.show[player.index] = CmdUI.categories[name].show_default end
 		category_flow.add{type="label", style="label_style", name = "title_show_" .. name, caption = "[Show " .. name .. "]"}
@@ -91,7 +91,7 @@ function CmdUI.create(player)
 		box.style.right_padding = 8
 	end
 
-	local group_flow = frame.add{type="flow", name="group_flow", style="flow_style", direction="horizontal"}
+	local group_flow = frame.add{type="flow", name="group_flow", style="flow", direction="horizontal"}
 	label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
 	label.style.font = "default-semibold"
 	label.style.top_padding = 4

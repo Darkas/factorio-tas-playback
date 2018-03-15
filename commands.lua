@@ -26,9 +26,14 @@ TAScommands["move"] = function(tokens, myplayer)
     end
 end
 
-TAScommands["craft"] = function(tokens, myplayer)
-    myplayer.begin_crafting {recipe = tokens[2], count = tokens[3] or 1}
-    LogUI.debugprint("Crafting: " .. tokens[2] .. " x" .. (tokens[3] or 1))
+TAScommands["craft"] = function (tokens, myplayer)
+  amt = myplayer.begin_crafting{recipe = tokens[2], count = tokens[3] or 1}
+  if amt ~= (tokens[3] or 1) then
+    errprint("Tried to craft with insufficient ingredients!")
+    errprint("You were trying to make " .. (tokens[3] or 1) .. "x" ..tokens[2])
+  else
+    debugprint("Crafting: " .. tokens[2] .. " x" .. (tokens[3] or 1))
+  end
 end
 
 TAScommands["stopcraft"] = function(tokens, myplayer)
@@ -81,11 +86,10 @@ TAScommands["build"] =
         return
     end
 
-    -- Check if we are in range to build this
-    local target_collision_box = Utils.collision_box {name = item, position = position, direction = direction}
-    local distance = Utils.distance_from_rect(myplayer.position, target_collision_box)
-    if not (distance <= myplayer.build_distance) then
-        LogUI.errprint("Build failed: You are trying to place beyond realistic reach")
+    -- Check if we can actually place the item at this tile
+    local canplace = myplayer.surface.can_place_entity{name = item, position = position, direction = direction, force = "player"}
+    if not canplace then
+        errprint("Build failed: Something is in the way")
         return
     end
 

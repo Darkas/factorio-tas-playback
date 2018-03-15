@@ -3,7 +3,7 @@ local commandqueue = {}
 
 commandqueue["settings"] = {
     debugmode = true,
-    allowspeed = true,
+    allowspeed = false,
     end_tick_debug = true
 }
 
@@ -4540,6 +4540,7 @@ commandqueue[10] = {{"print", "- Starbrow"}}
 commandqueue[11] = {{"print", "============================================== "}}
 commandqueue[260] = {{"print", "=============================================================="}}
 commandqueue[261] = {{"print", "The actions that the script performs can be read here in this wall of text."}}
+commandqueue[261] = {{"print", "Whenever a research finishes it will be announced here."}}
 commandqueue[262] = {{"print", "The number in [brackets] has the format [minutes:seconds:ticks] where"}}
 commandqueue[263] = {{"print", "there are 60 ticks (game updates) per second. "}}
 commandqueue[264] = {{"print", "============================================================== "}}
