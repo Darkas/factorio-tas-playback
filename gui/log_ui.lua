@@ -123,7 +123,7 @@ function LogUI.update_log_ui(player)
 			else
 				local box = type_flow.add{type="checkbox", name=log_type .. "_checkbox", state=not global.log_data.log_type_settings[log_type].default_hide}
 				box.style.top_padding = 3
-				type_flow.add{type="label", style="label_style", name=log_type .. "_text", caption=log_type}
+				type_flow.add{type="label", name=log_type .. "_text", caption=log_type}
 			end
 		end
 
@@ -177,15 +177,15 @@ function LogUI.create_log_ui(player)
 	local flow = mod_gui.get_frame_flow(player)
 	local frame = flow.log_frame
 	if frame and frame.valid then frame.destroy() end
-	frame = flow.add{type="frame", name="log_frame", style="frame", direction="vertical"}
+	frame = flow.add{type="frame", name="log_frame", direction="vertical"}
 	--if flow.direction ~= "vertical" then flow.direction = "vertical" end
 
-	local top_flow = frame.add{type="flow", name="top_flow", style="flow", direction="horizontal"}
-	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Log"}
+	local top_flow = frame.add{type="flow", name="top_flow", direction="horizontal"}
+	local title = top_flow.add{type="label", name = "title", caption="Log"}
 	title.style.font = "default-frame"
 
-	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical"}
-	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
+	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", direction="vertical"}
+	local table = scroll_pane.add{type="table", name="table", column_count=1}
 	table.style.vertical_spacing = 0
 	scroll_pane.style.maximal_height = 350
 	scroll_pane.style.maximal_width = 500
@@ -193,13 +193,13 @@ function LogUI.create_log_ui(player)
 	scroll_pane.style.minimal_width = 50
 
 	for index=1, NUM_LOG_LINES do
-		local label = table.add{type="label", style="label_style", name = "text_" .. index, caption="", single_line=true, want_ellipsis=true}
+		local label = table.add{type="label", name = "text_" .. index, caption="", single_line=true, want_ellipsis=true}
 		label.style.top_padding = 0
 		label.style.bottom_padding = 0
 		--label.style.font_color = {r=1.0, g=0.7, b=0.9}
 
 	end
-	frame.add{type="flow", name="type_flow", style="flow", direction="horizontal"}
+	frame.add{type="flow", name="type_flow", direction="horizontal"}
 
 	Utils.make_hide_button(player, frame, true, "virtual-signal/signal-L")
 	frame.style.visible = true

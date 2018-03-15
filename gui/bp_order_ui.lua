@@ -9,11 +9,11 @@ global.BPUI = global.BPUI or {}
 
 function BPUI.create(player)
     local flow = mod_gui.get_frame_flow(player)
-    local frame = flow.add{type="frame", name="bp_order_ui_frame", style="frame_style", direction = "vertical", caption = "Blueprint Order Editor"}
-    frame.add{type="label", name="label", style="label_style", caption="Blueprint Order UI output."}
+    local frame = flow.add{type="frame", name="bp_order_ui_frame", direction = "vertical", caption = "Blueprint Order Editor"}
+    frame.add{type="label", name="label", caption="Blueprint Order UI output."}
     frame.style.visible = true
 
-    local button_flow = frame.add{type="flow", name="button_flow", style="flow_style", direction="horizontal"}
+    local button_flow = frame.add{type="flow", name="button_flow", direction="horizontal"}
     button_flow.add{type="sprite-button", name="build_order_ui_prev", style=mod_gui.button_style, sprite="tas_playback_prev"}
     button_flow.add{type="sprite-button", name="build_order_ui_save", style=mod_gui.button_style, sprite="tas_playback_save"}
     --button_flow.add{type="sprite-button", name="build_order_ui_undo", style=mod_gui.button_style, sprite="tas_playback_undo"}

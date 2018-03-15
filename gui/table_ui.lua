@@ -27,9 +27,9 @@ function TableUI.create(player)
 
     global.TableUI[player.index] = { showed_elements = {}, line_data = {}, show_ui = true, need_update = false}
     local flow = player.gui.center
-    local frame = flow.add{name="tableui_frame", type="frame", direction="vertical", style="frame_style"}
-	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical"}
-	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
+    local frame = flow.add{name="tableui_frame", type="frame", direction="vertical"}
+	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", direction="vertical"}
+	local table = scroll_pane.add{type="table", name="table", column_count=1}
 	table.style.vertical_spacing = 0
 	scroll_pane.style.maximal_height = 800
 	scroll_pane.style.maximal_width = 800
@@ -46,7 +46,7 @@ function TableUI.get_line(player, line_index)
     if line_table["tableui_line_" .. line_index] then 
         return line_table["tableui_line_" .. line_index]
     else
-        return line_table.add{type="label", caption="--", style="label_style", name="tableui_line_" .. line_index}
+        return line_table.add{type="label", caption="--", name="tableui_line_" .. line_index}
     end
 end
 

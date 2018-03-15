@@ -68,43 +68,43 @@ function CmdUI.create(player)
 	if not flow.direction == "vertical" then flow.direction = "vertical" end
 	local frame = flow.command_list_frame
 	if frame and frame.valid then frame.destroy() end
-	frame = flow.add{type="frame", name="command_list_frame", style="frame", direction="vertical"}
+	frame = flow.add{type="frame", name="command_list_frame", direction="vertical"}
 
-	local top_flow = frame.add{type="flow", name="top_flow", style="flow", direction="horizontal"}
-	local title = top_flow.add{type="label", style="label_style", name = "title", caption="Command List"}
+	local top_flow = frame.add{type="flow", name="top_flow", direction="horizontal"}
+	local title = top_flow.add{type="label", name = "title", caption="Command List"}
 	title.style.font = "default-frame"
 
 	--  Checkbox to show/hide expanded view
-	local label = top_flow.add{type="label", style="label_style", name = "title_show", caption="[Show]"}
+	local label = top_flow.add{type="label", name = "title_show", caption="[Show]"}
 	label.style.left_padding = 40
-	local box = top_flow.add{type="checkbox", style="checkbox_style", name="show_command_list_ui_checkbox", state=true}
+	local box = top_flow.add{type="checkbox", name="show_command_list_ui_checkbox", state=true}
 	box.style.top_padding = 3
 	box.style.right_padding = 8
 
 	--  Checkboxes to show/hide categories
-	local category_flow = frame.add{type="flow", name="category_flow", style="flow", direction="horizontal"}
+	local category_flow = frame.add{type="flow", name="category_flow", direction="horizontal"}
 	for name, cfg in pairs(global.CmdUI.categories) do
 		if cfg.show[player.index] == nil then cfg.show[player.index] = CmdUI.categories[name].show_default end
-		category_flow.add{type="label", style="label_style", name = "title_show_" .. name, caption = "[Show " .. name .. "]"}
-		box = category_flow.add{type="checkbox", style="checkbox_style", name="cmd_show_" .. name, state=cfg.show[player.index]}
+		category_flow.add{type="label", name = "title_show_" .. name, caption = "[Show " .. name .. "]"}
+		box = category_flow.add{type="checkbox", name="cmd_show_" .. name, state=cfg.show[player.index]}
 		box.style.top_padding = 3
 		box.style.right_padding = 8
 	end
 
-	local group_flow = frame.add{type="flow", name="group_flow", style="flow", direction="horizontal"}
-	label = group_flow.add{type="label", style="label_style", name="current_command_group", caption = "Active Command Group"}
+	local group_flow = frame.add{type="flow", name="group_flow", direction="horizontal"}
+	label = group_flow.add{type="label", name="current_command_group", caption = "Active Command Group"}
 	label.style.font = "default-semibold"
 	label.style.top_padding = 4
-	local button = group_flow.add{type="button", style="button_style", name="next_command_group", caption="Next Command Group"}
+	local button = group_flow.add{type="button", name="next_command_group", caption="Next Command Group"}
 	button.style.top_padding = 0
 	button.style.bottom_padding = 0
 	button.style.font = "default-semibold"
 
-	label = frame.add{type="label", style="label_style", name="required_for_next", caption = "Required for next"}
+	label = frame.add{type="label", name="required_for_next", caption = "Required for next"}
 	label.style.font = "default-semibold"
 
-	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", style="scroll_pane_style", direction="vertical", caption="foo"}
-	local table = scroll_pane.add{type="table", name="table", style="table_style", colspan=1}
+	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", direction="vertical", caption="foo"}
+	local table = scroll_pane.add{type="table", name="table", column_count=1}
 	table.style.vertical_spacing = -1
 	scroll_pane.style.top_padding = 10
 	scroll_pane.style.maximal_height = 350
@@ -113,7 +113,7 @@ function CmdUI.create(player)
 	scroll_pane.style.minimal_width = 50
 
 	for index=1, NUM_LINES do
-		label = table.add{type="label", style="label_style", name = "text_" .. index, caption="_", single_line=true, want_ellipsis=true}
+		label = table.add{type="label", name = "text_" .. index, caption="_", single_line=true, want_ellipsis=true}
 		label.style.top_padding = 0
 		label.style.bottom_padding = 0
 	end

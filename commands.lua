@@ -32,7 +32,7 @@ TAScommands["craft"] = function (tokens, myplayer)
     errprint("Tried to craft with insufficient ingredients!")
     errprint("You were trying to make " .. (tokens[3] or 1) .. "x" ..tokens[2])
   else
-    debugprint("Crafting: " .. tokens[2] .. " x" .. (tokens[3] or 1))
+    LogUI.debugprint("Crafting: " .. tokens[2] .. " x" .. (tokens[3] or 1))
   end
 end
 
