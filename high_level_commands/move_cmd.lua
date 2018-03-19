@@ -31,7 +31,7 @@ local move_cmd = {
 
         local return_dir
         
-        if global.high_level_commands.variables.move_opt_near_buildings and #command.data.move_dir == 2 then
+        if not global.high_level_commands.variables.disable_move_opt_near_buildings and #command.data.move_dir == 2 then
             local position = myplayer.position
      
             myplayer.teleport{position.x + 2, position.y + 2}

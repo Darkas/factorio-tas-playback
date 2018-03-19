@@ -177,7 +177,7 @@ Currently implemented commands:
 * `{"mine", {<X>,<Y>}, amount=<int>, type=<string>}`: The `type` param is the entity type of the mined entity - typically "resource", "tree"; instead of "simple-entity" the string "rock" can also be used here.
 * `{"move", {<X>,<Y>,entity=<bool>}}`: move to a position, walking diagonal first, without smart path-finding around entities. If entity is set to true, move in range (interacting range, not mining range) of the entity at the given position.
 * `{"move", "<command>"}`: move to the closest point from the player that allows the command with the given name to be executed.
-* `{"move-sequence", {x1, y1}, ..., pass_arguments}`: Move to the positions in order.
+* `{"move-sequence", {x1, y1}, ..., pass_arguments}`: Move to the positions in order (currently not working, use simple-sequence, move).
 * `{"parallel", {<command-list>}}`: Add the commands in the list to the current command set.
 * `{"passive-take", <item>, <type>}`: Spawns `take` commands whenever there is an `<item>` in range available from an entity of the given type. `<type>` is not optional.
 * `{"pickup", oneshot=<bool>, ticks=<number>}`: Pick up items from ground. If `oneshot` is not set, we pick up until this command is stopped, or if the given amount of ticks have passed.

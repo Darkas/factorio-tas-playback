@@ -911,7 +911,9 @@ local function button_handler(event)
 	-- local player = game.players[event.player_index]
 	local element = event.element
 	local button_data = global.Utils.hide_buttons[event.player_index][element.name]
-	button_data.element.style.visible = not button_data.element.style.visible
+	if not button_data then return end
+	local target_element = button_data.element
+	target_element.style.visible = not target_element.style.visible
 end
 
 -- local function reset_handlers()
