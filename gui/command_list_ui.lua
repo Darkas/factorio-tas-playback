@@ -105,7 +105,7 @@ function CmdUI.create(player)
 
 	local scroll_pane = frame.add{type="scroll-pane", name="scroll_pane", direction="vertical", caption="foo"}
 	local table = scroll_pane.add{type="table", name="table", column_count=1}
-	table.style.vertical_spacing = -1
+	table.style.vertical_spacing = 0
 	scroll_pane.style.top_padding = 10
 	scroll_pane.style.maximal_height = 350
 	scroll_pane.style.maximal_width = 500
