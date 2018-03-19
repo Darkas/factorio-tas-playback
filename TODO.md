@@ -9,6 +9,8 @@
 - Passive-take should get a position param - if set, only consider that entity.
 - If the first parameter of a command is a table of valid commands, interpret that as a "parallel" command.
 - If a build order already exists, load it into the build order ui.
+- Maybe remove move-sequence in favor of simple-sequence with move
+- Moving to an entity should have the option to move into mining range as well
 
 ## Debug features:
 - Log Craft Inactivity, unoptimal movement (UI alert), dump inventory into file

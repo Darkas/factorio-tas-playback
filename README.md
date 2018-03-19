@@ -162,7 +162,7 @@ commandqueue.command_list = {
 Currently implemented commands:
 * `{"alert", "<cmd-group-name>"}`: Alert the player if a certain cmd-group starts and set game-speed to 0.05. Will pause the game if in SP.
 * `{"auto-build-blueprint", <name>, {<X>, <Y>}, rotation=<rotation>}`: Automates building blueprints (movement must still be entered manually though). Add build commands, recipe commands and put commands (for modules) to the current command set as we get in build range of the individual entities in the blueprint. `<name>` refers to the name of the blueprint in the `blueprint_data_raw` field, this can be set in the `blueprint_list.lua` of the run scenario - see examples. We have a mod that adds a command to conveniently export blueprints. The second argument is the offset, the third argument is the rotation and should be one of `defines.direction.north, east, south, west`. The blueprint build commands are added with the `on_leaving_range` constraint.
-* `{"auto-refuel", min=..., amount=..., type=..., pos={<X>, <Y>}, skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and amount are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to amount. To only target certain entities, use type, pos and skip_coal_drills.
+* `{"auto-refuel", min=..., target=..., type=..., pos={<X>, <Y>}, skip_coal_drills=<boolean>}`: automatically refuel all burner mining drills, furnaces and boilers so they contain the given amount. If the parameters min and target are not given, one piece of coal will be inserted a few frames before the entity runs out of coal. Otherwise, if the entity drops under min amount of coal, it will be refilled to target. To only target certain entities, use type, pos and skip_coal_drills.
 * `{"auto-take", <item>, <count>, exact = <bool>}`: Take items from surrounding entities until we have taken the given count. This will use the fewest take commands necessary to obtain this on the earliest tick possible, but it will likely only work when you are standing still.
 * `{"build", <entity>, {<X>,<Y>}, <facing direction>, <type>}`: NOTE: The positions for build are currently required to be at the center of the entity. Otherwise, you do impossible stuff
 * `{"craft", <item>, <count>, need_intermediates}`
@@ -175,7 +175,7 @@ Currently implemented commands:
 * `{"enable-cmd", "name"}`: Set a cmd to enabled.
 * `{"freeze-daytime"}`
 * `{"mine", {<X>,<Y>}, amount=<int>, type=<string>}`: The `type` param is the entity type of the mined entity - typically "resource", "tree"; instead of "simple-entity" the string "rock" can also be used here.
-* `{"move", {<X>,<Y>,entity=<bool>}}`: move to a position, walking diagonal first, without smart path-finding around entities. If entity is set to true, move in range of the entity at the given position.
+* `{"move", {<X>,<Y>,entity=<bool>}}`: move to a position, walking diagonal first, without smart path-finding around entities. If entity is set to true, move in range (interacting range, not mining range) of the entity at the given position.
 * `{"move", "<command>"}`: move to the closest point from the player that allows the command with the given name to be executed.
 * `{"move-sequence", {x1, y1}, ..., pass_arguments}`: Move to the positions in order.
 * `{"parallel", {<command-list>}}`: Add the commands in the list to the current command set.
@@ -221,6 +221,10 @@ on_exact_tick=<tick> (do this on exactly the tick - do we need this?)
 on_exact_relative_tick={<tick>, <name>} (do this a given amount of ticks after the command with the given name finished or after the current command set began (if name is not set))
 on_moving_away (player is moving away from the command target)
 
+## Tips & Tricks
+
+* Use the parallel and sequence commands to control the order in which commands are executed. They can be nested arbitrarily. To refer to a specific command in a parallel or sequence command, use <name-of-parallel-or-sequence>.<etc>...<etc>.<name-of-command>
+* Use {"simple-sequence", "move", {<X>,<Y>,name="<text>",entity=<bool>}, "<cmd-name>", ...} to chain move commands. Use the name parameter to easily refer to specific parts of the movement.
 
 ## Chat Commands
 
