@@ -29,8 +29,8 @@ end
 TAScommands["craft"] = function (tokens, myplayer)
   amt = myplayer.begin_crafting{recipe = tokens[2], count = tokens[3] or 1}
   if amt ~= (tokens[3] or 1) then
-    errprint("Tried to craft with insufficient ingredients!")
-    errprint("You were trying to make " .. (tokens[3] or 1) .. "x" ..tokens[2])
+    LogUI.errprint("Tried to craft with insufficient ingredients!")
+    LogUI.errprint("You were trying to make " .. (tokens[3] or 1) .. "x" ..tokens[2])
   else
     LogUI.debugprint("Crafting: " .. tokens[2] .. " x" .. (tokens[3] or 1))
   end
@@ -89,7 +89,7 @@ TAScommands["build"] =
     -- Check if we can actually place the item at this tile
     local canplace = myplayer.surface.can_place_entity{name = item, position = position, direction = direction, force = "player"}
     if not canplace then
-        errprint("Build failed: Something is in the way")
+        LogUI.errprint("Build failed: Something is in the way")
         return
     end
 
@@ -190,7 +190,7 @@ TAScommands["put"] =
 
     --[[
   if not inrange(position, myplayer) then
-    errprint("Put failed: You are trying to reach too far.")
+    LogUI.errprint("Put failed: You are trying to reach too far.")
     return
   end--]]
     local otherinv = myplayer.selected.get_inventory(slot)
@@ -264,7 +264,7 @@ TAScommands["take"] =
     --[[
   -- Check if we are in reach of this tile
   if not inrange(position, myplayer) then
-    errprint("Take failed: You are trying to reach too far.")
+    LogUI.errprint("Take failed: You are trying to reach too far.")
     return
   end--]]
     local otherinv = myplayer.selected.get_inventory(slot)
