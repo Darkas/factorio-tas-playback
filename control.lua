@@ -320,7 +320,7 @@ Event.register(defines.events.on_player_joined_game, function(event)
 end)
 
 script.on_event(defines.events.on_research_finished, function (event)
-	debugprint("Researched " .. event.research.name)
+	LogUI.debugprint("Researched " .. event.research.name)
 end)
 
 -- Create the interface and command that allow to launch a run
