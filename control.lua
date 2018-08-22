@@ -123,13 +123,17 @@ local function init_player_inventory(player)
 end
 
 local function init_player(player)
-	local char_entity = player.surface.create_entity({name="player", position={0,0}, force=player.force})
+	local char_entity = player.surface.create_entity({name="player", position={commandqueue.settings.spawn_x or 0, commandqueue.settings.spawn_y or 0}, force=player.force})
 	player.character = char_entity
 	player.surface.always_day = true
 	player.game_view_settings.update_entity_selection = false
 	player.game_view_settings.show_entity_info = true
 	player.game_view_settings.show_controller_gui = true
-	init_player_inventory(player)
+	if type(commandqueue.settings.init_player_inventory)=='function' then
+	    commandqueue.settings.init_player_inventory(player)
+	else
+	    init_player_inventory(player)
+	end
 end
 
 -- This function initializes the run's clock and a few properties
